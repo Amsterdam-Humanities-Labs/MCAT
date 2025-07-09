@@ -28,7 +28,7 @@ jobs:
     - name: Build with Nuitka
       run: |
         # Build with Nuitka
-        nuitka --standalone main.py
+        nuitka --standalone --onefile main.py
         
         # Organize output to dist/
         mkdir -p dist
