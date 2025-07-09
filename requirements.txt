@@ -1,0 +1,4 @@
+selenium
+dearpygui
+webdriver-manager
+requests
