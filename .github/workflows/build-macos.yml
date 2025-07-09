@@ -28,7 +28,7 @@ jobs:
     - name: Build with Nuitka
       run: |
         # Build with Nuitka
-        nuitka --standalone --enable-plugin=requests main.py
+        nuitka --standalone main.py
         
         # Organize output to dist/
         mkdir -p dist
