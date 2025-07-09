@@ -1,4 +1,4 @@
-selenium
-dearpygui
-webdriver-manager
-requests
+selenium>=4.15.0
+webdriver-manager>=4.0.0
+dearpygui>=1.10.0
+nuitka>=1.8.0

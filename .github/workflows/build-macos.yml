@@ -1,0 +1,49 @@
+name: Build macOS App
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:  # Allows manual trigger
+
+jobs:
+  build-macos:
+    runs-on: macos-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.13'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+    
+    - name: Build with Nuitka
+      run: |
+        # Build with Nuitka
+        nuitka --standalone --enable-plugin=requests main.py
+        
+        # Organize output to dist/
+        mkdir -p dist
+        mv main.dist/* dist/
+        rm -rf main.dist
+        
+        # Create zip for easy download
+        cd dist
+        zip -r ../WebScraper-macOS.zip .
+        cd ..
+    
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: WebScraper-macOS
+        path: |
+          dist/
+          WebScraper-macOS.zip
