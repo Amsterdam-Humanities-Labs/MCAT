@@ -1,6 +1,6 @@
-#
-Build outputs - ignore everything in dist/
+# Build outputs - ignore everything in dist/
 dist/
+assets/
 
 # Python cache
 __pycache__/
