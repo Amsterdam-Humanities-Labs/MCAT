@@ -13,7 +13,7 @@ mcat_app/
 ├── config/
 │   ├── __init__.py
 │   ├── settings.py         # Configuration loader
-│   └── columns.json        # Hardcoded column mappings
+│   └── columns.yaml        # Hardcoded column mappings
 ├── core/
 │   ├── __init__.py
 │   ├── driver_manager.py   # WebDriver management
@@ -54,59 +54,40 @@ class AppConfig:
         self.load_config()
     
     def load_config(self):
-        # Load column mappings from columns.json
+        # Load column mappings from columns.yaml
         # Load scraper settings
         # Load GUI defaults
 ```
 
-#### `columns.json`
-```json
-{
-    "facebook": {
-        "default_columns": {
-            "post": "Post URL",
-            "date": "Created Time",
-            "engagement": "Reactions Total", 
-            "user": "From Name"
-        },
-        "common_columns": {
-            "post": ["Post URL", "URL", "Link"],
-            "date": ["Created Time", "Posted", "Date"],
-            "engagement": ["Reactions Total", "Likes", "Shares", "Total Interactions"],
-            "user": ["From Name", "User Name", "Author", "Page Name"]
-        }
-    },
-    "twitter": {
-        "default_columns": {
-            "post": "Tweet URL",
-            "date": "Created At",
-            "engagement": "Retweet Count",
-            "user": "User Name"
-        },
-        "common_columns": {
-            "post": ["Tweet URL", "URL", "Link"],
-            "date": ["Created At", "Posted", "Date"],
-            "engagement": ["Retweet Count", "Likes", "Favorites"],
-            "user": ["User Name", "Author", "Handle", "Screen Name"]
-        }
-    },
-    "youtube": {
-        "default_columns": {
-            "post": "Video URL",
-            "date": "Published At",
-            "engagement": "View Count",
-            "user": "Channel Title"
-        }
-    },
-    "tiktok": {
-        "default_columns": {
-            "post": "Video URL", 
-            "date": "Create Time",
-            "engagement": "Play Count",
-            "user": "Author Name"
-        }
-    }
-}
+#### `columns.yaml`
+```yaml
+facebook:
+  columns:
+    post: "Post URL"
+    date: "Created Time"
+    engagement: "Reactions Total"
+    user: "From Name"
+
+twitter:
+  columns:
+    post: "Tweet URL"
+    date: "Created At"
+    engagement: "Retweet Count"
+    user: "User Name"
+
+youtube:
+  columns:
+    post: "Video URL"
+    date: "Published At"
+    engagement: "View Count"
+    user: "Channel Title"
+
+tiktok:
+  columns:
+    post: "Video URL"
+    date: "Create Time"
+    engagement: "Play Count"
+    user: "Author Name"
 ```
 
 ### 2. Core Processing (`core/`)
@@ -129,8 +110,9 @@ class BatchProcessor:
     """Main processing pipeline coordinator"""
     
     def __init__(self, state_manager: StateManager)
-    def process_csv(self, csv_path: str, platform: str) -> ProcessingResult
-    def _validate_csv(self, df: pd.DataFrame, platform: str) -> bool
+    def process_csv(self, csv_path: str, platform: str, column_mapping: Dict[str, str]) -> ProcessingResult
+    def _validate_csv(self, df: pd.DataFrame, column_mapping: Dict[str, str]) -> bool
+    def _create_scraper(self, platform: str) -> BaseScraper
     def _process_batch(self, urls: List[str], scraper: BaseScraper) -> List[Dict]
     def cancel_processing()
 ```
@@ -330,14 +312,14 @@ During processing, the status area shows:
 2. Load CSV using pandas  
 3. User selects platform (Facebook, Twitter, YouTube, TikTok)
 4. User maps 4 columns: Post, Date, Engagement, User
-5. Validate column mappings and data format
+5. Validate column mappings exist in CSV
 6. Show data preview in results table
 7. User confirms and starts processing
 
 ### URL Processing
-1. Extract URLs from configured column
+1. Extract URLs from user-mapped post column
 2. Create batches for parallel processing
-3. Initialize appropriate scraper
+3. Initialize scraper based on user-selected platform
 4. Process each URL and collect results
 5. Update GUI in real-time
 6. Store results in memory
@@ -351,7 +333,7 @@ During processing, the status area shows:
    - `info` (Additional details)
    - `check_timestamp` (When checked)
    - `error_message` (If applicable)
-   - `platform` (Detected platform)
+   - `platform` (User-selected platform)
 
 ## Implementation Priority
 
@@ -361,7 +343,7 @@ During processing, the status area shows:
 3. Create `BaseScraper` abstract class
 4. Implement `StateManager`
 5. Basic GUI with file picker and column selectors
-6. Configuration system with `columns.json`
+6. Configuration system with `columns.yaml`
 
 ### Phase 2 - Single Platform MVP
 1. Implement YouTube scraper (most reliable)
@@ -390,10 +372,30 @@ During processing, the status area shows:
 ## Configuration Files
 
 ### Required Configuration
-- Column mappings per platform
-- Scraper timeouts and retry settings
+- Column mappings per platform (YAML format)
+- Scraper timeouts and retry settings  
 - GUI theme and layout preferences
 - WebDriver configuration options
+
+### Example `settings.py` YAML Loading
+```python
+import yaml
+
+class AppConfig:
+    def __init__(self):
+        self.columns = self.load_columns()
+        self.scraper_settings = self.load_scraper_settings()
+    
+    def load_columns(self):
+        with open('config/columns.yaml', 'r') as f:
+            return yaml.safe_load(f)
+    
+    def get_platform_columns(self, platform: str) -> dict:
+        return self.columns.get(platform, {}).get('columns', {})
+    
+    def get_column_name(self, platform: str, column_type: str) -> str:
+        return self.get_platform_columns(platform).get(column_type, "")
+```
 
 ### Runtime Settings
 - Worker thread count (constant for now)

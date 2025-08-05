@@ -1,0 +1,6 @@
+youtube:
+  columns:
+    post: "Video URL"
+    date: "Published At"
+    engagement: "View Count"
+    user: "Channel Title"

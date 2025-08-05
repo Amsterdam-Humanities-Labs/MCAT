@@ -368,45 +368,18 @@ class BatchProcessor:
         self.twitter_checker = TwitterChecker(self.driver_manager)
         self.tiktok_checker = TikTokChecker(self.driver_manager)
     
-    def detect_platform(self, url: str) -> str:
-        """
-        Detect which platform a URL belongs to.
-        
-        Args:
-            url (str): The URL to analyze
-            
-        Returns:
-            str: Platform name or "unknown"
-        """
-        url = url.lower()
-        
-        if 'facebook.com' in url or 'fb.com' in url:
-            return 'facebook'
-        elif 'instagram.com' in url:
-            return 'instagram'
-        elif 'youtube.com' in url or 'youtu.be' in url:
-            return 'youtube'
-        elif 'twitter.com' in url or 'x.com' in url:
-            return 'twitter'
-        elif 'tiktok.com' in url:
-            return 'tiktok'
-        else:
-            return 'unknown'
     
-    def check_single_url(self, url: str, platform: str = None) -> Dict[str, str]:
+    def check_single_url(self, url: str, platform: str) -> Dict[str, str]:
         """
         Check the status of a single URL.
         
         Args:
             url (str): The URL to check
-            platform (str, optional): Platform name, auto-detected if None
+            platform (str): Platform name (user-specified)
             
         Returns:
             Dict[str, str]: Result dictionary with status info
         """
-        if platform is None:
-            platform = self.detect_platform(url)
-        
         result = {
             'url': url,
             'platform': platform,
@@ -437,14 +410,15 @@ class BatchProcessor:
         
         return result
     
-    def process_csv(self, csv_path: str, url_column: str = 'URL', 
+    def process_csv(self, csv_path: str, platform: str, column_mapping: Dict[str, str],
                    output_path: str = None, progress_callback=None) -> pd.DataFrame:
         """
         Process a CSV file of URLs in batches.
         
         Args:
             csv_path (str): Path to input CSV file
-            url_column (str): Name of the URL column
+            platform (str): Platform name (facebook, twitter, youtube, tiktok)
+            column_mapping (Dict[str, str]): Mapping of post/date/engagement/user columns
             output_path (str, optional): Path to save results
             progress_callback (callable, optional): Progress update function
             
@@ -454,8 +428,16 @@ class BatchProcessor:
         try:
             # Load CSV
             df = pd.read_csv(csv_path)
-            if url_column not in df.columns:
-                raise ValueError(f"Column '{url_column}' not found in CSV")
+            
+            # Validate required columns exist
+            url_column = column_mapping.get('post', '')
+            if not url_column or url_column not in df.columns:
+                raise ValueError(f"Post column '{url_column}' not found in CSV")
+            
+            # Validate other mapped columns exist (they're preserved but not used for scraping)
+            for col_type, col_name in column_mapping.items():
+                if col_name and col_name not in df.columns:
+                    raise ValueError(f"{col_type.title()} column '{col_name}' not found in CSV")
             
             # Add result columns
             result_columns = ['status', 'platform', 'info', 'date_checked', 'error']
@@ -472,7 +454,7 @@ class BatchProcessor:
                     return
                 
                 url = row[url_column]
-                result = self.check_single_url(url)
+                result = self.check_single_url(url, platform)
                 
                 # Update dataframe
                 for key, value in result.items():
