@@ -8,14 +8,16 @@ class CSVHandler:
     
     @staticmethod
     def load_csv(file_path: str) -> pd.DataFrame:
-        """Load CSV file with error handling."""
+        """Load CSV file with automatic delimiter detection."""
         if not os.path.exists(file_path):
             raise FileNotFoundError(f"CSV file not found: {file_path}")
         
         try:
-            df = pd.read_csv(file_path)
+            # Use pandas' automatic delimiter detection
+            df = pd.read_csv(file_path, sep=None, engine='python')
             if df.empty:
                 raise ValueError("CSV file is empty")
+            print("Successfully loaded CSV with automatic delimiter detection")
             return df
         except Exception as e:
             raise Exception(f"Error loading CSV file: {e}")
