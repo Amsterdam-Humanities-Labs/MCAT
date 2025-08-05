@@ -2,7 +2,11 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException
-from .base_scraper import BaseScraper, ScrapingResult
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from scrapers.base_scraper import BaseScraper, ScrapingResult
 
 
 class YouTubeScraper(BaseScraper):

@@ -3,11 +3,15 @@ import threading
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Dict, List, Optional, Callable
 
-from ..config.settings import config
-from ..utils.state_manager import StateManager, ProcessingState
-from ..utils.csv_handler import CSVHandler
-from ..core.driver_manager import WebDriverManager
-from ..scrapers.youtube_scraper import YouTubeScraper
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from config.settings import config
+from utils.state_manager import StateManager, ProcessingState
+from utils.csv_handler import CSVHandler
+from core.driver_manager import WebDriverManager
+from scrapers.youtube_scraper import YouTubeScraper
 
 
 class ProcessingResult:
@@ -160,7 +164,7 @@ class BatchProcessor:
                 current=processed,
                 total=total,
                 stats=stats.copy(),
-                current_action=f"Checking {scraper.get_platform_name()} URL #{processed}"
+                current_action=f"Checking: {url[:60]}{'...' if len(url) > 60 else ''}"
             )
             
             return result_dict
