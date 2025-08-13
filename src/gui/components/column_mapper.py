@@ -5,6 +5,7 @@ import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 from config.settings import config
+from .dropdown import Dropdown
 
 
 class ColumnMapper:
@@ -21,10 +22,12 @@ class ColumnMapper:
         
         # UI element IDs
         self.group_id = "column_mapper_group"
-        self.post_combo_id = "post_column_combo"
-        self.date_combo_id = "date_column_combo"
-        self.engagement_combo_id = "engagement_column_combo"
-        self.user_combo_id = "user_column_combo"
+        
+        # Dropdown components
+        self.post_dropdown: Optional[Dropdown] = None
+        self.date_dropdown: Optional[Dropdown] = None
+        self.engagement_dropdown: Optional[Dropdown] = None
+        self.user_dropdown: Optional[Dropdown] = None
         
         # Current selections
         self.selections = {
@@ -39,62 +42,70 @@ class ColumnMapper:
         with dpg.group(tag=self.group_id, parent=self.parent_window):
             
             # Post Column (Required)
-            dpg.add_text("Post url (required)", color=[255, 255, 255])
-            dpg.add_combo(
-                tag=self.post_combo_id,
-                items=["select post url column"],
-                default_value="select post url column",
-                width=280,
-                callback=lambda s, v: self._on_column_selected('post', v)
+            self.post_dropdown = Dropdown(
+                parent_window=self.group_id,
+                label="Post url (required)",
+                placeholder="select post url column",
+                callback=lambda s, v: self._on_column_selected('post', v),
+                id_suffix="_post"
             )
+            self.post_dropdown.setup_ui()
             
-            dpg.add_spacer(height=10)
+            dpg.add_spacer(height=5)  # Reduced spacing
             
             # Date Column (Optional)
-            dpg.add_text("Date", color=[255, 255, 255])
-            dpg.add_combo(
-                tag=self.date_combo_id,
-                items=["select post date column"],
-                default_value="select post date column",
-                width=280,
-                callback=lambda s, v: self._on_column_selected('date', v)
+            self.date_dropdown = Dropdown(
+                parent_window=self.group_id,
+                label="Date",
+                placeholder="select post date column",
+                callback=lambda s, v: self._on_column_selected('date', v),
+                id_suffix="_date"
             )
+            self.date_dropdown.setup_ui()
             
-            dpg.add_spacer(height=10)
+            dpg.add_spacer(height=5)  # Reduced spacing
             
             # Engagement Column (Optional)
-            dpg.add_text("Engagement", color=[255, 255, 255])
-            dpg.add_combo(
-                tag=self.engagement_combo_id,
-                items=["select post url column"],
-                default_value="select post url column",
-                width=280,
-                callback=lambda s, v: self._on_column_selected('engagement', v)
+            self.engagement_dropdown = Dropdown(
+                parent_window=self.group_id,
+                label="Engagement",
+                placeholder="select engagement column",
+                callback=lambda s, v: self._on_column_selected('engagement', v),
+                id_suffix="_engagement"
             )
+            self.engagement_dropdown.setup_ui()
             
-            dpg.add_spacer(height=10)
+            dpg.add_spacer(height=5)  # Reduced spacing
             
             # User Column (Optional)
-            dpg.add_text("User", color=[255, 255, 255])
-            dpg.add_combo(
-                tag=self.user_combo_id,
-                items=["select post date column"],
-                default_value="select post date column",
-                width=280,
-                callback=lambda s, v: self._on_column_selected('user', v)
+            self.user_dropdown = Dropdown(
+                parent_window=self.group_id,
+                label="User",
+                placeholder="select user column",
+                callback=lambda s, v: self._on_column_selected('user', v),
+                id_suffix="_user"
             )
+            self.user_dropdown.setup_ui()
     
     def populate_dropdowns(self, csv_columns: List[str]):
         """Populate dropdowns with CSV column names."""
         self.csv_columns = csv_columns
         
-        # All columns are required now
-        dropdown_items = ["Select CSV column..."] + csv_columns
+        # Add a "none" option and then CSV columns
+        items = ["[none]"] + csv_columns
         
-        # Update all dropdowns
-        for combo_id in [self.post_combo_id, self.date_combo_id, self.engagement_combo_id, self.user_combo_id]:
-            if dpg.does_item_exist(combo_id):
-                dpg.configure_item(combo_id, items=dropdown_items)
+        # Update all dropdown components
+        if self.post_dropdown:
+            self.post_dropdown.populate_items(items)
+        
+        if self.date_dropdown:
+            self.date_dropdown.populate_items(items)
+        
+        if self.engagement_dropdown:
+            self.engagement_dropdown.populate_items(items)
+        
+        if self.user_dropdown:
+            self.user_dropdown.populate_items(items)
         
         # Try to auto-match columns based on expected names
         self._auto_match_columns()
@@ -115,9 +126,9 @@ class ColumnMapper:
     
     def _set_column_selection(self, col_type: str, column_name: str):
         """Set the selection for a specific column type."""
-        combo_id = getattr(self, f"{col_type}_combo_id")
-        if dpg.does_item_exist(combo_id):
-            dpg.set_value(combo_id, column_name)
+        dropdown = getattr(self, f"{col_type}_dropdown", None)
+        if dropdown:
+            dropdown.set_selected_value(column_name)
             self.selections[col_type] = column_name
             
             # Trigger callback to update validation
@@ -169,15 +180,23 @@ class ColumnMapper:
         """Clear all column selections."""
         self.selections = {k: '' for k in self.selections.keys()}
         
-        # Reset dropdowns to default
-        for col_type in ['post', 'date', 'engagement', 'user']:
-            combo_id = getattr(self, f"{col_type}_combo_id")
-            if dpg.does_item_exist(combo_id):
-                dpg.set_value(combo_id, "Select CSV column...")
+        # Reset dropdown values
+        if self.post_dropdown:
+            self.post_dropdown.clear_selection()
+        if self.date_dropdown:
+            self.date_dropdown.clear_selection()
+        if self.engagement_dropdown:
+            self.engagement_dropdown.clear_selection()
+        if self.user_dropdown:
+            self.user_dropdown.clear_selection()
     
     def set_enabled(self, enabled: bool):
-        """Enable or disable the column mapper."""
-        for col_type in ['post', 'date', 'engagement', 'user']:
-            combo_id = getattr(self, f"{col_type}_combo_id")
-            if dpg.does_item_exist(combo_id):
-                dpg.configure_item(combo_id, enabled=enabled)
+        """Enable or disable all dropdowns."""
+        if self.post_dropdown:
+            self.post_dropdown.set_enabled(enabled)
+        if self.date_dropdown:
+            self.date_dropdown.set_enabled(enabled)
+        if self.engagement_dropdown:
+            self.engagement_dropdown.set_enabled(enabled)
+        if self.user_dropdown:
+            self.user_dropdown.set_enabled(enabled)

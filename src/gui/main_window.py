@@ -11,6 +11,7 @@ from utils.csv_handler import CSVHandler
 from utils.state_manager import StateManager, ProcessingState
 from gui.components.platform_tabs import PlatformTabs
 from gui.processing_controller import ProcessingController
+from gui.theme import AppTheme
 
 
 class MainWindow:
@@ -23,7 +24,6 @@ class MainWindow:
         
         # UI element IDs
         self.main_window_id = "main_window"
-        self.status_text_id = "status_text"
         
         # Initialize processing controller
         self.processing_controller = ProcessingController(self.state_manager)
@@ -68,6 +68,9 @@ class MainWindow:
         dpg.create_context()
         dpg.create_viewport(title="MCAT Content Moderation Checker", width=1050, height=850)
         
+        # Apply global theme
+        AppTheme.apply_themes()
+        
         self.setup_ui()
         
         dpg.setup_dearpygui()
@@ -89,9 +92,9 @@ class MainWindow:
     
     def _update_status(self, message: str, color: list = None):
         """Update the status display."""
-        dpg.set_value(self.status_text_id, message)
-        if color:
-            dpg.configure_item(self.status_text_id, color=color)
+        # Status display was removed, this method is kept for compatibility
+        # but does nothing. Status is now shown in individual tabs.
+        pass
     
     
     

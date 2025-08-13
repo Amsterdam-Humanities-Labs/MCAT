@@ -8,6 +8,10 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(
 from .file_picker import FilePicker
 from .column_mapper import ColumnMapper
 from utils.csv_handler import CSVHandler
+from utils.validation_service import (
+    validation_service, ValidationUIController, 
+    ButtonStateCommand, FileStatusCommand, ValidationContext
+)
 
 
 class YouTubeTab:
@@ -20,7 +24,10 @@ class YouTubeTab:
         
         # UI components
         self.column_mapper: Optional[ColumnMapper] = None
-        self.selected_file = ""
+        
+        # Validation controller setup
+        self.validation_controller = ValidationUIController()
+        validation_service.subscribe(self.validation_controller)
         
         # Data
         self.current_df: Optional[pd.DataFrame] = None
@@ -104,12 +111,15 @@ class YouTubeTab:
             if dpg.does_item_exist(self.file_status_group_id):
                 dpg.configure_item(self.file_status_group_id, show=True)
             
-            # Update file status display
-            self._update_file_status()
-            
             # Populate column mapper with CSV columns
             if self.column_mapper:
                 self.column_mapper.populate_dropdowns(self.csv_info['columns'])
+            
+            # Setup validation UI commands
+            self._setup_validation_commands()
+            
+            # Run initial validation
+            self._trigger_validation()
             
         except Exception as e:
             # Hide sections on error
@@ -120,33 +130,29 @@ class YouTubeTab:
             
             self._clear_csv_data()
             
+            # Clear validation state
+            validation_service.clear_validation()
+            
             # Clear column mapper on error
             if self.column_mapper:
                 self.column_mapper.clear_selections()
     
     def on_column_mapped(self, col_type: str, selected_value: str, mapping: dict):
         """Handle column mapping changes."""
-        # Validate mapping and enable/disable check button
-        if self.column_mapper:
-            is_valid, message = self.column_mapper.validate_mapping()
-            
-            if dpg.does_item_exist(self.check_button_id):
-                dpg.configure_item(self.check_button_id, enabled=is_valid)
-            
-            # Update file status with validation info
-            self._update_file_status()
+        # Trigger real-time validation through service
+        self._trigger_validation()
     
     def _start_processing(self):
         """Start the URL processing."""
+        # Check if validation passed using service
+        if not validation_service.is_valid():
+            return  # Button should be disabled, but double-check
+        
         if self.current_df is None or not self.column_mapper or not self.processing_controller:
             return
         
         # Get column mapping
         column_mapping = self.column_mapper.get_column_mapping()
-        is_valid, message = self.column_mapper.validate_mapping()
-        
-        if not is_valid:
-            return
         
         try:
             # Start processing
@@ -171,13 +177,19 @@ class YouTubeTab:
     
     def _set_processing_ui_state(self, processing: bool):
         """Update UI elements based on processing state."""
-        # Enable/disable check button
+        # Enable/disable check button based on processing AND validation state
         if dpg.does_item_exist(self.check_button_id):
-            dpg.configure_item(self.check_button_id, enabled=not processing)
+            if processing:
+                # Always disable during processing
+                dpg.configure_item(self.check_button_id, enabled=False)
+            else:
+                # When not processing, enable only if validation passes
+                enabled = validation_service.is_valid()
+                dpg.configure_item(self.check_button_id, enabled=enabled)
         
         # Enable/disable browse button and column mapper
-        if dpg.does_item_exist("youtube_browse_button"):
-            dpg.configure_item("youtube_browse_button", enabled=not processing)
+        if self.file_picker:
+            self.file_picker.set_enabled(not processing)
         
         if self.column_mapper:
             self.column_mapper.set_enabled(not processing)
@@ -185,11 +197,27 @@ class YouTubeTab:
     def update_processing_results(self, result):
         """Handle processing completion."""
         self._set_processing_ui_state(False)
+        
+        # Log successful processing completion
+        print(f"\n✅ PROCESSING COMPLETED SUCCESSFULLY!")
+        print(f"📊 Results Summary:")
+        print(f"   • Total URLs processed: {result.processed_count}")
+        print(f"   • Live URLs: {result.stats.get('live', 0)}")
+        print(f"   • Removed URLs: {result.stats.get('removed', 0)}")
+        print(f"   • Restricted URLs: {result.stats.get('restricted', 0)}")
+        print(f"   • Errors: {result.stats.get('errors', 0)}")
+        print(f"🎯 Processing completed without errors!\n")
+        
         # Results will be shown in the data space (right panel) - to be implemented later
     
     def handle_processing_error(self, error_message: str):
         """Handle processing error."""
         self._set_processing_ui_state(False)
+        
+        # Log processing error
+        print(f"\n❌ PROCESSING FAILED!")
+        print(f"🚨 Error: {error_message}")
+        print(f"💡 Please check your CSV file and column mappings.\n")
     
     def _export_results(self, file_path: str) -> bool:
         """Export results to file."""
@@ -201,34 +229,33 @@ class YouTubeTab:
                 return False
         return False
     
-    def _update_file_status(self):
-        """Update the file status display."""
-        if not dpg.does_item_exist(self.file_status_id):
-            return
-            
-        # Clear existing content
-        dpg.delete_item(self.file_status_id, children_only=True)
+    def _setup_validation_commands(self):
+        """Setup UI commands for validation responses."""
+        # Clear any existing commands
+        self.validation_controller.commands.clear()
         
-        if self.csv_info:
-            # Get file name from selected file
-            file_name = "Unknown file"
-            if self.selected_file:
-                file_name = os.path.basename(self.selected_file)
-            
-            # Count valid post URLs (placeholder - would need actual URL validation)
-            post_mapping = self.column_mapper.get_column_mapping() if self.column_mapper else {}
-            post_column = post_mapping.get('post', '')
-            valid_urls = 0
-            if post_column and post_column in self.current_df.columns:
-                # Simple check for non-empty URLs (could be improved)
-                valid_urls = self.current_df[post_column].notna().sum()
-            
-            with dpg.group(parent=self.file_status_id):
-                dpg.add_text(f"Csv file name: {file_name}", color=[200, 200, 255])
-                dpg.add_text(f"entries: {self.csv_info['rows']}", color=[200, 200, 255])
-                dpg.add_text(f"Valid post urls: {valid_urls}", color=[200, 200, 255])
-        else:
-            dpg.add_text("No file loaded", color=[180, 180, 180], parent=self.file_status_id)
+        # Add button state command
+        button_command = ButtonStateCommand(self.check_button_id, enable_on_valid=True)
+        self.validation_controller.add_command(button_command)
+        
+        # Add file status command
+        status_command = FileStatusCommand(self.file_status_id)
+        self.validation_controller.add_command(status_command)
+    
+    def _trigger_validation(self):
+        """Trigger validation through the service."""
+        context = ValidationContext()
+        context.csv_df = self.current_df
+        context.csv_filename = ""
+        if self.file_picker and self.file_picker.get_selected_file():
+            context.csv_filename = os.path.basename(self.file_picker.get_selected_file())
+        
+        context.column_mapping = self.column_mapper.get_column_mapping() if self.column_mapper else {}
+        context.csv_columns = self.csv_info.get('columns', [])
+        
+        # Trigger validation through service (will notify all observers)
+        result = validation_service.validate(context)
+        print(f"DEBUG: Validation result: {result.is_valid()}, Errors: {result.errors}")
     
     
     def _clear_csv_data(self):
@@ -239,5 +266,5 @@ class YouTubeTab:
     
     def cleanup(self):
         """Clean up tab resources."""
-        # Components will be cleaned up when DearPyGui context is destroyed
-        pass
+        # Unsubscribe from validation service
+        validation_service.unsubscribe(self.validation_controller)
