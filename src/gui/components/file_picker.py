@@ -8,22 +8,23 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(
 class FilePicker:
     """File selection component for CSV files."""
     
-    def __init__(self, parent_window: str, callback: Optional[Callable] = None):
+    def __init__(self, parent_window: str, callback: Optional[Callable] = None, id_suffix: str = ""):
         self.parent_window = parent_window
         self.callback = callback
         self.selected_file = ""
-        self.file_dialog_id = "file_dialog"
-        self.file_input_id = "file_input"
-        self.browse_button_id = "browse_button"
+        self.id_suffix = id_suffix
+        self.file_dialog_id = f"file_dialog{id_suffix}"
+        self.file_input_id = f"file_input{id_suffix}"
+        self.browse_button_id = f"browse_button{id_suffix}"
         
-    def setup_ui(self):
+    def setup_ui(self, input_width: int = 400, placeholder_text: str = "No file selected"):
         """Create the file picker UI components."""
         with dpg.group(horizontal=True, parent=self.parent_window):
             # File path input (read-only display)
             dpg.add_input_text(
                 tag=self.file_input_id,
-                default_value="No file selected",
-                width=400,
+                default_value=placeholder_text,
+                width=input_width,
                 readonly=True,
                 hint="Selected CSV file path will appear here"
             )

@@ -37,58 +37,52 @@ class ColumnMapper:
     def setup_ui(self):
         """Create the column mapping UI components."""
         with dpg.group(tag=self.group_id, parent=self.parent_window):
-            dpg.add_text("Column Mapping:", color=[200, 200, 255])
-            dpg.add_spacer()
             
             # Post Column (Required)
-            with dpg.group(horizontal=True):
-                dpg.add_text("Post Column:", color=[200, 200, 255])
-                dpg.add_combo(
-                    tag=self.post_combo_id,
-                    items=["Select CSV column..."],
-                    default_value="Select CSV column...",
-                    width=200,
-                    callback=lambda s, v: self._on_column_selected('post', v)
-                )
+            dpg.add_text("Post url (required)", color=[255, 255, 255])
+            dpg.add_combo(
+                tag=self.post_combo_id,
+                items=["select post url column"],
+                default_value="select post url column",
+                width=280,
+                callback=lambda s, v: self._on_column_selected('post', v)
+            )
             
-            dpg.add_spacer(height=2)
+            dpg.add_spacer(height=10)
             
             # Date Column (Optional)
-            with dpg.group(horizontal=True):
-                dpg.add_text("Date Column:", color=[200, 200, 255])
-                dpg.add_combo(
-                    tag=self.date_combo_id,
-                    items=["Select CSV column..."],
-                    default_value="Select CSV column...",
-                    width=200,
-                    callback=lambda s, v: self._on_column_selected('date', v)
-                )
+            dpg.add_text("Date", color=[255, 255, 255])
+            dpg.add_combo(
+                tag=self.date_combo_id,
+                items=["select post date column"],
+                default_value="select post date column",
+                width=280,
+                callback=lambda s, v: self._on_column_selected('date', v)
+            )
             
-            dpg.add_spacer(height=2)
+            dpg.add_spacer(height=10)
             
             # Engagement Column (Optional)
-            with dpg.group(horizontal=True):
-                dpg.add_text("Engagement Column:", color=[200, 200, 255])
-                dpg.add_combo(
-                    tag=self.engagement_combo_id,
-                    items=["Select CSV column..."],
-                    default_value="Select CSV column...",
-                    width=200,
-                    callback=lambda s, v: self._on_column_selected('engagement', v)
-                )
+            dpg.add_text("Engagement", color=[255, 255, 255])
+            dpg.add_combo(
+                tag=self.engagement_combo_id,
+                items=["select post url column"],
+                default_value="select post url column",
+                width=280,
+                callback=lambda s, v: self._on_column_selected('engagement', v)
+            )
             
-            dpg.add_spacer(height=2)
+            dpg.add_spacer(height=10)
             
             # User Column (Optional)
-            with dpg.group(horizontal=True):
-                dpg.add_text("User Column:", color=[200, 200, 255])
-                dpg.add_combo(
-                    tag=self.user_combo_id,
-                    items=["Select CSV column..."],
-                    default_value="Select CSV column...",
-                    width=200,
-                    callback=lambda s, v: self._on_column_selected('user', v)
-                )
+            dpg.add_text("User", color=[255, 255, 255])
+            dpg.add_combo(
+                tag=self.user_combo_id,
+                items=["select post date column"],
+                default_value="select post date column",
+                width=280,
+                callback=lambda s, v: self._on_column_selected('user', v)
+            )
     
     def populate_dropdowns(self, csv_columns: List[str]):
         """Populate dropdowns with CSV column names."""
