@@ -8,7 +8,6 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from config.settings import config
 from utils.csv_handler import CSVHandler
-from utils.state_manager import StateManager, ProcessingState
 from gui.components.platform_tabs import PlatformTabs
 from gui.processing_controller import ProcessingController
 from gui.theme import AppTheme
@@ -18,7 +17,6 @@ class MainWindow:
     """Primary GUI controller using Dear PyGui."""
     
     def __init__(self):
-        self.state_manager = StateManager()
         self.platform_tabs: Optional[PlatformTabs] = None
         self.processing_controller: Optional[ProcessingController] = None
         
@@ -26,14 +24,12 @@ class MainWindow:
         self.main_window_id = "main_window"
         
         # Initialize processing controller
-        self.processing_controller = ProcessingController(self.state_manager)
+        self.processing_controller = ProcessingController()
         self.processing_controller.set_callbacks(
             on_processing_complete=self._on_processing_complete,
-            on_processing_error=self._on_processing_error
+            on_processing_error=self._on_processing_error,
+            on_progress_update=self._on_progress_update
         )
-        
-        # Subscribe to state changes
-        self.state_manager.subscribe(self._on_state_changed)
     
     def setup_ui(self):
         """Create the main window UI."""
@@ -57,7 +53,6 @@ class MainWindow:
             # Platform Tabs
             self.platform_tabs = PlatformTabs(
                 parent_window=self.main_window_id,
-                state_manager=self.state_manager,
                 processing_controller=self.processing_controller
             )
             self.platform_tabs.setup_ui()
@@ -99,17 +94,7 @@ class MainWindow:
     
     
     
-    def _on_state_changed(self, state: ProcessingState, data: dict):
-        """Handle state manager updates."""
-        status_colors = {
-            ProcessingState.IDLE: [100, 255, 100],
-            ProcessingState.LOADING_CSV: [255, 255, 100],
-            ProcessingState.ERROR: [255, 100, 100],
-            ProcessingState.COMPLETED: [100, 255, 100]
-        }
-        
-        color = status_colors.get(state, [255, 255, 255])
-        self._update_status(state.value, color)
+    # Removed _on_state_changed - state updates now handled by ProcessingCoordinator
     
     
     
@@ -131,17 +116,11 @@ class MainWindow:
         
         self._update_status(f"Processing error: {error_message}", [255, 100, 100])
     
+    def _on_progress_update(self, current_stats: dict, total_count: int, processed_count: int):
+        """Handle progress updates from processing controller."""
+        # Delegate to YouTube tab
+        if self.platform_tabs and self.platform_tabs.get_youtube_tab():
+            self.platform_tabs.get_youtube_tab().update_processing_progress(current_stats, total_count, processed_count)
     
-    def _on_state_changed(self, state: ProcessingState, data: dict):
-        """Handle state manager updates."""
-        # Update main status
-        status_colors = {
-            ProcessingState.IDLE: [100, 255, 100],
-            ProcessingState.LOADING_CSV: [255, 255, 100],
-            ProcessingState.ERROR: [255, 100, 100],
-            ProcessingState.COMPLETED: [100, 255, 100]
-        }
-        
-        color = status_colors.get(state, [255, 255, 255])
-        if state not in [ProcessingState.PROCESSING_URLS]:  # Don't override processing status
-            self._update_status(state.value, color)
+    
+    # Removed duplicate _on_state_changed method

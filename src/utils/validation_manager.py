@@ -37,7 +37,8 @@ class ValidationContext:
     def __init__(self):
         self.csv_df: Optional[pd.DataFrame] = None
         self.csv_filename: str = ""
-        self.column_mapping: Dict[str, str] = {}
+        self.post_column: str = ""
+        self.preserve_columns: List[str] = []
         self.csv_columns: List[str] = []
 
 
@@ -96,30 +97,33 @@ class ValidationManager:
         return True
     
     def _validate_column_mapping(self, context: ValidationContext, result: ValidationResult) -> bool:
-        """Validate column mappings."""
-        # Check that post column is mapped (required)
-        post_column = context.column_mapping.get('post', '')
-        if not post_column or post_column == '[none]':
+        """Validate post column selection."""
+        # Check that post column is selected (required)
+        if not context.post_column:
             result.add_error("Post column must be selected")
             return False
         
-        # Check that mapped columns exist in CSV
-        for col_type, mapped_col in context.column_mapping.items():
-            if mapped_col and mapped_col != '[none]' and mapped_col not in context.csv_columns:
-                result.add_error(f"Selected {col_type} column '{mapped_col}' not found in CSV")
+        # Check that post column exists in CSV
+        if context.post_column not in context.csv_columns:
+            result.add_error(f"Selected post column '{context.post_column}' not found in CSV")
+            return False
+        
+        # Check that preserve columns exist in CSV (if any selected)
+        for preserve_col in context.preserve_columns:
+            if preserve_col not in context.csv_columns:
+                result.add_error(f"Selected preserve column '{preserve_col}' not found in CSV")
                 return False
         
         return True
     
     def _validate_data_content(self, context: ValidationContext, result: ValidationResult) -> bool:
         """Validate data content, specifically URL structure."""
-        post_column = context.column_mapping.get('post', '')
-        if not post_column or post_column == '[none]':
+        if not context.post_column:
             return False
         
         # Check URLs in post column
-        if post_column in context.csv_df.columns:
-            post_data = context.csv_df[post_column].dropna()
+        if context.post_column in context.csv_df.columns:
+            post_data = context.csv_df[context.post_column].dropna()
             valid_url_count = 0
             
             for url in post_data:

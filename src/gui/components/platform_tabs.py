@@ -10,9 +10,8 @@ from .youtube_tab import YouTubeTab
 class PlatformTabs:
     """Platform-specific scraper tabs container."""
     
-    def __init__(self, parent_window: str, state_manager, processing_controller):
+    def __init__(self, parent_window: str, processing_controller):
         self.parent_window = parent_window
-        self.state_manager = state_manager
         self.processing_controller = processing_controller
         
         # Tab components
@@ -26,10 +25,9 @@ class PlatformTabs:
         with dpg.tab_bar(tag=self.tab_bar_id, parent=self.parent_window):
             
             # YouTube Tab
-            with dpg.tab(label="YouTube"):
+            with dpg.tab(label="YouTube") as youtube_tab_id:
                 self.youtube_tab = YouTubeTab(
-                    parent_window=self.parent_window,
-                    state_manager=self.state_manager,
+                    parent_window=youtube_tab_id,
                     processing_controller=self.processing_controller
                 )
                 self.youtube_tab.setup_ui()

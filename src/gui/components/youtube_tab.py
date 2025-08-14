@@ -1,12 +1,15 @@
 import dearpygui.dearpygui as dpg
-from typing import Optional, Callable
+from typing import Optional
 import pandas as pd
 import os
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 from .file_picker import FilePicker
-from .column_mapper import ColumnMapper
+from .panel_preserve_columns import PanelPreserveColumns
+from .rectangular_progress import RectangularProgress
+from .processing_controls import ProcessingControls
+from .processing_coordinator import ProcessingCoordinator
 from utils.csv_handler import CSVHandler
 from utils.validation_service import (
     validation_service, ValidationUIController, 
@@ -15,256 +18,278 @@ from utils.validation_service import (
 
 
 class YouTubeTab:
-    """YouTube scraper tab component."""
+    """Simplified YouTube scraper tab with proper separation of concerns."""
     
-    def __init__(self, parent_window: str, state_manager, processing_controller):
+    def __init__(self, parent_window: str, processing_controller, state_manager=None):
         self.parent_window = parent_window
-        self.state_manager = state_manager
-        self.processing_controller = processing_controller
         
-        # UI components
-        self.column_mapper: Optional[ColumnMapper] = None
+        # Core components with single responsibilities
+        self.file_picker: Optional[FilePicker] = None
+        self.column_selector: Optional[PanelPreserveColumns] = None
+        self.progress_display: Optional[RectangularProgress] = None
+        self.processing_controls: Optional[ProcessingControls] = None
+        self.processing_coordinator = ProcessingCoordinator(processing_controller)
         
-        # Validation controller setup
+        # Validation
         self.validation_controller = ValidationUIController()
         validation_service.subscribe(self.validation_controller)
         
-        # Data
+        # Current data
         self.current_df: Optional[pd.DataFrame] = None
         self.csv_info = {}
         
         # UI element IDs
-        self.check_button_id = "youtube_check_button"
-        self.file_status_id = "youtube_file_status"
-        self.tab_container_id = "youtube_tab_container"
-        self.column_mapping_group_id = "youtube_column_mapping_group"
+        self.left_panel_id = "youtube_left_panel"
+        self.right_panel_id = "youtube_right_panel"
+        self.preserve_columns_group_id = "youtube_preserve_columns_group"
         self.file_status_group_id = "youtube_file_status_group"
+        self.file_status_id = "youtube_file_status"
+        
+        # Callbacks will be setup after UI components are created
     
     def setup_ui(self):
-        """Create the YouTube tab UI components."""
-        # Create a left panel that takes 40% of screen width with right border
+        """Create the YouTube tab UI with clean component separation."""
+        with dpg.group(horizontal=True, parent=self.parent_window):
+            self._setup_left_panel()
+            self._setup_right_panel()
+        
+        # Setup callbacks after UI components are created
+        self._setup_callbacks()
+    
+    def _setup_left_panel(self):
+        """Setup the left control panel (40% width)."""
         with dpg.child_window(
-            tag=self.tab_container_id,
-            width=int(1000 * 0.4),  # 40% of screen width
+            tag=self.left_panel_id,
+            width=int(1000 * 0.4),
             height=-1,
             border=True,
             horizontal_scrollbar=False
         ):
-            # Select csv file section
-            dpg.add_text("Select csv file", color=[255, 255, 255])
-            dpg.add_spacer(height=10)
-            
-            # Initialize file picker component
-            self.file_picker = FilePicker(
-                parent_window=self.tab_container_id,
-                callback=self.on_file_selected,
-                id_suffix="_youtube"
-            )
-            self.file_picker.setup_ui(input_width=250, placeholder_text="Select csv file")
-            
+            # File selection
+            self._setup_file_section()
             dpg.add_spacer(height=20)
             
-            # Column Mapping Section (hidden initially)
-            with dpg.group(tag=self.column_mapping_group_id, show=False):
-                dpg.add_text("Csv column mappings", color=[255, 255, 255])
-                dpg.add_spacer(height=10)
-                
-                self.column_mapper = ColumnMapper(
-                    parent_window=self.column_mapping_group_id,
-                    platform="youtube",
-                    callback=self.on_column_mapped
-                )
-                self.column_mapper.setup_ui()
-                
-                dpg.add_spacer(height=20)
+            # Column selection (hidden initially)
+            self._setup_column_section()
+            dpg.add_spacer(height=20)
             
-            # File Status Section (hidden initially)
-            with dpg.group(tag=self.file_status_group_id, show=False):
-                dpg.add_text("File status", color=[255, 255, 255])
-                dpg.add_spacer(height=10)
-                
-                with dpg.group(tag=self.file_status_id):
-                    dpg.add_text("No file loaded", color=[180, 180, 180])
-                
-                dpg.add_spacer(height=20)
-                
-                # Check moderation status button
-                dpg.add_button(
-                    tag=self.check_button_id,
-                    label="Check moderation status",
-                    callback=self._start_processing,
-                    enabled=False,
-                    width=-1
-                )
+            # File status and validation (hidden initially)
+            self._setup_status_section()
+            dpg.add_spacer(height=20)
+            
+            # Processing controls
+            self._setup_processing_section()
     
+    def _setup_right_panel(self):
+        """Setup the right data panel (60% width)."""
+        with dpg.child_window(
+            tag=self.right_panel_id,
+            width=-1,
+            height=-1,
+            border=False,
+            horizontal_scrollbar=False
+        ):
+            dpg.add_text("YouTube Data", color=[255, 255, 255])
+            dpg.add_spacer(height=20)
+            
+            # Progress display
+            self.progress_display = RectangularProgress(
+                parent_window=self.right_panel_id,
+                width=400,
+                height=50
+            )
+            self.progress_display.setup_ui(label="Processing Progress")
+            
+            dpg.add_spacer(height=20)
+            dpg.add_text("Results will appear here after processing", color=[120, 120, 120])
     
-    def on_file_selected(self, file_path: str):
-        """Handle file selection from file picker."""
+    def _setup_file_section(self):
+        """Setup file selection section."""
+        dpg.add_text("Select CSV file", color=[255, 255, 255])
+        dpg.add_spacer(height=10)
+        
+        self.file_picker = FilePicker(
+            parent_window=self.left_panel_id,
+            callback=self._on_file_selected,
+            id_suffix="_youtube"
+        )
+        self.file_picker.setup_ui(input_width=250, placeholder_text="Select csv file")
+    
+    def _setup_column_section(self):
+        """Setup column selection section."""
+        with dpg.group(tag=self.preserve_columns_group_id, show=False):
+            self.column_selector = PanelPreserveColumns(
+                parent_window=self.preserve_columns_group_id,
+                callback=self._on_columns_changed
+            )
+            self.column_selector.setup_ui()
+    
+    def _setup_status_section(self):
+        """Setup file status and validation section."""
+        with dpg.group(tag=self.file_status_group_id, show=False):
+            dpg.add_text("File status", color=[255, 255, 255])
+            dpg.add_spacer(height=10)
+            
+            with dpg.group(tag=self.file_status_id):
+                dpg.add_text("No file loaded", color=[180, 180, 180])
+    
+    def _setup_processing_section(self):
+        """Setup processing controls section."""
+        self.processing_controls = ProcessingControls(self.left_panel_id)
+        self.processing_controls.setup_ui("Check moderation status")
+    
+    def _setup_callbacks(self):
+        """Setup all component callbacks."""
+        # Processing coordinator callbacks
+        self.processing_coordinator.set_callbacks(
+            on_progress_update=self._on_progress_update,
+            on_processing_complete=self._on_processing_complete,
+            on_processing_error=self._on_processing_error,
+            on_ui_state_change=self._on_processing_state_changed
+        )
+        
+        # Processing controls callbacks
+        if self.processing_controls:
+            self.processing_controls.set_callbacks(
+                on_start=self._start_processing,
+                on_pause=self._pause_processing,
+                on_resume=self._resume_processing,
+                on_cancel=self._cancel_processing
+            )
+    
+    def _on_file_selected(self, file_path: str):
+        """Handle file selection."""
         try:
-            # Load CSV using our CSV handler
             self.current_df = CSVHandler.load_csv(file_path)
             self.csv_info = CSVHandler.get_csv_info(self.current_df)
             
-            # Show column mapping and file status sections
-            if dpg.does_item_exist(self.column_mapping_group_id):
-                dpg.configure_item(self.column_mapping_group_id, show=True)
+            # Show dependent sections
+            if dpg.does_item_exist(self.preserve_columns_group_id):
+                dpg.configure_item(self.preserve_columns_group_id, show=True)
             if dpg.does_item_exist(self.file_status_group_id):
                 dpg.configure_item(self.file_status_group_id, show=True)
             
-            # Populate column mapper with CSV columns
-            if self.column_mapper:
-                self.column_mapper.populate_dropdowns(self.csv_info['columns'])
+            # Populate columns
+            if self.column_selector:
+                self.column_selector.populate_columns(self.csv_info['columns'])
             
-            # Setup validation UI commands
-            self._setup_validation_commands()
-            
-            # Run initial validation
+            # Setup validation
+            self._setup_validation()
             self._trigger_validation()
             
         except Exception as e:
-            # Hide sections on error
-            if dpg.does_item_exist(self.column_mapping_group_id):
-                dpg.configure_item(self.column_mapping_group_id, show=False)
-            if dpg.does_item_exist(self.file_status_group_id):
-                dpg.configure_item(self.file_status_group_id, show=False)
-            
-            self._clear_csv_data()
-            
-            # Clear validation state
-            validation_service.clear_validation()
-            
-            # Clear column mapper on error
-            if self.column_mapper:
-                self.column_mapper.clear_selections()
+            self._handle_file_error()
     
-    def on_column_mapped(self, col_type: str, selected_value: str, mapping: dict):
-        """Handle column mapping changes."""
-        # Trigger real-time validation through service
+    def _on_columns_changed(self, change_type: str, data: dict):
+        """Handle column selection changes."""
         self._trigger_validation()
     
     def _start_processing(self):
-        """Start the URL processing."""
-        # Check if validation passed using service
-        if not validation_service.is_valid():
-            return  # Button should be disabled, but double-check
-        
-        if self.current_df is None or not self.column_mapper or not self.processing_controller:
+        """Start processing workflow."""
+        if not validation_service.is_valid() or not self.column_selector:
             return
         
-        # Get column mapping
-        column_mapping = self.column_mapper.get_column_mapping()
+        columns_data = self.column_selector.get_all_selected_columns()
+        column_mapping = {'post': columns_data['post_column']}
         
-        try:
-            # Start processing
-            self.processing_controller.start_processing(
-                df=self.current_df,
-                column_mapping=column_mapping,
-                platform="youtube"
-            )
-            
-            # Update UI state
-            self._set_processing_ui_state(True)
-            
-        except Exception as e:
-            pass  # Error handling will be done by processing controller
+        self.processing_coordinator.start_processing(
+            self.current_df, 
+            column_mapping, 
+            "youtube"
+        )
+    
+    def _pause_processing(self):
+        """Pause processing."""
+        self.processing_coordinator.pause_processing()
+    
+    def _resume_processing(self):
+        """Resume processing."""
+        self.processing_coordinator.resume_processing()
     
     def _cancel_processing(self):
-        """Cancel the current processing."""
-        if self.processing_controller:
-            self.processing_controller.cancel_processing()
-        
-        self._set_processing_ui_state(False)
+        """Cancel processing and reset."""
+        self.processing_coordinator.cancel_processing()
+        if self.progress_display:
+            self.progress_display.reset()
     
-    def _set_processing_ui_state(self, processing: bool):
-        """Update UI elements based on processing state."""
-        # Enable/disable check button based on processing AND validation state
-        if dpg.does_item_exist(self.check_button_id):
-            if processing:
-                # Always disable during processing
-                dpg.configure_item(self.check_button_id, enabled=False)
-            else:
-                # When not processing, enable only if validation passes
-                enabled = validation_service.is_valid()
-                dpg.configure_item(self.check_button_id, enabled=enabled)
-        
-        # Enable/disable browse button and column mapper
-        if self.file_picker:
-            self.file_picker.set_enabled(not processing)
-        
-        if self.column_mapper:
-            self.column_mapper.set_enabled(not processing)
+    def _on_progress_update(self, current_stats: dict, total_count: int, processed_count: int):
+        """Handle progress updates."""
+        if self.progress_display:
+            pending_count = max(0, total_count - processed_count)
+            progress_counts = {
+                'pending': pending_count,
+                'live': current_stats.get('live', 0),
+                'removed': current_stats.get('removed', 0),
+                'restricted': current_stats.get('restricted', 0),
+                'error': current_stats.get('errors', 0),
+                'skipped': current_stats.get('skipped', 0)
+            }
+            self.progress_display.update_progress(progress_counts, total_count, processed_count)
     
-    def update_processing_results(self, result):
+    def _on_processing_complete(self, result):
         """Handle processing completion."""
-        self._set_processing_ui_state(False)
-        
-        # Log successful processing completion
-        print(f"\n✅ PROCESSING COMPLETED SUCCESSFULLY!")
-        print(f"📊 Results Summary:")
-        print(f"   • Total URLs processed: {result.processed_count}")
-        print(f"   • Live URLs: {result.stats.get('live', 0)}")
-        print(f"   • Removed URLs: {result.stats.get('removed', 0)}")
-        print(f"   • Restricted URLs: {result.stats.get('restricted', 0)}")
-        print(f"   • Errors: {result.stats.get('errors', 0)}")
-        print(f"🎯 Processing completed without errors!\n")
-        
-        # Results will be shown in the data space (right panel) - to be implemented later
+        print(f"✅ Processing completed: {result.processed_count} URLs processed")
     
-    def handle_processing_error(self, error_message: str):
+    def _on_processing_error(self, error_message: str):
         """Handle processing error."""
-        self._set_processing_ui_state(False)
+        print(f"❌ Processing error: {error_message}")
+    
+    def _on_processing_state_changed(self, is_processing: bool, is_paused: bool):
+        """Handle processing state changes."""
+        if self.processing_controls:
+            self.processing_controls.set_processing_state(is_processing, is_paused)
         
-        # Log processing error
-        print(f"\n❌ PROCESSING FAILED!")
-        print(f"🚨 Error: {error_message}")
-        print(f"💡 Please check your CSV file and column mappings.\n")
+        # Enable/disable other components
+        if self.file_picker:
+            self.file_picker.set_enabled(not is_processing)
+        if self.column_selector:
+            self.column_selector.set_enabled(not is_processing)
     
-    def _export_results(self, file_path: str) -> bool:
-        """Export results to file."""
-        if self.processing_controller:
-            try:
-                return self.processing_controller.export_results(file_path)
-            except Exception as e:
-                print(f"Export error: {e}")
-                return False
-        return False
-    
-    def _setup_validation_commands(self):
-        """Setup UI commands for validation responses."""
-        # Clear any existing commands
+    def _setup_validation(self):
+        """Setup validation UI commands."""
         self.validation_controller.commands.clear()
         
-        # Add button state command
-        button_command = ButtonStateCommand(self.check_button_id, enable_on_valid=True)
-        self.validation_controller.add_command(button_command)
+        if self.processing_controls:
+            button_command = ButtonStateCommand(
+                self.processing_controls.start_button_id, 
+                enable_on_valid=True
+            )
+            self.validation_controller.add_command(button_command)
         
-        # Add file status command
         status_command = FileStatusCommand(self.file_status_id)
         self.validation_controller.add_command(status_command)
     
     def _trigger_validation(self):
-        """Trigger validation through the service."""
+        """Trigger validation check."""
         context = ValidationContext()
         context.csv_df = self.current_df
         context.csv_filename = ""
+        
         if self.file_picker and self.file_picker.get_selected_file():
             context.csv_filename = os.path.basename(self.file_picker.get_selected_file())
         
-        context.column_mapping = self.column_mapper.get_column_mapping() if self.column_mapper else {}
-        context.csv_columns = self.csv_info.get('columns', [])
+        if self.column_selector:
+            columns_data = self.column_selector.get_all_selected_columns()
+            context.post_column = columns_data['post_column']
+            context.preserve_columns = columns_data['preserve_columns']
         
-        # Trigger validation through service (will notify all observers)
-        result = validation_service.validate(context)
-        print(f"DEBUG: Validation result: {result.is_valid()}, Errors: {result.errors}")
+        context.csv_columns = self.csv_info.get('columns', [])
+        validation_service.validate(context)
     
-    
-    def _clear_csv_data(self):
-        """Clear CSV data and reset displays."""
+    def _handle_file_error(self):
+        """Handle file loading errors."""
+        if dpg.does_item_exist(self.preserve_columns_group_id):
+            dpg.configure_item(self.preserve_columns_group_id, show=False)
+        if dpg.does_item_exist(self.file_status_group_id):
+            dpg.configure_item(self.file_status_group_id, show=False)
+        
         self.current_df = None
         self.csv_info = {}
-        self._update_file_status()
+        validation_service.clear_validation()
+        
+        if self.column_selector:
+            self.column_selector.clear_selections()
     
     def cleanup(self):
-        """Clean up tab resources."""
-        # Unsubscribe from validation service
+        """Clean up resources."""
         validation_service.unsubscribe(self.validation_controller)

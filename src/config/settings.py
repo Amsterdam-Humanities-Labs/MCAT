@@ -24,8 +24,7 @@ class AppConfig:
         """Load scraper settings with defaults."""
         return {
             'timeout': 30,
-            'max_workers': 10,
-            'retry_count': 3,
+            'max_workers': 3,
             'headless': True
         }
     
