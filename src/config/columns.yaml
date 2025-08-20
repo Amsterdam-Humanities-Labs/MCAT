@@ -1,6 +1,0 @@
-youtube:
-  columns:
-    post: "VideoUrl"
-    date: "publishedAtSQL"
-    engagement: "viewCount"
-    user: "channelTitle"

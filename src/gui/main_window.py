@@ -6,7 +6,7 @@ import sys
 import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from config.settings import config
+# config import removed - not used in this file
 from utils.csv_handler import CSVHandler
 from gui.components.containers.tab_container_platforms import PlatformTabs
 from gui.processing_controller import ProcessingController
