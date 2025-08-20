@@ -115,9 +115,12 @@ class BatchProcessor:
             result.error_message = str(e)
         
         finally:
-            # Cleanup
+            # Cleanup scraper and WebDriver pool
             if 'scraper' in locals():
                 scraper.cleanup()
+            
+            # Always cleanup WebDriver pool to close Chrome browsers
+            self.cleanup()
         
         return result
     

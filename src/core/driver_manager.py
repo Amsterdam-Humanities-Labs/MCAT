@@ -25,6 +25,13 @@ class WebDriverPool:
         # Initialize the pool
         self._initialize_pool()
     
+    def __del__(self):
+        """Destructor to ensure cleanup on object deletion."""
+        try:
+            self.cleanup()
+        except:
+            pass
+    
     def _setup_chromedriver(self):
         """Install and setup ChromeDriver automatically."""
         try:
@@ -107,12 +114,20 @@ class WebDriverPool:
     def cleanup(self):
         """Clean up all drivers in the pool."""
         print("Cleaning up WebDriver pool...")
+        
+        # Suppress urllib3 warnings during cleanup
+        import urllib3
+        urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+        
         with self.lock:
-            # Close all drivers
+            # Close all drivers gracefully
             for driver in self.all_drivers:
                 try:
+                    # Set a shorter timeout for cleanup
+                    driver.implicitly_wait(1)  
                     driver.quit()
-                except:
+                except Exception:
+                    # Ignore all cleanup errors (connection refused, etc.)
                     pass
             
             self.all_drivers.clear()
@@ -190,9 +205,8 @@ class WebDriverManager:
     
     @staticmethod
     def cleanup_all_processes():
-        """Kill any leftover Chrome/ChromeDriver processes."""
-        try:
-            os.system('killall -9 chrome 2>/dev/null')
-            os.system('killall -9 chromedriver 2>/dev/null')
-        except:
-            pass
+        """Placeholder for process cleanup - relying on driver.quit() for now."""
+        # Removed aggressive process killing for cross-platform compatibility
+        # Selenium's driver.quit() should handle cleanup properly
+        print("🧹 Relying on Selenium driver.quit() for cleanup...")
+        pass

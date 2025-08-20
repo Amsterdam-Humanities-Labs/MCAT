@@ -2,10 +2,10 @@ import dearpygui.dearpygui as dpg
 from typing import Dict, List, Optional, Callable
 import sys
 import os
-sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))))
 
-from config.settings import config
-from .dropdown import Dropdown
+from src.config.settings import config
+from ..widgets.dropdown_widget import Dropdown
 
 
 class ColumnMapper:

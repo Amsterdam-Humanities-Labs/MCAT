@@ -8,7 +8,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from config.settings import config
 from utils.csv_handler import CSVHandler
-from gui.components.platform_tabs import PlatformTabs
+from gui.components.containers.tab_container_platforms import PlatformTabs
 from gui.processing_controller import ProcessingController
 from gui.theme import AppTheme
 
@@ -116,11 +116,11 @@ class MainWindow:
         
         self._update_status(f"Processing error: {error_message}", [255, 100, 100])
     
-    def _on_progress_update(self, current_stats: dict, total_count: int, processed_count: int):
+    def _on_progress_update(self, current_stats: dict, total_count: int, processed_count: int, current_action: str = ""):
         """Handle progress updates from processing controller."""
         # Delegate to YouTube tab
         if self.platform_tabs and self.platform_tabs.get_youtube_tab():
-            self.platform_tabs.get_youtube_tab().update_processing_progress(current_stats, total_count, processed_count)
+            self.platform_tabs.get_youtube_tab()._on_progress_update(current_stats, total_count, processed_count, current_action)
     
     
     # Removed duplicate _on_state_changed method

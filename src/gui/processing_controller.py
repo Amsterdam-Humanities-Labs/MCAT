@@ -127,7 +127,8 @@ class ProcessingController:
                     self.on_progress_update(
                         latest_update['stats'],
                         latest_update['total'], 
-                        latest_update['current']
+                        latest_update['current'],
+                        latest_update.get('current_action', '')
                     )
                 
                 # Check every 100ms for smooth updates

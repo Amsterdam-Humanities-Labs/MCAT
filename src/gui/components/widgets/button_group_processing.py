@@ -132,6 +132,6 @@ class ProcessingControls:
         if dpg.does_item_exist(self.container_id):
             # Enable/disable all buttons except those with specific state logic
             if dpg.does_item_exist(self.start_button_id):
-                dpg.configure_item(self.start_button_id, enabled=enabled and self.state == ProcessingState.IDLE)
+                dpg.configure_item(self.start_button_id, enabled=enabled and self.state == ControlState.IDLE)
             if dpg.does_item_exist(self.pause_button_id):
                 dpg.configure_item(self.pause_button_id, enabled=enabled)

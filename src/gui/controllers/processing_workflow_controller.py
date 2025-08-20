@@ -80,10 +80,10 @@ class ProcessingCoordinator:
             self.processing_controller.cancel_processing()
             self._reset_state()
     
-    def _handle_progress(self, current_stats: dict, total_count: int, processed_count: int):
+    def _handle_progress(self, current_stats: dict, total_count: int, processed_count: int, current_action: str = ""):
         """Handle progress updates from processing controller."""
         if self.on_progress_update:
-            self.on_progress_update(current_stats, total_count, processed_count)
+            self.on_progress_update(current_stats, total_count, processed_count, current_action)
     
     def _handle_completion(self, result):
         """Handle processing completion."""

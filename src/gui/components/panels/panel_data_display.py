@@ -2,9 +2,9 @@ import dearpygui.dearpygui as dpg
 from typing import Optional, Dict
 import os
 import sys
-sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))))
 
-from .rectangular_progress import RectangularProgress
+from ..widgets.progress_bar_segmented import RectangularProgress
 
 
 class DataPanel:

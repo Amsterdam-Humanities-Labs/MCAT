@@ -2,7 +2,7 @@ import dearpygui.dearpygui as dpg
 from typing import Dict, Optional, Tuple
 import os
 import sys
-sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))))
 
 
 class RectangularProgress:
@@ -37,11 +37,14 @@ class RectangularProgress:
         self.container_id = f"progress_container_{id(self)}"
         self.drawlist_id = f"progress_drawlist_{id(self)}"
         self.counter_text_id = f"progress_counter_{id(self)}"
+        self.url_text_id = f"progress_url_{id(self)}"
+        self.info_row_id = f"progress_info_row_{id(self)}"
         self.legend_group_id = f"progress_legend_{id(self)}"
         
         # Progress tracking
         self.total_count = 0
         self.processed_count = 0
+        self.latest_url = ""
     
     def setup_ui(self, label: str = "Processing Progress") -> None:
         """Create the progress bar UI components."""
@@ -60,9 +63,17 @@ class RectangularProgress:
                 # Draw initial empty state (all gray)
                 self._draw_segments()
             
-            # Progress counter below the bar
+            # URL and counter info row below the bar
             dpg.add_spacer(height=5)
-            dpg.add_text("0 / 0", tag=self.counter_text_id, color=[180, 180, 180])
+            with dpg.group(tag=self.info_row_id, horizontal=True):
+                # Latest URL on the left (initially hidden)
+                dpg.add_text("", tag=self.url_text_id, color=[180, 180, 180], show=False)
+                
+                # Spacer to push counter to the right
+                dpg.add_spacer(width=-1)
+                
+                # Progress counter on the right
+                dpg.add_text("0 / 0", tag=self.counter_text_id, color=[180, 180, 180])
             
             # Legend below the counter
             dpg.add_spacer(height=10)
@@ -77,7 +88,7 @@ class RectangularProgress:
         # Update progress tracking
         if total > 0:
             self.total_count = total
-        if processed > 0:
+        if processed >= 0:
             self.processed_count = processed
         
         # Redraw the progress bar
@@ -86,11 +97,34 @@ class RectangularProgress:
         # Update counter text
         self._update_counter_text()
     
+    def set_processed_count(self, count: int) -> None:
+        """Set the processed count and update display."""
+        self.processed_count = count
+        self._update_counter_text()
+    
+    def update_latest_url(self, url: str) -> None:
+        """Update the latest processed URL display."""
+        if url and url != self.latest_url:
+            self.latest_url = url
+            # Truncate long URLs for display
+            display_url = url if len(url) <= 50 else f"{url[:47]}..."
+            
+            if dpg.does_item_exist(self.url_text_id):
+                dpg.set_value(self.url_text_id, display_url)
+                dpg.configure_item(self.url_text_id, show=True)
+    
+    def clear_latest_url(self) -> None:
+        """Hide the latest URL display when processing completes."""
+        if dpg.does_item_exist(self.url_text_id):
+            dpg.configure_item(self.url_text_id, show=False)
+        self.latest_url = ""
+    
     def reset(self) -> None:
         """Reset the progress bar to initial empty state."""
         self.status_counts = {status: 0 for status in self.status_counts.keys()}
         self.total_count = 0
         self.processed_count = 0
+        self.clear_latest_url()
         self._draw_segments()
         self._update_counter_text()
     
@@ -194,14 +228,19 @@ class RectangularProgress:
                 if i > 0:
                     dpg.add_spacer(width=15)  # Space between legend items
                 
-                # Create a small colored square
-                with dpg.drawlist(width=12, height=12):
-                    dpg.draw_rectangle(
-                        pmin=(0, 0),
-                        pmax=(12, 12),
-                        color=color,
-                        fill=color
-                    )
-                
-                # Add label next to the square
-                dpg.add_text(label, color=[200, 200, 200])
+                # Group each legend item (square + label) together
+                with dpg.group(horizontal=True):
+                    # Create a small colored square
+                    with dpg.drawlist(width=12, height=12):
+                        dpg.draw_rectangle(
+                            pmin=(0, 0),
+                            pmax=(12, 12),
+                            color=color,
+                            fill=color
+                        )
+                    
+                    # Add small spacer between square and label
+                    dpg.add_spacer(width=4)
+                    
+                    # Add label next to the square
+                    dpg.add_text(label, color=[200, 200, 200])
