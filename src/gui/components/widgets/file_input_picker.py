@@ -17,24 +17,29 @@ class FilePicker:
         self.file_input_id = f"file_input{id_suffix}"
         self.browse_button_id = f"browse_button{id_suffix}"
         
-    def setup_ui(self, input_width: int = 400, placeholder_text: str = "No file selected"):
+    def setup_ui(self, input_width: int = 400, placeholder_text: str = "No file selected", label: str = None):
         """Create the file picker UI components."""
-        with dpg.group(horizontal=True, parent=self.parent_window):
-            # File path input (read-only display)
-            dpg.add_input_text(
-                tag=self.file_input_id,
-                default_value=placeholder_text,
-                width=input_width,
-                readonly=True,
-                hint="Selected CSV file path will appear here"
-            )
+        with dpg.group(parent=self.parent_window):
+            # Optional label above file picker
+            if label:
+                dpg.add_text(label, color=[255, 255, 255])
             
-            # Browse button
-            dpg.add_button(
-                tag=self.browse_button_id,
-                label="Browse",
-                callback=self._show_file_dialog
-            )
+            with dpg.group(horizontal=True):
+                # File path input (read-only display)
+                dpg.add_input_text(
+                    tag=self.file_input_id,
+                    default_value=placeholder_text,
+                    width=input_width,
+                    readonly=True,
+                    hint="Selected CSV file path will appear here"
+                )
+                
+                # Browse button
+                dpg.add_button(
+                    tag=self.browse_button_id,
+                    label="Browse",
+                    callback=self._show_file_dialog
+                )
         
         # File dialog (hidden by default)
         with dpg.file_dialog(

@@ -15,6 +15,7 @@ from src.utils.validation_service import (
     validation_service, ValidationUIController, 
     ButtonStateCommand, FileStatusCommand, ValidationContext
 )
+from src.config.settings import UI_SPACING
 
 
 class YouTubeTab:
@@ -23,7 +24,7 @@ class YouTubeTab:
     def __init__(self, parent_window: str, processing_controller, state_manager=None):
         self.parent_window = parent_window
         
-        # Core components with single responsibilities
+        # Core components 
         self.file_picker: Optional[FilePicker] = None
         self.column_selector: Optional[PanelPreserveColumns] = None
         self.progress_display: Optional[RectangularProgress] = None
@@ -75,15 +76,15 @@ class YouTubeTab:
         ):
             # File selection
             self._setup_file_section()
-            dpg.add_spacer(height=20)
+            dpg.add_spacer(height=UI_SPACING)
             
             # Column selection (hidden initially)
             self._setup_column_section()
-            dpg.add_spacer(height=20)
+            dpg.add_spacer(height=UI_SPACING)
             
             # File status and validation (hidden initially)
             self._setup_status_section()
-            dpg.add_spacer(height=20)
+            dpg.add_spacer(height=UI_SPACING)
             
             # Processing controls
             self._setup_processing_section()
@@ -98,7 +99,7 @@ class YouTubeTab:
             horizontal_scrollbar=False
         ):
             dpg.add_text("YouTube Data", color=[255, 255, 255])
-            dpg.add_spacer(height=20)
+            dpg.add_spacer(height=UI_SPACING)
             
             # Progress display
             self.progress_display = RectangularProgress(
@@ -108,22 +109,23 @@ class YouTubeTab:
             )
             self.progress_display.setup_ui(label="Processing Progress")
             
-            dpg.add_spacer(height=20)
+            dpg.add_spacer(height=UI_SPACING)
             
             # Results section
             self._setup_results_section()
     
     def _setup_file_section(self):
         """Setup file selection section."""
-        dpg.add_text("Select CSV file", color=[255, 255, 255])
-        dpg.add_spacer(height=10)
-        
         self.file_picker = FilePicker(
             parent_window=self.left_panel_id,
             callback=self._on_file_selected,
             id_suffix="_youtube"
         )
-        self.file_picker.setup_ui(input_width=250, placeholder_text="Select csv file")
+        self.file_picker.setup_ui(
+            input_width=250, 
+            placeholder_text="Select csv file",
+            label="Select CSV file"
+        )
     
     def _setup_column_section(self):
         """Setup column selection section."""
@@ -138,7 +140,7 @@ class YouTubeTab:
         """Setup file status and validation section."""
         with dpg.group(tag=self.file_status_group_id, show=False):
             dpg.add_text("File status", color=[255, 255, 255])
-            dpg.add_spacer(height=10)
+            dpg.add_spacer(height=UI_SPACING)
             
             with dpg.group(tag=self.file_status_id):
                 dpg.add_text("No file loaded", color=[180, 180, 180])
@@ -152,7 +154,7 @@ class YouTubeTab:
         """Setup results table and export section."""
         with dpg.group(tag=self.results_section_id, show=False):
             dpg.add_text("Results", color=[255, 255, 255])
-            dpg.add_spacer(height=10)
+            dpg.add_spacer(height=UI_SPACING)
             
             # Results table with horizontal scrolling
             with dpg.table(
@@ -170,11 +172,7 @@ class YouTubeTab:
             ):
                 pass  # Columns will be added dynamically
             
-            dpg.add_spacer(height=10)
-            
-            # Export section
-            dpg.add_text("Export Results", color=[255, 255, 255])
-            dpg.add_spacer(height=5)
+            dpg.add_spacer(height=UI_SPACING)
             
             # Export file picker
             self.export_file_picker = FilePicker(
@@ -184,7 +182,8 @@ class YouTubeTab:
             )
             self.export_file_picker.setup_ui(
                 input_width=300, 
-                placeholder_text="Choose export location..."
+                placeholder_text="Choose export location...",
+                label="Export Results"
             )
     
     def _setup_callbacks(self):
@@ -237,6 +236,9 @@ class YouTubeTab:
         """Start processing workflow."""
         if not validation_service.is_valid() or not self.column_selector:
             return
+        
+        # Clear existing results before starting new processing
+        self._clear_results()
         
         columns_data = self.column_selector.get_all_selected_columns()
         column_mapping = {'post': columns_data['post_column']}
@@ -475,6 +477,28 @@ class YouTubeTab:
             
         except Exception as e:
             print(f"❌ Export error: {e}")
+    
+    def _clear_results(self):
+        """Clear results table and data before starting new processing."""
+        # Clear results data
+        self.results_df = None
+        
+        # Hide the results section
+        if dpg.does_item_exist(self.results_section_id):
+            dpg.configure_item(self.results_section_id, show=False)
+        
+        # Clear existing table content
+        if dpg.does_item_exist(self.results_table_id):
+            # Delete existing columns and rows
+            children = dpg.get_item_children(self.results_table_id)
+            if children:
+                for child_list in children.values():
+                    for child in child_list:
+                        dpg.delete_item(child)
+        
+        # Reset progress display
+        if self.progress_display:
+            self.progress_display.reset()
     
     def cleanup(self):
         """Clean up resources."""

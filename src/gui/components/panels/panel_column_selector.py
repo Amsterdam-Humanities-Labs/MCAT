@@ -27,13 +27,10 @@ class PanelPreserveColumns:
     
     def setup_ui(self):
         """Create the preserve columns UI."""
-        with dpg.group(tag=self.container_id, parent=self.parent_window):
-            
-            # Post URL column dropdown (required)
-            dpg.add_text("Post url (required)", color=[255, 255, 255])
+        with dpg.group(tag=self.container_id, parent=self.parent_window): 
             self.post_dropdown = Dropdown(
                 parent_window=self.container_id,
-                label="",  # No label since we have text above
+                label="Post url (required)",
                 placeholder="select post url column",
                 callback=self._on_post_column_selected,
                 id_suffix="_post_url"

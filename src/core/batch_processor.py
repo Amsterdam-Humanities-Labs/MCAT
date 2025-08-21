@@ -101,9 +101,9 @@ class BatchProcessor:
             status_counts = df['status'].value_counts().to_dict()
             result.stats = {
                 'live': status_counts.get('Live', 0),
-                'removed': status_counts.get('Removed', 0) + status_counts.get('Age-restricted', 0) + 
-                          status_counts.get('Geo-blocked', 0) + status_counts.get('Private', 0),
-                'restricted': status_counts.get('Restricted', 0),
+                'removed': status_counts.get('Removed', 0),
+                'restricted': status_counts.get('Restricted', 0) + status_counts.get('Age-restricted', 0) + 
+                              status_counts.get('Geo-blocked', 0) + status_counts.get('Private', 0),
                 'errors': status_counts.get('Error', 0)
             }
             
@@ -162,9 +162,9 @@ class BatchProcessor:
                     status = result.status.lower()
                     if status == 'live':
                         stats['live'] += 1
-                    elif status in ['removed', 'age-restricted', 'geo-blocked', 'private']:
+                    elif status == 'removed':
                         stats['removed'] += 1
-                    elif status == 'restricted':
+                    elif status in ['restricted', 'age-restricted', 'geo-blocked', 'private']:
                         stats['restricted'] += 1
                     else:
                         stats['errors'] += 1
