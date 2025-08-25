@@ -20,7 +20,7 @@ jobs:
     - name: Install system dependencies
       run: |
         dnf update -y
-        dnf install -y python3 python3-pip python3-devel gcc g++ make
+        dnf install -y python3 python3-pip python3-devel gcc g++ make patchelf
     
     - name: Install Python dependencies
       run: |

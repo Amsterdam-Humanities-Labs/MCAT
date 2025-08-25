@@ -2,12 +2,26 @@
 ```pip install -r requirements.txt```
 
 ### dev
-```python -m src.main```
+```python src/main.py```
 
-### compile
-```nuitka --standalone --onefile --python-flag=no_site --enable-plugin=no-qt --follow-imports src/main.py```
+## Building
 
+### Self-building on Linux/macOS
+
+**Prerequisites:**
+- Python 3.11+
+- On Linux: install `patchelf`
+  - Ubuntu/Debian: `apt install patchelf`
+  - Fedora/RHEL: `dnf install patchelf`
+
+**Build command:**
+```bash
+pip install nuitka
+nuitka --standalone --onefile --enable-plugin=no-qt --output-dir=dist src/main.py
 ```
-nuitka --standalone --onefile --enable-plugin=no-qt --follow-imports --include-data-dir=assets=assets --output-dir=dist --windows-disable-console src/main.py
-```
+
+The built executable will be in the `dist/` folder.
+
+### Automated builds
+GitHub Actions automatically builds for macOS and Fedora on every push to main branch.
 
