@@ -30,15 +30,16 @@ jobs:
         # Build with Nuitka
         nuitka --standalone --onefile --enable-plugin=no-qt --output-dir=dist src/main.py
         
-        # Create zip for easy download
+        # Rename binary and create zip
+        mv dist/main.bin dist/mcat.bin
         cd dist
-        zip -r ../WebScraper-macOS.zip .
+        zip ../mcat.zip mcat.bin
         cd ..
     
     - name: Upload build artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: WebScraper-macOS
+        name: mcat-macOS
         path: |
-          dist/
-          WebScraper-macOS.zip
+          dist/mcat.bin
+          mcat.zip
