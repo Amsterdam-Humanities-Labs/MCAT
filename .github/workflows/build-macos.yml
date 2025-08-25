@@ -24,18 +24,15 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
-        pip install nuitka
     
     - name: Build with Nuitka
       run: |
         # Build with Nuitka
         nuitka --standalone --onefile --enable-plugin=no-qt --output-dir=dist src/main.py
         
-        # Rename binary and create zip
-        mv dist/main.bin dist/mcat.bin
-        cd dist
-        zip ../mcat.zip mcat.bin
-        cd ..
+        # Rename binary and create zip with just the binary
+        mv dist/main.bin mcat.bin
+        zip mcat.zip mcat.bin
     
     - name: Upload build artifacts
       uses: actions/upload-artifact@v4
