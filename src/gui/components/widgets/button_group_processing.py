@@ -108,12 +108,12 @@ class ProcessingControls:
             if dpg.does_item_exist(self.cancel_button_id):
                 dpg.configure_item(self.cancel_button_id, enabled=False)
     
-    def _on_start_clicked(self):
+    def _on_start_clicked(self, *args, **kwargs):
         """Handle start button click."""
         if self.on_start_callback:
             self.on_start_callback()
     
-    def _on_pause_clicked(self):
+    def _on_pause_clicked(self, *args, **kwargs):
         """Handle pause/resume button click."""
         if self.state == ControlState.PROCESSING:
             if self.on_pause_callback:
@@ -122,7 +122,7 @@ class ProcessingControls:
             if self.on_resume_callback:
                 self.on_resume_callback()
     
-    def _on_cancel_clicked(self):
+    def _on_cancel_clicked(self, *args, **kwargs):
         """Handle cancel button click."""
         if self.on_cancel_callback:
             self.on_cancel_callback()

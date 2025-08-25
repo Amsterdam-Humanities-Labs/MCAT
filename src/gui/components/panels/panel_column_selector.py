@@ -91,7 +91,7 @@ class PanelPreserveColumns:
                 if i < len(csv_columns) - 1:
                     dpg.add_spacer(height=2)
     
-    def _on_post_column_selected(self, sender, value):
+    def _on_post_column_selected(self, sender, value, *args, **kwargs):
         """Handle post column selection."""
         if self.callback:
             try:

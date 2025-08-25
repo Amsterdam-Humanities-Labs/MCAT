@@ -55,11 +55,11 @@ class FilePicker:
             dpg.add_file_extension(".csv", color=(255, 255, 0, 255))
             dpg.add_file_extension(".*", color=(255, 255, 255, 255))
     
-    def _show_file_dialog(self):
+    def _show_file_dialog(self, *args, **kwargs):
         """Show the file selection dialog."""
         dpg.show_item(self.file_dialog_id)
     
-    def _file_selected(self, sender, app_data):
+    def _file_selected(self, sender, app_data, *args, **kwargs):
         """Handle file selection from dialog."""
         file_path = app_data['file_path_name']
         self.selected_file = file_path

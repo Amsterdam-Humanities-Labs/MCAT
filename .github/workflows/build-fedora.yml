@@ -1,4 +1,4 @@
-name: Build macOS App
+name: Build Fedora App
 
 on:
   push:
@@ -8,37 +8,39 @@ on:
   workflow_dispatch:  # Allows manual trigger
 
 jobs:
-  build-macos:
-    runs-on: macos-13
+  build-fedora:
+    runs-on: ubuntu-latest
+    container:
+      image: fedora:latest
     
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
     
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.13'
-    
-    - name: Install dependencies
+    - name: Install system dependencies
       run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
+        dnf update -y
+        dnf install -y python3 python3-pip python3-devel gcc g++ make
+    
+    - name: Install Python dependencies
+      run: |
+        python3 -m pip install --upgrade pip
+        pip3 install -r requirements.txt
     
     - name: Build with Nuitka
       run: |
         # Build with Nuitka
         nuitka --standalone --onefile --enable-plugin=no-qt --output-dir=dist src/main.py
         
-        # Create zip for easy download
+        # Create tar.gz for easy download
         cd dist
-        zip -r ../WebScraper-macOS.zip .
+        tar -czf ../WebScraper-Fedora.tar.gz .
         cd ..
     
     - name: Upload build artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: WebScraper-macOS
+        name: WebScraper-Fedora
         path: |
           dist/
-          WebScraper-macOS.zip
+          WebScraper-Fedora.tar.gz

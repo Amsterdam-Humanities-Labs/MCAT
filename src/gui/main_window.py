@@ -1,7 +1,6 @@
 import dearpygui.dearpygui as dpg
 import pandas as pd
 from typing import Optional
-
 import sys
 import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -11,6 +10,25 @@ from utils.csv_handler import CSVHandler
 from gui.components.containers.tab_container_platforms import PlatformTabs
 from gui.processing_controller import ProcessingController
 from gui.theme import AppTheme
+
+
+def get_resource_path(relative_path: str) -> str:
+    """Get absolute path to resource, works for dev and for Nuitka."""
+    if getattr(sys, 'frozen', False) or '/tmp/onefile_' in __file__:
+        # Running in Nuitka onefile binary - assets are in temp directory
+        if hasattr(sys, '_MEIPASS'):
+            # PyInstaller style
+            base_path = sys._MEIPASS
+        else:
+            # Nuitka onefile - get the temp extraction directory
+            base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        resource_path = os.path.join(base_path, relative_path)
+    else:
+        # Running in development
+        base_path = os.path.dirname(__file__)
+        resource_path = os.path.join(base_path, "..", "..", relative_path)
+    
+    return os.path.abspath(resource_path)
 
 
 class MainWindow:
@@ -44,11 +62,15 @@ class MainWindow:
 
             # Load larger font for 4K display
             with dpg.font_registry():
-                font_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 
-                                       "assets", "fonts", "NotoSans-Medium.ttf")
-                large_font = dpg.add_font(font_path, 22)  # 20px for 4K, adjust as needed
+                font_path = get_resource_path("assets/fonts/NotoSans-Medium.ttf")
+                
+                if os.path.exists(font_path):
+                    large_font = dpg.add_font(font_path, 22)
+                else:
+                    large_font = None
             
-            dpg.bind_font(large_font)
+            if large_font:
+                dpg.bind_font(large_font)
  
             # Platform Tabs
             self.platform_tabs = PlatformTabs(

@@ -39,7 +39,7 @@ class Dropdown:
                 callback=self._on_selection_changed
             )
     
-    def _on_selection_changed(self, sender, value):
+    def _on_selection_changed(self, sender, value, *args, **kwargs):
         """Handle dropdown selection changes."""
         self.selected_value = value
         if self.callback:

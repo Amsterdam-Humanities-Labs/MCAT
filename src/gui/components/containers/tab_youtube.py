@@ -300,8 +300,6 @@ class YouTubeTab:
             self.progress_display.update_progress(final_counts, result.processed_count, result.processed_count)
             # Clear the latest URL display when processing completes
             self.progress_display.clear_latest_url()
-            
-        print(f"✅ Processing completed: {result.processed_count} URLs processed")
         
         # Show results table if we have results
         if hasattr(result, 'dataframe') and result.dataframe is not None:
@@ -309,7 +307,7 @@ class YouTubeTab:
     
     def _on_processing_error(self, error_message: str):
         """Handle processing error."""
-        print(f"❌ Processing error: {error_message}")
+        pass
     
     def _on_processing_state_changed(self, is_processing: bool, is_paused: bool):
         """Handle processing state changes."""
@@ -371,18 +369,11 @@ class YouTubeTab:
         """Populate the results table with processed data."""
         self.results_df = results_df
         
-        # Debug: Print DataFrame info
-        print(f"📊 Results DataFrame shape: {results_df.shape}")
-        print(f"📊 Results DataFrame columns: {list(results_df.columns)}")
-        print(f"📊 First few rows:\n{results_df.head()}")
-        
         # Get column mapping info
         if self.column_selector:
             columns_data = self.column_selector.get_all_selected_columns()
             self.video_url_column = columns_data['post_column']
             self.preserved_columns = columns_data['preserve_columns']
-            print(f"📊 Video URL column: {self.video_url_column}")
-            print(f"📊 Preserved columns: {self.preserved_columns}")
         
         # Clear existing table content
         if dpg.does_item_exist(self.results_table_id):
@@ -396,13 +387,8 @@ class YouTubeTab:
         # Define column order: Video URL, Status, then preserved columns
         table_columns = [self.video_url_column, 'status'] + self.preserved_columns
         
-        # Debug: Check which columns actually exist
-        available_columns = [col for col in table_columns if col in results_df.columns]
-        missing_columns = [col for col in table_columns if col not in results_df.columns]
-        print(f"📊 Available columns: {available_columns}")
-        print(f"📊 Missing columns: {missing_columns}")
-        
         # Use only available columns
+        available_columns = [col for col in table_columns if col in results_df.columns]
         table_columns = available_columns
         
         # Add table columns
@@ -456,7 +442,6 @@ class YouTubeTab:
     def _on_export_file_selected(self, file_path: str):
         """Handle export file selection using our FilePicker component."""
         if self.results_df is None:
-            print("❌ No results to export")
             return
         
         try:
@@ -473,10 +458,9 @@ class YouTubeTab:
             # Export only the selected columns
             export_df = self.results_df[available_export_columns]
             export_df.to_csv(file_path, index=False)
-            print(f"✅ Results exported to: {file_path}")
             
         except Exception as e:
-            print(f"❌ Export error: {e}")
+            pass
     
     def _clear_results(self):
         """Clear results table and data before starting new processing."""

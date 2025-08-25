@@ -1,9 +1,6 @@
 # Build outputs - ignore everything in dist/
 dist/
-assets/*.csv
-assets/*.py
-assets/sketches
-
+dev_assets/
 
 # Python cache
 __pycache__/
