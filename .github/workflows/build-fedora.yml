@@ -32,14 +32,11 @@ jobs:
         # Build with Nuitka
         nuitka --standalone --onefile --enable-plugin=no-qt --include-data-dir=assets/fonts=assets/fonts --output-dir=dist src/main.py
         
-        # Rename binary and create tar.gz with just the binary
+        # Rename binary
         mv dist/main.bin mcat
-        tar -czf mcat.tar.gz mcat
     
     - name: Upload build artifacts
       uses: actions/upload-artifact@v4
       with:
         name: mcat-Fedora
-        path: |
-          dist/mcat
-          mcat.tar.gz
+        path: mcat
