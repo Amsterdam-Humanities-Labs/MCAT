@@ -17,7 +17,7 @@
 **Build command:**
 ```bash
 pip install nuitka
-nuitka --standalone --onefile --enable-plugin=no-qt --output-dir=dist src/main.py
+nuitka --standalone --onefile --enable-plugin=no-qt --include-data-dir=assets/fonts=assets/fonts --output-dir=dist src/main.py
 ```
 
 The built executable will be in the `dist/` folder.
