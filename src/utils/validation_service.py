@@ -1,10 +1,7 @@
 from typing import List, Callable, Optional, Dict, Any
 from abc import ABC, abstractmethod
-import os
-import sys
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from .validation_manager import ValidationManager, ValidationContext, ValidationResult, ValidationStatus
+from utils.validation_manager import ValidationManager, ValidationContext, ValidationResult, ValidationStatus
 
 
 class ValidationObserver(ABC):

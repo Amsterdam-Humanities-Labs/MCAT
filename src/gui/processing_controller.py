@@ -2,9 +2,7 @@ import threading
 import time
 from typing import Dict, Optional, Callable
 import pandas as pd
-import sys
 import os
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from core.batch_processor import BatchProcessor
 from utils.csv_handler import CSVHandler

@@ -2,9 +2,6 @@ import pandas as pd
 import re
 from typing import Dict, List, Optional, Tuple
 from enum import Enum
-import os
-import sys
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 
 class ValidationStatus(Enum):

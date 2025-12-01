@@ -5,10 +5,6 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Dict, List, Optional, Callable
 from queue import Queue
 
-import sys
-import os
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
 from config.settings import config
 from utils.csv_handler import CSVHandler
 from core.driver_manager import WebDriverPool

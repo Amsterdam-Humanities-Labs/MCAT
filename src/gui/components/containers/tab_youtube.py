@@ -1,21 +1,18 @@
 import dearpygui.dearpygui as dpg
 from typing import Optional
 import pandas as pd
-import os
-import sys
-sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))))
 
-from ..widgets.file_input_picker import FilePicker
-from ..panels.panel_column_selector import PanelPreserveColumns
-from ..widgets.progress_bar_segmented import RectangularProgress
-from ..widgets.button_group_processing import ProcessingControls
-from ...controllers.processing_workflow_controller import ProcessingCoordinator
-from src.utils.csv_handler import CSVHandler
-from src.utils.validation_service import (
+from gui.components.widgets.file_input_picker import FilePicker
+from gui.components.panels.panel_column_selector import PanelPreserveColumns
+from gui.components.widgets.progress_bar_segmented import RectangularProgress
+from gui.components.widgets.button_group_processing import ProcessingControls
+from gui.controllers.processing_workflow_controller import ProcessingCoordinator
+from utils.csv_handler import CSVHandler
+from utils.validation_service import (
     validation_service, ValidationUIController, 
     ButtonStateCommand, FileStatusCommand, ValidationContext
 )
-from src.config.settings import UI_SPACING
+from config.settings import UI_SPACING
 
 
 class YouTubeTab:
