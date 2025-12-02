@@ -6,38 +6,36 @@ from gui.components.widgets.file_input_picker import FilePicker
 from gui.components.panels.panel_column_selector import PanelPreserveColumns
 from gui.components.widgets.progress_bar_segmented import RectangularProgress
 from gui.components.widgets.button_group_processing import ProcessingControls
-from gui.controllers.processing_workflow_controller import ProcessingCoordinator
-from utils.csv_handler import CSVHandler
-from utils.validation_service import (
-    validation_service, ValidationUIController, 
-    ButtonStateCommand, FileStatusCommand, ValidationContext
-)
+
+# New service imports
+from services.csv_service import CSVService
+from services.processing_service import ProcessingService
+from models.file_models import FileInfo, ColumnMapping
+from models.processing_models import ProcessingJob, ProcessingStatus, ProcessingState
+
 from config.settings import UI_SPACING
 
 
 class YouTubeTab:
     """Simplified YouTube scraper tab with proper separation of concerns."""
     
-    def __init__(self, parent_window: str, processing_controller, state_manager=None):
+    def __init__(self, parent_window: str, processing_controller=None, state_manager=None):
         self.parent_window = parent_window
         
-        # Core components 
+        # Business logic services
+        self.csv_service = CSVService()
+        self.processing_service = ProcessingService()
+        
+        # UI components 
         self.file_picker: Optional[FilePicker] = None
         self.column_selector: Optional[PanelPreserveColumns] = None
         self.progress_display: Optional[RectangularProgress] = None
         self.processing_controls: Optional[ProcessingControls] = None
-        self.processing_coordinator = ProcessingCoordinator(processing_controller)
         
-        # Validation
-        self.validation_controller = ValidationUIController()
-        validation_service.subscribe(self.validation_controller)
-        
-        # Current data
-        self.current_df: Optional[pd.DataFrame] = None
-        self.csv_info = {}
+        # Current data (using new models)
+        self.current_file: Optional[FileInfo] = None
+        self.current_column_mapping = ColumnMapping()
         self.results_df: Optional[pd.DataFrame] = None
-        self.video_url_column = ""
-        self.preserved_columns = []
         
         # Export file picker
         self.export_file_picker: Optional[FilePicker] = None
@@ -185,13 +183,7 @@ class YouTubeTab:
     
     def _setup_callbacks(self):
         """Setup all component callbacks."""
-        # Processing coordinator callbacks
-        self.processing_coordinator.set_callbacks(
-            on_progress_update=self._on_progress_update,
-            on_processing_complete=self._on_processing_complete,
-            on_processing_error=self._on_processing_error,
-            on_ui_state_change=self._on_processing_state_changed
-        )
+        # Note: Processing service callbacks are now setup in _start_processing method
         
         # Processing controls callbacks
         if self.processing_controls:
@@ -203,26 +195,32 @@ class YouTubeTab:
             )
     
     def _on_file_selected(self, file_path: str):
-        """Handle file selection."""
-        try:
-            self.current_df = CSVHandler.load_csv(file_path)
-            self.csv_info = CSVHandler.get_csv_info(self.current_df)
-            
+        """Handle file selection - now uses CSV service."""
+        # Use CSV service to load and validate file
+        file_info = self.csv_service.load_file(file_path)
+        self.current_file = file_info
+        
+        if file_info.valid:
             # Show dependent sections
             if dpg.does_item_exist(self.preserve_columns_group_id):
                 dpg.configure_item(self.preserve_columns_group_id, show=True)
             if dpg.does_item_exist(self.file_status_group_id):
                 dpg.configure_item(self.file_status_group_id, show=True)
             
-            # Populate columns
+            # Populate columns using service
+            column_options = self.csv_service.get_column_options(file_info)
             if self.column_selector:
-                self.column_selector.populate_columns(self.csv_info['columns'])
+                self.column_selector.populate_columns(column_options)
+            
+            # Update file status display
+            self._update_file_status(f"✅ Loaded: {file_info.filename} ({file_info.row_count} rows, {len(file_info.columns)} columns)")
             
             # Setup validation
             self._setup_validation()
             self._trigger_validation()
-            
-        except Exception as e:
+        else:
+            # Handle file error using service info
+            self._update_file_status(f"❌ Error: {file_info.error_message}")
             self._handle_file_error()
     
     def _on_columns_changed(self, change_type: str, data: dict):
@@ -230,59 +228,75 @@ class YouTubeTab:
         self._trigger_validation()
     
     def _start_processing(self):
-        """Start processing workflow."""
-        if not validation_service.is_valid() or not self.column_selector:
+        """Start processing workflow - now uses Processing service."""
+        if not self.current_file or not self.current_file.valid or not self.column_selector:
             return
         
-        # Clear existing results before starting new processing
+        # Get column mapping from UI
+        columns_data = self.column_selector.get_all_selected_columns()
+        self.current_column_mapping = ColumnMapping(
+            post_column=columns_data['post_column'],
+            preserve_columns=columns_data['preserve_columns']
+        )
+        
+        # Create processing job
+        job = ProcessingJob(
+            file_info=self.current_file,
+            column_mapping=self.current_column_mapping,
+            platform="youtube"
+        )
+        
+        # Setup service callbacks
+        self.processing_service.set_callbacks(
+            on_progress_update=self._on_progress_update,
+            on_completion=self._on_processing_complete,
+            on_error=self._on_processing_error
+        )
+        
+        # Clear existing results
         self._clear_results()
         
-        columns_data = self.column_selector.get_all_selected_columns()
-        column_mapping = {'post': columns_data['post_column']}
-        
-        self.processing_coordinator.start_processing(
-            self.current_df, 
-            column_mapping, 
-            "youtube"
-        )
+        # Start processing using service
+        if not self.processing_service.start_processing(job):
+            self._update_file_status("❌ Failed to start processing")
     
     def _pause_processing(self):
-        """Pause processing."""
-        self.processing_coordinator.pause_processing()
+        """Pause processing - now uses Processing service."""
+        self.processing_service.pause_processing()
     
     def _resume_processing(self):
-        """Resume processing."""
-        self.processing_coordinator.resume_processing()
+        """Resume processing - now uses Processing service."""
+        self.processing_service.resume_processing()
     
     def _cancel_processing(self):
-        """Cancel processing and reset."""
-        self.processing_coordinator.cancel_processing()
+        """Cancel processing and reset - now uses Processing service."""
+        self.processing_service.cancel_processing()
         if self.progress_display:
             self.progress_display.reset()
     
-    def _on_progress_update(self, current_stats: dict, total_count: int, processed_count: int, current_action: str = ""):
-        """Handle progress updates."""
+    def _on_progress_update(self, status: ProcessingStatus):
+        """Handle progress updates - now receives ProcessingStatus object."""
         if self.progress_display:
-            pending_count = max(0, total_count - processed_count)
+            pending_count = max(0, status.total_count - status.processed_count)
             progress_counts = {
                 'pending': pending_count,
-                'live': current_stats.get('live', 0),
-                'removed': current_stats.get('removed', 0),
-                'restricted': current_stats.get('restricted', 0),
-                'error': current_stats.get('errors', 0),
-                'skipped': current_stats.get('skipped', 0)
+                'live': status.stats.get('live', 0),
+                'removed': status.stats.get('removed', 0),
+                'restricted': status.stats.get('restricted', 0),
+                'error': status.stats.get('errors', 0),
+                'skipped': status.stats.get('skipped', 0)
             }
-            self.progress_display.update_progress(progress_counts, total_count, processed_count)
+            self.progress_display.update_progress(progress_counts, status.total_count, status.processed_count)
             
             # Update latest URL if provided
-            if current_action:
+            if status.current_action:
                 # Extract URL from "Checking: <url>" format
-                if current_action.startswith("Checking: "):
-                    url = current_action[10:]  # Remove "Checking: " prefix
+                if status.current_action.startswith("Checking: "):
+                    url = status.current_action[10:]  # Remove "Checking: " prefix
                     self.progress_display.update_latest_url(url)
     
     def _on_processing_complete(self, result):
-        """Handle processing completion."""
+        """Handle processing completion - now receives ProcessingResult object."""
         # Ensure progress bar shows completion with no pending items
         if self.progress_display:
             # Get final stats and ensure no pending items
@@ -299,12 +313,22 @@ class YouTubeTab:
             self.progress_display.clear_latest_url()
         
         # Show results table if we have results
-        if hasattr(result, 'dataframe') and result.dataframe is not None:
+        if result.success and result.dataframe is not None:
             self._populate_results_table(result.dataframe)
+            self._update_file_status(f"✅ Processing complete: {result.processed_count} URLs processed")
+        else:
+            self._update_file_status(f"❌ Processing failed: {result.error_message}")
     
     def _on_processing_error(self, error_message: str):
         """Handle processing error."""
-        pass
+        self._update_file_status(f"❌ Processing error: {error_message}")
+        if self.progress_display:
+            self.progress_display.clear_latest_url()
+    
+    def _update_file_status(self, message: str):
+        """Update file status display."""
+        if dpg.does_item_exist(self.file_status_id):
+            dpg.set_value(self.file_status_id, message)
     
     def _on_processing_state_changed(self, is_processing: bool, is_paused: bool):
         """Handle processing state changes."""
@@ -318,35 +342,31 @@ class YouTubeTab:
             self.column_selector.set_enabled(not is_processing)
     
     def _setup_validation(self):
-        """Setup validation UI commands."""
-        self.validation_controller.commands.clear()
-        
-        if self.processing_controls:
-            button_command = ButtonStateCommand(
-                self.processing_controls.start_button_id, 
-                enable_on_valid=True
-            )
-            self.validation_controller.add_command(button_command)
-        
-        status_command = FileStatusCommand(self.file_status_id)
-        self.validation_controller.add_command(status_command)
+        """Setup validation - simplified for service-based approach."""
+        self._trigger_validation()
     
     def _trigger_validation(self):
-        """Trigger validation check."""
-        context = ValidationContext()
-        context.csv_df = self.current_df
-        context.csv_filename = ""
+        """Trigger validation check using services."""
+        # Simple validation using services
+        is_valid = False
         
-        if self.file_picker and self.file_picker.get_selected_file():
-            context.csv_filename = os.path.basename(self.file_picker.get_selected_file())
-        
-        if self.column_selector:
+        if self.current_file and self.column_selector:
             columns_data = self.column_selector.get_all_selected_columns()
-            context.post_column = columns_data['post_column']
-            context.preserve_columns = columns_data['preserve_columns']
+            column_mapping = ColumnMapping(
+                post_column=columns_data['post_column'],
+                preserve_columns=columns_data['preserve_columns']
+            )
+            
+            # Use CSV service to validate
+            validation_result = self.csv_service.validate_column_mapping(self.current_file, column_mapping)
+            is_valid = validation_result.valid
+            
+            if not is_valid and validation_result.errors:
+                self._update_file_status(f"❌ {validation_result.error_summary}")
         
-        context.csv_columns = self.csv_info.get('columns', [])
-        validation_service.validate(context)
+        # Update processing button state
+        if self.processing_controls:
+            self.processing_controls.set_start_enabled(is_valid)
     
     def _handle_file_error(self):
         """Handle file loading errors."""
@@ -483,4 +503,6 @@ class YouTubeTab:
     
     def cleanup(self):
         """Clean up resources."""
-        validation_service.unsubscribe(self.validation_controller)
+        # Cleanup services
+        if self.processing_service:
+            self.processing_service.cleanup()
