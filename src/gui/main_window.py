@@ -5,9 +5,10 @@ import sys
 import os
 
 # config import removed - not used in this file
-from utils.csv_handler import CSVHandler
+# from utils.csv_handler import CSVHandler  # Not needed in MainWindow
 from gui.components.containers.tab_container_platforms import PlatformTabs
-from gui.processing_controller import ProcessingController
+# from gui.processing_controller import ProcessingController  # Removed - merged into ProcessingService
+from services.processing_service import ProcessingService
 from gui.theme import AppTheme
 
 
@@ -35,18 +36,9 @@ class MainWindow:
     
     def __init__(self):
         self.platform_tabs: Optional[PlatformTabs] = None
-        self.processing_controller: Optional[ProcessingController] = None
         
         # UI element IDs
         self.main_window_id = "main_window"
-        
-        # Initialize processing controller
-        self.processing_controller = ProcessingController()
-        self.processing_controller.set_callbacks(
-            on_processing_complete=self._on_processing_complete,
-            on_processing_error=self._on_processing_error,
-            on_progress_update=self._on_progress_update
-        )
     
     def setup_ui(self):
         """Create the main window UI."""
@@ -73,15 +65,15 @@ class MainWindow:
  
             # Platform Tabs
             self.platform_tabs = PlatformTabs(
-                parent_window=self.main_window_id,
-                processing_controller=self.processing_controller
+                parent_window=self.main_window_id
             )
             self.platform_tabs.setup_ui()
             
     
     def run(self):
-        """Start the GUI application."""
+        """Start the GUI application with progress processing main loop."""
         dpg.create_context()
+        dpg.configure_app(manual_callback_management=True)  # Enable manual callback management
         dpg.create_viewport(title="MCAT Content Moderation Checker", width=1050, height=850)
         
         # Apply global theme
@@ -94,13 +86,21 @@ class MainWindow:
         dpg.set_primary_window(self.main_window_id, True)
         
         try:
-            dpg.start_dearpygui()
+            # Main event loop with progress processing
+            while dpg.is_dearpygui_running():
+                # Process Dear PyGui callbacks
+                jobs = dpg.get_callback_queue()
+                dpg.run_callbacks(jobs)
+                
+                # Process progress updates from all ProcessingService instances
+                ProcessingService.process_all_progress_updates()
+                
+                # Render frame
+                dpg.render_dearpygui_frame()
         finally:
             # Cleanup components
             if self.platform_tabs:
                 self.platform_tabs.cleanup()
-            if self.processing_controller:
-                self.processing_controller.cleanup()
             dpg.destroy_context()
     
     
@@ -121,27 +121,11 @@ class MainWindow:
     
     
     
-    def _on_processing_complete(self, result):
-        """Handle processing completion."""
-        # Delegate to YouTube tab
-        if self.platform_tabs and self.platform_tabs.get_youtube_tab():
-            self.platform_tabs.get_youtube_tab().update_processing_results(result)
-        
-        self._update_status(f"Processing completed! {result.processed_count} URLs processed", [100, 255, 100])
-    
-    def _on_processing_error(self, error_message: str):
-        """Handle processing error."""
-        # Delegate to YouTube tab
-        if self.platform_tabs and self.platform_tabs.get_youtube_tab():
-            self.platform_tabs.get_youtube_tab().handle_processing_error(error_message)
-        
-        self._update_status(f"Processing error: {error_message}", [255, 100, 100])
-    
-    def _on_progress_update(self, current_stats: dict, total_count: int, processed_count: int, current_action: str = ""):
-        """Handle progress updates from processing controller."""
-        # Delegate to YouTube tab
-        if self.platform_tabs and self.platform_tabs.get_youtube_tab():
-            self.platform_tabs.get_youtube_tab()._on_progress_update(current_stats, total_count, processed_count, current_action)
+    # Removed callback methods - processing now handled via MVP pattern:
+    # - _on_processing_complete: Events → Presenter → View
+    # - _on_processing_error: Events → Presenter → View
+    # - _on_progress_update: Events → Presenter → View
+    # MainWindow no longer needs to handle processing events directly
     
     
     # Removed duplicate _on_state_changed method
