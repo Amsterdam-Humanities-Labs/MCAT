@@ -5,12 +5,13 @@ Business logic for URL processing coordination without UI dependencies.
 """
 
 import threading
-from typing import Optional, Callable, Dict
+from typing import Optional, Dict
 import pandas as pd
 
 from models.processing_models import ProcessingJob, ProcessingStatus, ProcessingState, ProcessingResult
 from models.file_models import ValidationResult, ColumnMapping
 from gui.processing_controller import ProcessingController
+from events import dispatcher, ProcessingEvents
 
 
 class ProcessingService:
@@ -20,27 +21,6 @@ class ProcessingService:
         self.processing_controller: Optional[ProcessingController] = None
         self.current_job: Optional[ProcessingJob] = None
         self.current_status = ProcessingStatus()
-        
-        # Callbacks for status updates
-        self._on_progress_update: Optional[Callable] = None
-        self._on_completion: Optional[Callable] = None
-        self._on_error: Optional[Callable] = None
-    
-    def set_callbacks(self, 
-                     on_progress_update: Callable = None,
-                     on_completion: Callable = None,
-                     on_error: Callable = None):
-        """
-        Set callback functions for processing events.
-        
-        Args:
-            on_progress_update: Called with (status) on progress updates
-            on_completion: Called with (result) when processing completes
-            on_error: Called with (error_message) on errors
-        """
-        self._on_progress_update = on_progress_update
-        self._on_completion = on_completion
-        self._on_error = on_error
     
     def validate_processing_request(self, job: ProcessingJob) -> ValidationResult:
         """
@@ -103,8 +83,9 @@ class ProcessingService:
         # Validate the job first
         validation = self.validate_processing_request(job)
         if not validation.valid:
-            if self._on_error:
-                self._on_error(f"Cannot start processing: {validation.error_summary}")
+            # Emit error event instead of callback
+            error_msg = f"Cannot start processing: {validation.error_summary}"
+            dispatcher.send(ProcessingEvents.ERROR, sender=self, error_message=error_msg)
             return False
         
         try:
@@ -132,9 +113,12 @@ class ProcessingService:
                 platform=job.platform
             )
             
-            # Update status
+            # Update status and emit started event
             self.current_status.state = ProcessingState.PROCESSING
             self.current_status.total_count = len(job.file_info.dataframe)
+            
+            # Emit processing started event
+            dispatcher.send(ProcessingEvents.STARTED, sender=self, job=job, status=self.current_status)
             
             return True
             
@@ -142,8 +126,9 @@ class ProcessingService:
             self.current_status.state = ProcessingState.ERROR
             self.current_status.error_message = str(e)
             
-            if self._on_error:
-                self._on_error(f"Failed to start processing: {str(e)}")
+            # Emit error event instead of callback
+            error_msg = f"Failed to start processing: {str(e)}"
+            dispatcher.send(ProcessingEvents.ERROR, sender=self, error_message=error_msg)
             
             return False
     
@@ -161,6 +146,8 @@ class ProcessingService:
             if self.processing_controller:
                 self.processing_controller.pause_processing()
                 self.current_status.state = ProcessingState.PAUSED
+                # Emit paused event
+                dispatcher.send(ProcessingEvents.PAUSED, sender=self, status=self.current_status)
             return True
         except Exception:
             return False
@@ -179,6 +166,8 @@ class ProcessingService:
             if self.processing_controller:
                 self.processing_controller.resume_processing()
                 self.current_status.state = ProcessingState.PROCESSING
+                # Emit resumed event
+                dispatcher.send(ProcessingEvents.RESUMED, sender=self, status=self.current_status)
             return True
         except Exception:
             return False
@@ -199,6 +188,9 @@ class ProcessingService:
             
             self.current_status.state = ProcessingState.CANCELLED
             self.current_job = None
+            
+            # Emit cancelled event
+            dispatcher.send(ProcessingEvents.CANCELLED, sender=self, status=self.current_status)
             
             return True
         except Exception:
@@ -270,8 +262,8 @@ class ProcessingService:
         self.current_status.processed_count = processed_count
         self.current_status.current_action = current_action
         
-        if self._on_progress_update:
-            self._on_progress_update(self.current_status)
+        # Emit progress event instead of callback
+        dispatcher.send(ProcessingEvents.PROGRESS, sender=self, status=self.current_status)
     
     def _handle_completion(self, result):
         """Handle processing completion."""
@@ -280,13 +272,13 @@ class ProcessingService:
         # Create a ProcessingResult from the raw result
         processing_result = ProcessingResult.from_batch_result(result)
         
-        if self._on_completion:
-            self._on_completion(processing_result)
+        # Emit completion event instead of callback
+        dispatcher.send(ProcessingEvents.COMPLETED, sender=self, result=processing_result, status=self.current_status)
     
     def _handle_error(self, error_message: str):
         """Handle processing error."""
         self.current_status.state = ProcessingState.ERROR
         self.current_status.error_message = error_message
         
-        if self._on_error:
-            self._on_error(error_message)
+        # Emit error event instead of callback
+        dispatcher.send(ProcessingEvents.ERROR, sender=self, error_message=error_message, status=self.current_status)

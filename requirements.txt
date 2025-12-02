@@ -5,3 +5,4 @@ dearpygui>=1.10.0
 pandas>=2.0.0
 urllib3>=2.0.0
 nuitka>=1.8.0
+PyDispatcher>=2.0.7

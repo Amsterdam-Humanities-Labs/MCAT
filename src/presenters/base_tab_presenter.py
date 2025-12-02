@@ -12,6 +12,7 @@ from models.file_models import FileInfo, ColumnMapping, ValidationResult
 from models.processing_models import ProcessingJob, ProcessingStatus, ProcessingState
 from services.csv_service import CSVService
 from services.processing_service import ProcessingService
+from events import dispatcher, ProcessingEvents
 
 
 class BaseTabPresenter:
@@ -36,8 +37,8 @@ class BaseTabPresenter:
         self.current_file: Optional[FileInfo] = None
         self.current_column_mapping = ColumnMapping()
         
-        # Setup processing service callbacks
-        self._setup_processing_callbacks()
+        # Subscribe to processing events
+        self._subscribe_to_events()
     
     def initialize(self):
         """Initialize presenter and setup view callbacks."""
@@ -47,6 +48,9 @@ class BaseTabPresenter:
     
     def cleanup(self):
         """Cleanup presenter resources."""
+        # Unsubscribe from events to prevent memory leaks
+        self._unsubscribe_from_events()
+        
         if self.processing_service:
             self.processing_service.cleanup()
     
@@ -112,25 +116,23 @@ class BaseTabPresenter:
         )
         
         # Start processing using service
-        if self.processing_service.start_processing(job):
-            self.view.show_processing_started()
-        else:
-            self.view.show_processing_error("Failed to start processing")
+        # Events will handle view updates automatically
+        self.processing_service.start_processing(job)
     
     def handle_pause_processing(self):
         """Handle pause processing request."""
-        if self.processing_service.pause_processing():
-            self.view.show_processing_paused()
+        # Events will handle view updates automatically
+        self.processing_service.pause_processing()
     
     def handle_resume_processing(self):
         """Handle resume processing request.""" 
-        if self.processing_service.resume_processing():
-            self.view.show_processing_resumed()
+        # Events will handle view updates automatically
+        self.processing_service.resume_processing()
     
     def handle_cancel_processing(self):
         """Handle cancel processing request."""
-        if self.processing_service.cancel_processing():
-            self.view.show_processing_cancelled()
+        # Events will handle view updates automatically
+        self.processing_service.cancel_processing()
     
     def get_current_file(self) -> Optional[FileInfo]:
         """Get the currently loaded file info."""
@@ -154,13 +156,26 @@ class BaseTabPresenter:
     
     # Internal methods
     
-    def _setup_processing_callbacks(self):
-        """Setup callbacks for processing service events."""
-        self.processing_service.set_callbacks(
-            on_progress_update=self._handle_progress_update,
-            on_completion=self._handle_processing_complete,
-            on_error=self._handle_processing_error
-        )
+    def _subscribe_to_events(self):
+        """Subscribe to processing events from services."""
+        # Subscribe to events from our specific processing service instance
+        dispatcher.connect(self._handle_progress_update, ProcessingEvents.PROGRESS, sender=self.processing_service)
+        dispatcher.connect(self._handle_processing_complete, ProcessingEvents.COMPLETED, sender=self.processing_service)
+        dispatcher.connect(self._handle_processing_error, ProcessingEvents.ERROR, sender=self.processing_service)
+        dispatcher.connect(self._handle_processing_started, ProcessingEvents.STARTED, sender=self.processing_service)
+        dispatcher.connect(self._handle_processing_paused, ProcessingEvents.PAUSED, sender=self.processing_service)
+        dispatcher.connect(self._handle_processing_resumed, ProcessingEvents.RESUMED, sender=self.processing_service)
+        dispatcher.connect(self._handle_processing_cancelled, ProcessingEvents.CANCELLED, sender=self.processing_service)
+    
+    def _unsubscribe_from_events(self):
+        """Unsubscribe from processing events to prevent memory leaks."""
+        dispatcher.disconnect(self._handle_progress_update, ProcessingEvents.PROGRESS, sender=self.processing_service)
+        dispatcher.disconnect(self._handle_processing_complete, ProcessingEvents.COMPLETED, sender=self.processing_service)
+        dispatcher.disconnect(self._handle_processing_error, ProcessingEvents.ERROR, sender=self.processing_service)
+        dispatcher.disconnect(self._handle_processing_started, ProcessingEvents.STARTED, sender=self.processing_service)
+        dispatcher.disconnect(self._handle_processing_paused, ProcessingEvents.PAUSED, sender=self.processing_service)
+        dispatcher.disconnect(self._handle_processing_resumed, ProcessingEvents.RESUMED, sender=self.processing_service)
+        dispatcher.disconnect(self._handle_processing_cancelled, ProcessingEvents.CANCELLED, sender=self.processing_service)
     
     def _validate_current_state(self):
         """Validate current file and column mapping state."""
@@ -203,17 +218,38 @@ class BaseTabPresenter:
     
     # Processing service event handlers
     
-    def _handle_progress_update(self, status: ProcessingStatus):
+    def _handle_progress_update(self, sender=None, **kwargs):
         """Handle progress updates from processing service."""
-        self.view.update_progress(status)
+        status = kwargs.get('status')
+        if status:
+            self.view.update_progress(status)
     
-    def _handle_processing_complete(self, result):
+    def _handle_processing_complete(self, sender=None, **kwargs):
         """Handle processing completion."""
-        self.view.show_processing_complete(result)
+        result = kwargs.get('result')
+        if result:
+            self.view.show_processing_complete(result)
     
-    def _handle_processing_error(self, error_message: str):
+    def _handle_processing_error(self, sender=None, **kwargs):
         """Handle processing error."""
+        error_message = kwargs.get('error_message', 'Unknown error')
         self.view.show_processing_error(error_message)
+    
+    def _handle_processing_started(self, sender=None, **kwargs):
+        """Handle processing started."""
+        self.view.show_processing_started()
+    
+    def _handle_processing_paused(self, sender=None, **kwargs):
+        """Handle processing paused."""
+        self.view.show_processing_paused()
+    
+    def _handle_processing_resumed(self, sender=None, **kwargs):
+        """Handle processing resumed."""
+        self.view.show_processing_resumed()
+    
+    def _handle_processing_cancelled(self, sender=None, **kwargs):
+        """Handle processing cancelled."""
+        self.view.show_processing_cancelled()
     
     # Platform-specific methods (override in subclasses)
     
