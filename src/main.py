@@ -6,8 +6,6 @@ Content Moderation Analysis Toolkit (MCAT) desktop application
 for processing CSV files containing social media URLs and checking
 their moderation status.
 
-Usage:
-    python -m src.main
 """
 
 import sys
@@ -63,8 +61,6 @@ def main():
     
     try:
         print("Starting MCAT GUI Application...")
-        print("CSV Loading Test Mode")
-        print("-" * 40)
         
         # Create and run the main window
         app_instance = MainWindow()
@@ -74,7 +70,10 @@ def main():
         print("\nApplication interrupted by user")
         cleanup_on_exit()
     except Exception as e:
+        import traceback
         print(f"Error starting application: {e}")
+        print("\nFull traceback:")
+        traceback.print_exc()
         cleanup_on_exit()
         return 1
     

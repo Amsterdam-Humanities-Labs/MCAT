@@ -21,44 +21,14 @@ class YouTubePresenter(BaseTabPresenter):
     
     def _suggest_columns(self, file_info: FileInfo):
         """
-        YouTube-specific column suggestions.
-        
-        Looks for columns that are likely to contain YouTube video URLs
-        based on common naming patterns.
-        
+        No column suggestions - let users choose themselves.
+
         Args:
             file_info: Information about the loaded CSV file
         """
-        # Get potential URL columns from the base service
-        url_candidates = self.csv_service.get_url_column_candidates(file_info)
-        
-        # YouTube-specific patterns (in priority order)
-        youtube_patterns = [
-            'video',      # "video_url", "video_link"
-            'youtube',    # "youtube_url", "youtube_link"
-            'url',        # "url", "post_url"
-            'link',       # "link", "video_link"
-            'post'        # "post", "post_url"
-        ]
-        
-        # Find best match based on patterns
-        best_suggestion = None
-        for pattern in youtube_patterns:
-            for column in url_candidates:
-                if pattern in column.lower():
-                    best_suggestion = column
-                    break
-            if best_suggestion:
-                break
-        
-        # Fall back to first URL candidate if no pattern matches
-        if not best_suggestion and url_candidates:
-            best_suggestion = url_candidates[0]
-        
-        # Suggest the best match to the view
-        if best_suggestion:
-            self.view.suggest_url_column(best_suggestion)
-    
+        # Intentionally empty - no automatic suggestions
+        pass
+
     def _get_platform_validation_rules(self) -> Dict[str, Any]:
         """
         YouTube-specific validation rules.
@@ -132,37 +102,12 @@ class YouTubePresenter(BaseTabPresenter):
     
     def get_suggested_preserve_columns(self, file_info: FileInfo) -> list:
         """
-        Get suggested columns to preserve for YouTube analysis.
-        
+        No column suggestions - let users choose themselves.
+
         Args:
             file_info: Information about the loaded CSV file
-            
+
         Returns:
-            List of column names that are commonly useful for YouTube analysis
+            Empty list - no automatic suggestions
         """
-        if not file_info or not file_info.valid:
-            return []
-        
-        # Common YouTube analysis columns
-        useful_patterns = [
-            'title',
-            'description', 
-            'channel',
-            'view',
-            'like',
-            'comment',
-            'date',
-            'publish',
-            'upload',
-            'duration',
-            'category',
-            'tag'
-        ]
-        
-        suggested = []
-        for column in file_info.columns:
-            column_lower = column.lower()
-            if any(pattern in column_lower for pattern in useful_patterns):
-                suggested.append(column)
-        
-        return suggested
+        return []

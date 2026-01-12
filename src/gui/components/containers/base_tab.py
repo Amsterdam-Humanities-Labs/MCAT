@@ -33,7 +33,7 @@ class BaseTab(ABC):
         self.parent_window = parent_window
         self.platform = platform
         
-        # Common UI components (identical across all tabs)
+        # Common UI components
         self.file_picker: Optional[FilePicker] = None
         self.column_selector: Optional[PanelPreserveColumns] = None
         self.progress_display: Optional[RectangularProgress] = None
@@ -65,8 +65,8 @@ class BaseTab(ABC):
         """Setup common UI structure - identical across all platforms."""
         # Main horizontal layout
         with dpg.group(parent=self.parent_window, horizontal=True):
-            self._setup_left_panel()   # File selection + controls (40% width)
-            self._setup_right_panel()  # Progress + results (60% width)
+            self._setup_left_panel()   
+            self._setup_right_panel() 
         
         # Initialize presenter after UI is created
         if self.presenter:
@@ -76,7 +76,7 @@ class BaseTab(ABC):
         """Setup the left control panel - common across all platforms."""
         with dpg.child_window(
             tag=self.left_panel_id,
-            width=400,  # Fixed width for consistency
+            width=400,  
             height=-1,
             border=False,
             horizontal_scrollbar=False
@@ -86,19 +86,15 @@ class BaseTab(ABC):
                         color=[255, 255, 255])
             dpg.add_spacer(height=UI_SPACING)
             
-            # File selection section
             self._setup_file_section()
             dpg.add_spacer(height=UI_SPACING)
             
-            # Column selection section
             self._setup_column_section()
             dpg.add_spacer(height=UI_SPACING)
             
-            # File status and validation
             self._setup_status_section()
             dpg.add_spacer(height=UI_SPACING)
             
-            # Processing controls
             self._setup_processing_section()
     
     def _setup_right_panel(self):
@@ -121,7 +117,7 @@ class BaseTab(ABC):
             )
             self.progress_display.setup_ui(label="Processing Progress")
             dpg.add_spacer(height=UI_SPACING)
-            
+
             # Results section
             self._setup_results_section()
     
@@ -292,12 +288,23 @@ class BaseTab(ABC):
         """Populate column selector with available columns."""
         if self.column_selector:
             self.column_selector.populate_columns(columns)
+
+    def add_console_message(self, message: str):
+        """Add a message to the console (deprecated - now uses global console)."""
+        # Messages go to global console via print() capture
+        # This method kept for compatibility but does nothing
+        pass
+
+    def update_console(self, logger):
+        """Update console (deprecated - now uses global console)."""
+        # Global console updated directly in MainWindow
+        # This method kept for compatibility but does nothing
+        pass
     
     def suggest_url_column(self, column_name: str):
-        """Suggest a URL column to the user."""
-        # This could be enhanced to highlight the suggested column
-        # For now, just update status
-        self._update_status(f"💡 Suggested URL column: {column_name}")
+        """Suggest a URL column to the user (deprecated - no longer used)."""
+        # Column suggestions removed - users choose columns themselves
+        pass
     
     def set_processing_enabled(self, enabled: bool):
         """Enable or disable processing controls."""

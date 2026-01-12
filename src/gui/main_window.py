@@ -2,8 +2,11 @@ import dearpygui.dearpygui as dpg
 from typing import Optional
 
 from gui.components.containers.tab_container_platforms import PlatformTabs
+from gui.components.panels.panel_console import ConsolePanel
+from presenters.console_presenter import ConsolePresenter
 from services.processing_service import ProcessingService
 from gui.theme import AppTheme
+from utils.console_logger import ConsoleLogger
 
 
 # Removed get_resource_path - no longer needed for default font
@@ -13,8 +16,10 @@ class MainWindow:
     """Primary GUI controller using Dear PyGui."""
     
     def __init__(self):
+        self.console_logger: Optional[ConsoleLogger] = None
+        self.console_presenter: Optional[ConsolePresenter] = None
         self.platform_tabs: Optional[PlatformTabs] = None
-        
+
         # UI element IDs
         self.main_window_id = "main_window"
     
@@ -28,21 +33,43 @@ class MainWindow:
             height=800,
             pos=[50, 50]
         ):
+            # Vertical layout: tabs on top, console on bottom
+            # Platform Tabs (flexible height - account for console at bottom)
+            # Height calculation: 800px window - 230px console section (200px + header + spacers)
+            with dpg.child_window(
+                tag="tabs_container",
+                height=565,  # Fixed height to prevent overflow
+                border=False,
+                horizontal_scrollbar=False
+            ):
+                self.platform_tabs = PlatformTabs(
+                    parent_window="tabs_container"
+                )
+                self.platform_tabs.setup_ui()
 
-            # Set default font size
-            with dpg.font_registry():
-                default_font = dpg.add_font("", 22)  # Default font at size 22
-                dpg.bind_font(default_font)
- 
-            # Platform Tabs
-            self.platform_tabs = PlatformTabs(
-                parent_window=self.main_window_id
+            # Small spacer for visual separation
+            dpg.add_spacer(height=5, parent=self.main_window_id)
+
+            # Global console view (fixed height, full width)
+            console_view = ConsolePanel(
+                parent_window=self.main_window_id,
+                platform="global"
             )
-            self.platform_tabs.setup_ui()
+            console_view.setup_ui()
+
+            # Create console presenter (MVP: coordinates logger service and console view)
+            self.console_presenter = ConsolePresenter(
+                view=console_view,
+                logger=self.console_logger
+            )
             
     
     def run(self):
         """Start the GUI application with progress processing main loop."""
+        # Initialize console logger to capture print statements
+        self.console_logger = ConsoleLogger()
+        self.console_logger.install()
+
         dpg.create_context()
         dpg.configure_app(manual_callback_management=True)  # Enable manual callback management
         dpg.create_viewport(title="MCAT Content Moderation Checker", width=1050, height=850)
@@ -62,13 +89,21 @@ class MainWindow:
                 # Process Dear PyGui callbacks
                 jobs = dpg.get_callback_queue()
                 dpg.run_callbacks(jobs)
-                
+
                 # Process progress updates from all ProcessingService instances
                 ProcessingService.process_all_progress_updates()
-                
+
+                # Update global console with new messages (MVP: MainWindow → ConsolePresenter → ConsolePanel)
+                if self.console_presenter:
+                    self.console_presenter.update()
+
                 # Render frame
                 dpg.render_dearpygui_frame()
         finally:
+            # Uninstall console logger
+            if self.console_logger:
+                self.console_logger.uninstall()
+
             # Cleanup components
             if self.platform_tabs:
                 self.platform_tabs.cleanup()

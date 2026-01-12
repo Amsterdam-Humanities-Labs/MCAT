@@ -42,7 +42,15 @@ class PlatformTabs:
     def get_youtube_tab(self) -> Optional[YouTubeTab]:
         """Get the YouTube tab component."""
         return self.youtube_tab
-    
+
+    def get_all_tabs(self) -> list:
+        """Get all tab instances for console updates."""
+        tabs = []
+        if self.youtube_tab:
+            tabs.append(self.youtube_tab)
+        # Add other tabs when implemented
+        return tabs
+
     def cleanup(self):
         """Clean up tab resources."""
         if self.youtube_tab:

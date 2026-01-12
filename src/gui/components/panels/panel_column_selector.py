@@ -75,20 +75,20 @@ class PanelPreserveColumns:
             for i, column in enumerate(csv_columns):
                 checkbox_id = f"preserve_checkbox_{i}"
                 self.checkbox_ids[column] = checkbox_id
-                
+
                 dpg.add_checkbox(
                     tag=checkbox_id,
                     label=column,
                     default_value=False,
                     user_data=column,
-                    callback=lambda sender, value, user_data: self._on_checkbox_changed(user_data, value)
+                    callback=self._on_checkbox_toggled
                 )
-                
+
                 # Add small spacing between checkboxes
                 if i < len(csv_columns) - 1:
                     dpg.add_spacer(height=2)
     
-    def _on_post_column_selected(self, sender, value, *args, **kwargs):
+    def _on_post_column_selected(self, sender, value):
         """Handle post column selection."""
         if self.callback:
             try:
@@ -99,13 +99,18 @@ class PanelPreserveColumns:
             except Exception as e:
                 print(f"Error in preserve columns callback: {e}")
     
+    def _on_checkbox_toggled(self, sender, checked, user_data):
+        """Handle checkbox toggle - called by DearPyGUI."""
+        column = user_data
+        self._on_checkbox_changed(column, checked)
+
     def _on_checkbox_changed(self, column: str, checked: bool):
         """Handle checkbox state change."""
         if checked:
             self.selected_columns.add(column)
         else:
             self.selected_columns.discard(column)
-        
+
         # Notify callback
         if self.callback:
             try:

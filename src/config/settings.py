@@ -1,6 +1,5 @@
 from typing import Dict
 
-# UI Constants
 UI_SPACING = 3  # Standard spacing throughout the app
 
 
@@ -19,5 +18,4 @@ class AppConfig:
         }
 
 
-# Global config instance
 config = AppConfig()

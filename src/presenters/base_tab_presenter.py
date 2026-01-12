@@ -45,12 +45,12 @@ class BaseTabPresenter:
         # The view will call presenter methods directly via UI callbacks
         # No additional setup needed in base implementation
         pass
-    
+
     def cleanup(self):
         """Cleanup presenter resources."""
         # Unsubscribe from events to prevent memory leaks
         self._unsubscribe_from_events()
-        
+
         if self.processing_service:
             self.processing_service.cleanup()
     
@@ -68,6 +68,9 @@ class BaseTabPresenter:
         self.current_file = file_info
         
         if file_info.valid:
+            # Log to console (captured by ConsoleLogger)
+            print(f"✅ Loaded file: {file_info.filename} ({file_info.row_count} rows, {len(file_info.columns)} columns)")
+
             # Update view with success
             self.view.show_file_success(file_info)
             self.view.populate_columns(file_info.columns)
@@ -88,7 +91,7 @@ class BaseTabPresenter:
     def handle_column_mapping_changed(self, post_column: str, preserve_columns: list):
         """
         Handle column mapping changes.
-        
+
         Args:
             post_column: Selected post/URL column
             preserve_columns: List of columns to preserve in output
@@ -97,7 +100,11 @@ class BaseTabPresenter:
             post_column=post_column,
             preserve_columns=preserve_columns
         )
-        
+
+        # Log to console (captured by ConsoleLogger)
+        if post_column:
+            print(f"📋 Column mapping updated: URL column = '{post_column}'")
+
         # Re-validate with new mapping
         self._validate_current_state()
     
@@ -114,7 +121,10 @@ class BaseTabPresenter:
             column_mapping=self.current_column_mapping,
             platform=self.platform  # Only difference between platforms
         )
-        
+
+        # Log to console (captured by ConsoleLogger)
+        print(f"🚀 Started processing {job.file_info.row_count} URLs")
+
         # Start processing using service
         # Events will handle view updates automatically
         self.processing_service.start_processing(job)
@@ -228,11 +238,15 @@ class BaseTabPresenter:
         """Handle processing completion."""
         result = kwargs.get('result')
         if result:
+            # Log to console (captured by ConsoleLogger)
+            print(f"✅ Processing completed: {result.stats}")
             self.view.show_processing_complete(result)
     
     def _handle_processing_error(self, sender=None, **kwargs):
         """Handle processing error."""
         error_message = kwargs.get('error_message', 'Unknown error')
+        # Log to console (captured by ConsoleLogger)
+        print(f"❌ Processing error: {error_message}")
         self.view.show_processing_error(error_message)
     
     def _handle_processing_started(self, sender=None, **kwargs):
