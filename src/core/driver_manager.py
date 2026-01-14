@@ -54,7 +54,6 @@ class WebDriverPool:
         chrome_options.add_argument("--disable-extensions")
         chrome_options.add_argument("--disable-plugins")
         chrome_options.add_argument("--disable-images")
-        chrome_options.add_argument("--disable-javascript")
         chrome_options.add_argument("--disable-popup-blocking")
         chrome_options.add_argument("--ignore-certificate-errors")
         chrome_options.add_argument("--incognito")
@@ -69,7 +68,14 @@ class WebDriverPool:
         
         # User agent to avoid detection
         chrome_options.add_argument("--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
-        
+
+        # Disable automation flags to avoid bot detection
+        chrome_options.add_experimental_option("excludeSwitches", ["enable-automation"])
+        chrome_options.add_experimental_option('useAutomationExtension', False)
+
+        # Disable WebDriver flag that sites check for bots
+        chrome_options.add_argument('--disable-blink-features=AutomationControlled')
+
         return chrome_options
     
     def _initialize_pool(self):
@@ -170,7 +176,6 @@ class WebDriverManager:
         chrome_options.add_argument("--disable-extensions")
         chrome_options.add_argument("--disable-plugins")
         chrome_options.add_argument("--disable-images")
-        chrome_options.add_argument("--disable-javascript")
         chrome_options.add_argument("--disable-popup-blocking")
         chrome_options.add_argument("--ignore-certificate-errors")
         chrome_options.add_argument("--incognito")
@@ -185,7 +190,14 @@ class WebDriverManager:
         
         # User agent to avoid detection
         chrome_options.add_argument("--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
-        
+
+        # Disable automation flags to avoid bot detection
+        chrome_options.add_experimental_option("excludeSwitches", ["enable-automation"])
+        chrome_options.add_experimental_option('useAutomationExtension', False)
+
+        # Disable WebDriver flag that sites check for bots
+        chrome_options.add_argument('--disable-blink-features=AutomationControlled')
+
         service = Service(self.chromedriver_path)
         
         try:
