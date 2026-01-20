@@ -1,6 +1,8 @@
 import pandas as pd
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Any
 import os
+import csv
+import threading
 
 
 class CSVHandler:
@@ -99,3 +101,47 @@ class CSVHandler:
             'columns': list(df.columns),
             'column_count': len(df.columns)
         }
+
+
+class IncrementalCSVWriter:
+    """Thread-safe incremental CSV writer for real-time result saving."""
+
+    def __init__(self, output_path: str, columns: List[str]) -> None:
+        """
+        Initialize incremental CSV writer.
+
+        Args:
+            output_path: Path to output CSV file
+            columns: List of column names for the CSV
+        """
+        self.output_path: str = output_path
+        self.columns: List[str] = columns
+        self.lock: threading.Lock = threading.Lock()
+        self.initialized: bool = False
+
+    def write_header(self) -> None:
+        """Write CSV header (call once at start)."""
+        with self.lock:
+            with open(self.output_path, 'w', newline='', encoding='utf-8') as f:
+                writer = csv.writer(f)
+                writer.writerow(self.columns)
+            self.initialized = True
+
+    def append_row(self, row_data: Dict[str, Any]) -> None:
+        """
+        Append a single result row (thread-safe).
+
+        Args:
+            row_data: Dictionary of column name to value
+        """
+        if not self.initialized:
+            raise Exception("Must call write_header() first")
+
+        with self.lock:
+            try:
+                with open(self.output_path, 'a', newline='', encoding='utf-8') as f:
+                    writer = csv.DictWriter(f, fieldnames=self.columns)
+                    writer.writerow(row_data)
+            except Exception as e:
+                # Log error but don't crash processing
+                print(f"⚠️ Failed to write row to CSV: {e}")

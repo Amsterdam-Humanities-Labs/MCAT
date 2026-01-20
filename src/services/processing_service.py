@@ -380,7 +380,9 @@ class ProcessingService:
             result = self._batch_processor.process_csv(
                 csv_path=temp_csv_path,
                 platform=job.platform,
-                column_mapping={'post': job.column_mapping.post_column}
+                column_mapping={'post': job.column_mapping.post_column},
+                output_folder=job.output_folder,
+                save_screenshots=job.save_screenshots
             )
             
             # Check for cancellation
@@ -407,10 +409,15 @@ class ProcessingService:
                 self._processing_state = ProcessingState.ERROR
             self.current_status.state = ProcessingState.ERROR
             self.current_status.error_message = str(e)
-            
+
             dispatcher.send(ProcessingEvents.ERROR, sender=self, error_message=str(e))
-        
+
         finally:
+            # Reset state to IDLE so new processing can start
+            with self._state_lock:
+                if self._processing_state in [ProcessingState.COMPLETED, ProcessingState.ERROR]:
+                    self._processing_state = ProcessingState.IDLE
+
             # Cleanup temp file
             try:
                 if os.path.exists("/tmp/mcat_processing_temp.csv"):

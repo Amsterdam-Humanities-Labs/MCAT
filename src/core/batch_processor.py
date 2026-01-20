@@ -4,9 +4,10 @@ import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Dict, List, Optional, Callable
 from queue import Queue
+from pathlib import Path
 
 from config.settings import config
-from utils.csv_handler import CSVHandler
+from utils.csv_handler import CSVHandler, IncrementalCSVWriter
 from core.driver_manager import WebDriverPool
 from scrapers.youtube_scraper import YouTubeScraper
 
@@ -48,64 +49,82 @@ class BatchProcessor:
         self.progress_queue = Queue()
         self.progress_callback = None
     
-    def process_csv(self, csv_path: str, platform: str, column_mapping: Dict[str, str], 
-                   output_path: str = None) -> ProcessingResult:
-        """Process a CSV file of URLs."""
+    def process_csv(self, csv_path: str, platform: str, column_mapping: Dict[str, str],
+                   output_folder: str = None, save_screenshots: bool = False) -> ProcessingResult:
+        """Process a CSV file of URLs with incremental saving."""
         result = ProcessingResult()
-        
+        csv_writer = None
+        output_csv_path = None
+
         try:
             # Reset cancel flag
             self.cancel_flag.clear()
-            
+
             # Step 1: Load CSV
             df = CSVHandler.load_csv(csv_path)
-            
+
             # Step 2: Validate data
             valid, error_msg = CSVHandler.validate_column_mapping(df, column_mapping)
             if not valid:
                 result.error_message = error_msg
                 return result
-            
-            # Add result columns
-            df = CSVHandler.add_result_columns(df)
-            
-            # Step 3: Initialize scraper
+
+            # Step 3: Setup incremental CSV writer if output folder provided
+            if output_folder:
+                output_csv_path = Path(output_folder) / "results.csv"
+                # Include all original columns plus result columns
+                result_columns = ['status', 'info', 'screenshot_path', 'timestamp', 'error_message', 'platform']
+                all_columns = list(df.columns) + result_columns
+                csv_writer = IncrementalCSVWriter(
+                    output_path=str(output_csv_path),
+                    columns=all_columns
+                )
+                csv_writer.write_header()
+
+            # Step 4: Initialize scraper
             scraper = self._create_scraper(platform)
             if not scraper:
                 result.error_message = f"Unsupported platform: {platform}"
                 return result
-            
-            # Step 4: Extract URLs
+
+            # Enable screenshots if requested
+            if save_screenshots and output_folder:
+                scraper.enable_screenshots(True, output_folder)
+
+            # Step 5: Extract URLs
             url_column = column_mapping.get('post', '')
             urls = CSVHandler.get_urls_from_column(df, url_column)
-            
-            # Step 5: Process URLs
-            scraping_results = self._process_batch(urls, scraper)
-            
+
+            # Step 6: Process URLs with incremental writing
+            self._process_batch(urls, scraper, csv_writer, df, url_column)
+
             if self.cancel_flag.is_set():
                 result.error_message = "Processing was cancelled"
+                # Still load partial results from CSV if available
+                if output_csv_path and output_csv_path.exists():
+                    result.dataframe = pd.read_csv(output_csv_path)
                 return result
-            
-            # Step 6: Update DataFrame with results
-            df = CSVHandler.update_results(df, scraping_results, url_column)
-            
-            # Step 7: Save if output path provided
-            if output_path:
-                CSVHandler.save_csv(df, output_path)
-            
-            # Calculate final stats
-            status_counts = df['status'].value_counts().to_dict()
-            result.stats = {
-                'live': status_counts.get('Live', 0),
-                'removed': status_counts.get('Removed', 0),
-                'restricted': status_counts.get('Restricted', 0) + status_counts.get('Age-restricted', 0) + 
-                              status_counts.get('Geo-blocked', 0) + status_counts.get('Private', 0),
-                'errors': status_counts.get('Error', 0)
-            }
-            
+
+            # Step 7: Load CSV back into memory for GUI table
+            if output_csv_path and output_csv_path.exists():
+                result.dataframe = pd.read_csv(output_csv_path)
+            else:
+                # Fallback if no CSV was saved (shouldn't happen)
+                result.dataframe = df
+
+            # Calculate final stats from loaded DataFrame
+            if result.dataframe is not None:
+                status_counts = result.dataframe['status'].value_counts().to_dict()
+                result.stats = {
+                    'live': status_counts.get('Live', 0),
+                    'removed': status_counts.get('Removed', 0),
+                    'restricted': status_counts.get('Restricted', 0) + status_counts.get('Age-restricted', 0) +
+                                  status_counts.get('Geo-blocked', 0) + status_counts.get('Private', 0),
+                    'errors': status_counts.get('Error', 0)
+                }
+                result.processed_count = len(result.dataframe)
+
             result.success = True
-            result.dataframe = df
-            result.processed_count = len(scraping_results)
             
         except Exception as e:
             result.error_message = str(e)
@@ -133,26 +152,42 @@ class BatchProcessor:
         """Set callback function for progress updates."""
         self.progress_callback = callback
     
-    def _process_batch(self, urls: List[str], scraper) -> List[Dict]:
-        """Process URLs in parallel batches with thread-safe progress updates."""
-        results = []
+    def _process_batch(self, urls: List[str], scraper,
+                      csv_writer: Optional[IncrementalCSVWriter] = None,
+                      original_df: Optional[pd.DataFrame] = None,
+                      url_column: str = None) -> None:
+        """Process URLs in parallel batches with incremental CSV writing."""
         processed = 0
         total = len(urls)
-        
+
         # Thread-safe counters
         stats_lock = threading.Lock()
         stats = {'live': 0, 'removed': 0, 'restricted': 0, 'errors': 0, 'skipped': 0}
-        
-        def process_single_url(url: str) -> Dict:
+
+        def process_single_url(url: str, row_index: int) -> None:
             nonlocal processed
             if self.cancel_flag.is_set():
-                return None
-            
+                return
+
             try:
                 # Check URL using shared scraper
                 result = scraper.check_url_status(url)
-                result_dict = result.to_dict()
-                
+
+                # Write to CSV incrementally if writer provided
+                if csv_writer and original_df is not None:
+                    # Get original row data
+                    original_row = original_df.iloc[row_index].to_dict()
+                    # Add scraping results
+                    original_row.update({
+                        'status': result.status,
+                        'info': result.info,
+                        'screenshot_path': result.screenshot_path or '',
+                        'timestamp': result.timestamp,
+                        'error_message': result.error_message,
+                        'platform': result.platform
+                    })
+                    csv_writer.append_row(original_row)
+
                 # Thread-safe stats update
                 with stats_lock:
                     status = result.status.lower()
@@ -164,11 +199,11 @@ class BatchProcessor:
                         stats['restricted'] += 1
                     else:
                         stats['errors'] += 1
-                    
+
                     processed += 1
                     current_processed = processed
                     current_stats = stats.copy()
-                
+
                 # Queue progress update for main thread
                 progress_data = {
                     'current': current_processed,
@@ -177,33 +212,24 @@ class BatchProcessor:
                     'current_action': f"Checking: {url[:60]}{'...' if len(url) > 60 else ''}"
                 }
                 self.progress_queue.put(progress_data)
-                
-                # Progress updates now handled via queue only
-                
-                return result_dict
-                
+
             except Exception as e:
                 print(f"Error processing URL {url}: {e}")
                 with stats_lock:
                     stats['errors'] += 1
                     processed += 1
-                return None
-        
+
         # Process URLs with threading
         with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
-            futures = [executor.submit(process_single_url, url) for url in urls]
-            
+            futures = [executor.submit(process_single_url, url, idx) for idx, url in enumerate(urls)]
+
             for future in as_completed(futures):
                 if self.cancel_flag.is_set():
                     break
                 try:
-                    result = future.result()
-                    if result:
-                        results.append(result)
+                    future.result()
                 except Exception as e:
                     print(f"Error in future result: {e}")
-        
-        return results
     
     def get_progress_updates(self):
         """Get all pending progress updates from queue (non-blocking)."""

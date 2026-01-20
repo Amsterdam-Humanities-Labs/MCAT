@@ -24,17 +24,18 @@ class ProcessingState(Enum):
 @dataclass
 class ProcessingJob:
     """Configuration for a processing job."""
-    
+
     file_info: FileInfo
     column_mapping: ColumnMapping
     platform: str = "youtube"
-    output_path: Optional[str] = None
-    
+    output_folder: str = ""
+    save_screenshots: bool = False
+
     @property
     def is_valid(self) -> bool:
         """Check if job configuration is valid."""
         return (
-            self.file_info.valid and 
+            self.file_info.valid and
             self.column_mapping.is_valid and
             bool(self.platform)
         )

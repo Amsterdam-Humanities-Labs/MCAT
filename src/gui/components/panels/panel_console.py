@@ -49,8 +49,7 @@ class ConsolePanel:
             ):
                 # Content group (messages added here)
                 with dpg.group(tag=self.content_id):
-                    dpg.add_text("Console initialized. Messages will appear here...",
-                                color=[120, 120, 120])
+                    pass  # Start empty, messages will appear as they come
 
     def add_message(self, message: str):
         """
@@ -68,10 +67,6 @@ class ConsolePanel:
 
         # Add to UI (if content exists)
         if dpg.does_item_exist(self.content_id):
-            # Clear if first real message
-            if self.message_count == 1:
-                dpg.delete_item(self.content_id, children_only=True)
-
             # Add text with timestamp-like prefix
             dpg.add_text(f"[{self.message_count}] {message}",
                         color=color,

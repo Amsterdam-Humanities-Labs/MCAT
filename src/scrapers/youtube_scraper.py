@@ -4,8 +4,12 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException
 import time
 import random
+from pathlib import Path
+from datetime import datetime
+from typing import Optional
 
 from scrapers.base_scraper import BaseScraper, ScrapingResult
+from cookies.youtube_cookie_handler import dismiss_youtube_cookies
 
 
 class YouTubeScraper(BaseScraper):
@@ -31,9 +35,13 @@ class YouTubeScraper(BaseScraper):
         self.min_delay = self.RATE_LIMIT_MIN
         self.max_delay = self.RATE_LIMIT_MAX
         self.last_request_time = 0
-        
+
         # Pause control - event-based instead of polling
         self.pause_event = None
+
+        # Screenshot configuration
+        self.save_screenshots: bool = False
+        self.screenshot_base_path: Optional[Path] = None
     
     def get_platform_name(self) -> str:
         """Return the platform name for this scraper."""
@@ -62,6 +70,55 @@ class YouTubeScraper(BaseScraper):
     def set_pause_event(self, pause_event):
         """Set threading event for pause control."""
         self.pause_event = pause_event
+
+    def enable_screenshots(self, enabled: bool, base_path: str) -> None:
+        """
+        Enable screenshot saving with base path.
+
+        Args:
+            enabled: Whether to save screenshots
+            base_path: Base directory path for screenshot storage
+        """
+        self.save_screenshots = enabled
+        if enabled:
+            self.screenshot_base_path = Path(base_path) / "screenshots"
+
+    def _save_screenshot(self, driver, url: str, status: str) -> str:
+        """
+        Save screenshot for evidence.
+
+        Args:
+            driver: WebDriver instance
+            url: URL being checked
+            status: Status result (Live, Removed, etc.)
+
+        Returns:
+            Path to saved screenshot file, or empty string if failed
+        """
+        if not self.screenshot_base_path:
+            return ""
+
+        try:
+            # Extract video ID from URL
+            video_id = url.split('v=')[-1].split('&')[0][:20]  # Truncate for safety
+
+            # Create status-specific folder
+            screenshot_dir = self.screenshot_base_path / status.lower()
+            screenshot_dir.mkdir(parents=True, exist_ok=True)
+
+            # Filename with timestamp
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            filename = f"{video_id}_{timestamp}.png"
+            filepath = screenshot_dir / filename
+
+            # Save screenshot
+            driver.save_screenshot(str(filepath))
+            print(f"📷 Screenshot saved: {filepath.name}")
+            return str(filepath)
+
+        except Exception as e:
+            print(f"⚠️ Screenshot failed for {url}: {e}")
+            return ""
 
     def check_url_status(self, url: str) -> ScrapingResult:
         """Check URL status with automatic retries on transient failures."""
@@ -105,6 +162,9 @@ class YouTubeScraper(BaseScraper):
             # Now make the request
             driver.get(url)
 
+            # Dismiss cookie consent modal if present
+            dismiss_youtube_cookies(driver, timeout=3)
+
             # Wait for YouTube's JavaScript to render dynamic content (SPA)
             try:
                 WebDriverWait(driver, self.SPA_RENDER_WAIT).until(
@@ -135,6 +195,8 @@ class YouTubeScraper(BaseScraper):
                 result.status = "Removed"
                 result.info = "Video unavailable"
                 print(f"✅ {url}: {result.status} - {result.info}")
+                if self.save_screenshots:
+                    result.screenshot_path = self._save_screenshot(driver, url, result.status)
                 return result
 
             # Age restricted
@@ -142,6 +204,8 @@ class YouTubeScraper(BaseScraper):
                 result.status = "Age-restricted"
                 result.info = "Age verification required"
                 print(f"✅ {url}: {result.status} - {result.info}")
+                if self.save_screenshots:
+                    result.screenshot_path = self._save_screenshot(driver, url, result.status)
                 return result
 
             # Geo-blocked
@@ -149,6 +213,8 @@ class YouTubeScraper(BaseScraper):
                 result.status = "Geo-blocked"
                 result.info = "Not available in your region"
                 print(f"✅ {url}: {result.status} - {result.info}")
+                if self.save_screenshots:
+                    result.screenshot_path = self._save_screenshot(driver, url, result.status)
                 return result
 
             # Private video
@@ -156,8 +222,10 @@ class YouTubeScraper(BaseScraper):
                 result.status = "Private"
                 result.info = "Video is private"
                 print(f"✅ {url}: {result.status} - {result.info}")
+                if self.save_screenshots:
+                    result.screenshot_path = self._save_screenshot(driver, url, result.status)
                 return result
-            
+
             # Check for content warning panels
             try:
                 warning_elements = driver.find_elements(By.CSS_SELECTOR, '[class*="warning"], [class*="restricted"]')
@@ -166,6 +234,8 @@ class YouTubeScraper(BaseScraper):
                     result.status = "Restricted"
                     result.info = f"Warning: {warning_text[:100]}"
                     print(f"✅ {url}: {result.status} - {result.info}")
+                    if self.save_screenshots:
+                        result.screenshot_path = self._save_screenshot(driver, url, result.status)
                     return result
             except Exception:
                 pass  # Ignore failures in warning element detection
@@ -174,6 +244,8 @@ class YouTubeScraper(BaseScraper):
             result.status = "Live"
             result.info = "Video available"
             print(f"✅ {url}: {result.status} - {result.info}")
+            if self.save_screenshots:
+                result.screenshot_path = self._save_screenshot(driver, url, result.status)
             return result
 
         except Exception as e:

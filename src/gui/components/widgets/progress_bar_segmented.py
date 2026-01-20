@@ -4,16 +4,21 @@ from typing import Dict, Optional, Tuple
 
 class RectangularProgress:
     """Reusable rectangular progress bar component showing URL processing distribution."""
-    
-    # Status colors (RGB tuples)
+
+    # Status colors (RGB tuples) - Noctua-inspired warm palette
     STATUS_COLORS = {
-        'pending': (80, 80, 80),      # Gray - not yet processed
-        'live': (0, 180, 0),          # Green - content is live
-        'removed': (220, 50, 50),     # Red - content removed/deleted
-        'restricted': (255, 140, 0),  # Orange - age restricted/private
-        'error': (150, 30, 30),       # Dark red - processing errors
-        'skipped': (255, 200, 0)      # Yellow - skipped URLs
+        'pending': (80, 65, 50),      # Sandy brown - not yet processed
+        'live': (100, 180, 90),       # Soft green - content is live
+        'removed': (200, 80, 70),     # Warm red - content removed/deleted
+        'restricted': (230, 140, 70), # Warm orange - age restricted/private
+        'error': (180, 60, 50),       # Warm dark red - processing errors
+        'skipped': (220, 180, 80)     # Warm yellow - skipped URLs
     }
+
+    # Background and UI colors matching Noctua theme
+    BACKGROUND_COLOR = (35, 30, 25)   # Dark brown background
+    BORDER_COLOR = (80, 65, 50)       # Sandy brown border
+    LEGEND_TEXT_COLOR = (230, 220, 200)  # Light sandy/cream text
     
     def __init__(self, parent_window: str, width: int = 300, height: int = 40):
         self.parent_window = parent_window
@@ -136,13 +141,22 @@ class RectangularProgress:
         # Calculate total count
         total_count = sum(self.status_counts.values())
         
-        # If no data, show all gray (pending state)
+        # Draw background first
+        dpg.draw_rectangle(
+            pmin=(0, 0),
+            pmax=(self.width, self.height),
+            color=self.BACKGROUND_COLOR,
+            fill=self.BACKGROUND_COLOR,
+            parent=self.drawlist_id
+        )
+
+        # If no data, just show background with border
         if total_count == 0:
             dpg.draw_rectangle(
                 pmin=(0, 0),
                 pmax=(self.width, self.height),
-                color=self.STATUS_COLORS['pending'],
-                fill=self.STATUS_COLORS['pending'],
+                color=self.BORDER_COLOR,
+                thickness=1,
                 parent=self.drawlist_id
             )
             return
@@ -177,7 +191,7 @@ class RectangularProgress:
         dpg.draw_rectangle(
             pmin=(0, 0),
             pmax=(self.width, self.height),
-            color=(100, 100, 100),
+            color=self.BORDER_COLOR,
             thickness=1,
             parent=self.drawlist_id
         )
@@ -238,6 +252,6 @@ class RectangularProgress:
                     
                     # Add small spacer between square and label
                     dpg.add_spacer(width=4)
-                    
-                    # Add label next to the square
-                    dpg.add_text(label, color=[200, 200, 200])
+
+                    # Add label next to the square (light creamy color from Noctua theme)
+                    dpg.add_text(label, color=self.LEGEND_TEXT_COLOR)

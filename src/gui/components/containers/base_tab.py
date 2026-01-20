@@ -11,6 +11,7 @@ import pandas as pd
 from abc import ABC, abstractmethod
 
 from gui.components.widgets.file_input_picker import FilePicker
+from gui.components.widgets.folder_picker import FolderPicker
 from gui.components.panels.panel_column_selector import PanelPreserveColumns
 from gui.components.widgets.progress_bar_segmented import RectangularProgress
 from gui.components.widgets.button_group_processing import ProcessingControls
@@ -35,10 +36,10 @@ class BaseTab(ABC):
         
         # Common UI components
         self.file_picker: Optional[FilePicker] = None
+        self.folder_picker: Optional[FolderPicker] = None
         self.column_selector: Optional[PanelPreserveColumns] = None
         self.progress_display: Optional[RectangularProgress] = None
         self.processing_controls: Optional[ProcessingControls] = None
-        self.export_file_picker: Optional[FilePicker] = None
         
         # Results data
         self.results_df: Optional[pd.DataFrame] = None
@@ -51,7 +52,7 @@ class BaseTab(ABC):
         self.file_status_id = f"{platform}_file_status"
         self.results_section_id = f"{platform}_results_section"
         self.results_table_id = f"{platform}_results_table"
-        self.export_section_id = f"{platform}_export_section"
+        self.screenshot_checkbox_id = f"{platform}_screenshot_checkbox"
         
         # Platform-specific presenter (created by subclass)
         self.presenter = self._create_presenter()
@@ -113,7 +114,7 @@ class BaseTab(ABC):
             self.progress_display = RectangularProgress(
                 parent_window=self.right_panel_id,
                 width=400,
-                height=50
+                height=30
             )
             self.progress_display.setup_ui(label="Processing Progress")
             dpg.add_spacer(height=UI_SPACING)
@@ -129,9 +130,31 @@ class BaseTab(ABC):
             id_suffix=f"_{self.platform}"
         )
         self.file_picker.setup_ui(
-            input_width=250, 
+            input_width=250,
             placeholder_text="Select CSV file",
             label="Select CSV file"
+        )
+
+        # Output folder picker
+        dpg.add_spacer(height=10, parent=self.left_panel_id)
+        self.folder_picker = FolderPicker(
+            parent_window=self.left_panel_id,
+            callback=self._on_output_folder_selected,
+            id_suffix=f"_{self.platform}"
+        )
+        self.folder_picker.setup_ui(
+            input_width=250,
+            placeholder_text="Auto-generated from CSV",
+            label="Output folder"
+        )
+
+        # Screenshot checkbox
+        dpg.add_spacer(height=10, parent=self.left_panel_id)
+        dpg.add_checkbox(
+            tag=self.screenshot_checkbox_id,
+            label="Save screenshots",
+            default_value=False,
+            parent=self.left_panel_id
         )
     
     def _setup_column_section(self):
@@ -189,35 +212,8 @@ class BaseTab(ABC):
                 dpg.add_table_column(label="URL")
                 dpg.add_table_column(label="Status")
                 dpg.add_table_column(label="Info")
-                
-                # Add placeholder row
-                with dpg.table_row():
-                    dpg.add_text("No results yet...")
-                    dpg.add_text("")
-                    dpg.add_text("")
             
-            dpg.add_spacer(height=UI_SPACING)
-            
-            # Export section
-            self._setup_export_section()
-    
-    def _setup_export_section(self):
-        """Setup export results section."""
-        with dpg.group(tag=self.export_section_id):
-            dpg.add_text("Export Results", color=[255, 255, 255])
-            dpg.add_spacer(height=5)
-            
-            self.export_file_picker = FilePicker(
-                parent_window=self.export_section_id,
-                callback=self._on_export_file_selected,
-                id_suffix=f"_{self.platform}_export"
-            )
-            self.export_file_picker.setup_ui(
-                input_width=250,
-                placeholder_text="Choose export location...",
-                label="Export Results"
-            )
-    
+
     # UI event handlers (delegate to presenter)
     
     def _on_file_selected(self, file_path: str):
@@ -252,18 +248,12 @@ class BaseTab(ABC):
         """Handle cancel processing - delegate to presenter."""
         if self.presenter:
             self.presenter.handle_cancel_processing()
-    
-    def _on_export_file_selected(self, file_path: str):
-        """Handle export file selection."""
-        if self.presenter and self.results_df is not None:
-            try:
-                if self.presenter.export_results(file_path):
-                    self._update_status(f"✅ Results exported to {file_path}")
-                else:
-                    self._update_status("❌ Export failed")
-            except Exception as e:
-                self._update_status(f"❌ Export error: {str(e)}")
-    
+
+    def _on_output_folder_selected(self, folder_path: str):
+        """Handle output folder selection - delegate to presenter."""
+        if self.presenter:
+            self.presenter.handle_output_folder_changed(folder_path)
+
     # View interface methods (called by presenter)
     
     def show_file_success(self, file_info: FileInfo):
@@ -318,7 +308,18 @@ class BaseTab(ABC):
     def show_validation_error(self, error_message: str):
         """Show validation error."""
         self._update_status(f"❌ Validation error: {error_message}")
-    
+
+    def show_output_folder(self, folder_path: str):
+        """Display output folder path in folder picker."""
+        if self.folder_picker:
+            self.folder_picker.set_folder(folder_path)
+
+    def get_screenshot_enabled(self) -> bool:
+        """Get whether screenshot checkbox is enabled."""
+        if dpg.does_item_exist(self.screenshot_checkbox_id):
+            return dpg.get_value(self.screenshot_checkbox_id)
+        return False
+
     def show_processing_started(self):
         """Show that processing has started."""
         self._update_status("🔄 Processing started...")

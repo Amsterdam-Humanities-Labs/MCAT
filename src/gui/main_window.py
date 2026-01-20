@@ -6,6 +6,7 @@ from gui.components.panels.panel_console import ConsolePanel
 from presenters.console_presenter import ConsolePresenter
 from services.processing_service import ProcessingService
 from gui.theme import AppTheme
+from gui.themes.noctua_theme import create_noctua_theme
 from utils.console_logger import ConsoleLogger
 
 
@@ -73,9 +74,10 @@ class MainWindow:
         dpg.create_context()
         dpg.configure_app(manual_callback_management=True)  # Enable manual callback management
         dpg.create_viewport(title="MCAT Content Moderation Checker", width=1050, height=850)
-        
-        # Apply global theme
-        AppTheme.apply_themes()
+
+        # Apply Noctua theme
+        noctua_theme = create_noctua_theme()
+        dpg.bind_theme(noctua_theme)
         
         self.setup_ui()
         

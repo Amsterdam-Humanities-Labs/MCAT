@@ -7,6 +7,7 @@ UI components and services, following the MVP pattern.
 
 from typing import Optional, Dict, Any
 from abc import ABC
+from pathlib import Path
 
 from models.file_models import FileInfo, ColumnMapping, ValidationResult
 from models.processing_models import ProcessingJob, ProcessingStatus, ProcessingState
@@ -28,14 +29,15 @@ class BaseTabPresenter:
         """
         self.view = view
         self.platform = platform
-        
+
         # Shared services (same for all platforms)
         self.csv_service = CSVService()
         self.processing_service = ProcessingService()
-        
+
         # Current state
         self.current_file: Optional[FileInfo] = None
         self.current_column_mapping = ColumnMapping()
+        self.output_folder: Optional[Path] = None
         
         # Subscribe to processing events
         self._subscribe_to_events()
@@ -59,34 +61,46 @@ class BaseTabPresenter:
     def handle_file_selected(self, file_path: str):
         """
         Handle file selection workflow - same for all platforms.
-        
+
         Args:
             file_path: Path to the selected CSV file
         """
         # Use CSV service to load and validate file
         file_info = self.csv_service.load_file(file_path)
         self.current_file = file_info
-        
+
         if file_info.valid:
+            # Auto-determine output folder
+            csv_path = Path(file_path)
+            csv_dir = csv_path.parent
+            csv_stem = csv_path.stem
+            self.output_folder = csv_dir / f"{csv_stem}_results"
+
             # Log to console (captured by ConsoleLogger)
             print(f"✅ Loaded file: {file_info.filename} ({file_info.row_count} rows, {len(file_info.columns)} columns)")
+            print(f"📁 Results will be saved to: {self.output_folder}")
 
             # Update view with success
             self.view.show_file_success(file_info)
             self.view.populate_columns(file_info.columns)
-            
+
+            # Show output folder in view
+            if hasattr(self.view, 'show_output_folder'):
+                self.view.show_output_folder(str(self.output_folder))
+
             # Platform-specific column suggestions
             self._suggest_columns(file_info)
-            
+
             # Reset column mapping for new file
             self.current_column_mapping = ColumnMapping()
-            
+
             # Trigger initial validation
             self._validate_current_state()
         else:
             # Update view with error
             self.view.show_file_error(file_info.error_message)
             self.current_file = None
+            self.output_folder = None
     
     def handle_column_mapping_changed(self, post_column: str, preserve_columns: list):
         """
@@ -102,8 +116,12 @@ class BaseTabPresenter:
         )
 
         # Log to console (captured by ConsoleLogger)
-        if post_column:
-            print(f"📋 Column mapping updated: URL column = '{post_column}'")
+        url_part = f"'{post_column}'" if post_column else "None"
+        if preserve_columns:
+            cols_str = ", ".join(preserve_columns)
+            print(f"📋 Column mapping: URL = {url_part}, Preserve = [{cols_str}]")
+        else:
+            print(f"📋 Column mapping: URL = {url_part}, Preserve = []")
 
         # Re-validate with new mapping
         self._validate_current_state()
@@ -114,16 +132,29 @@ class BaseTabPresenter:
         """
         if not self._validate_processing_request():
             return
-        
+
+        # Get screenshot preference from view
+        save_screenshots = False
+        if hasattr(self.view, 'get_screenshot_enabled'):
+            save_screenshots = self.view.get_screenshot_enabled()
+
+        # Create output folder
+        if self.output_folder:
+            self.output_folder.mkdir(parents=True, exist_ok=True)
+
         # Create processing job
         job = ProcessingJob(
             file_info=self.current_file,
             column_mapping=self.current_column_mapping,
-            platform=self.platform  # Only difference between platforms
+            platform=self.platform,
+            output_folder=str(self.output_folder) if self.output_folder else "",
+            save_screenshots=save_screenshots
         )
 
         # Log to console (captured by ConsoleLogger)
         print(f"🚀 Started processing {job.file_info.row_count} URLs")
+        if save_screenshots:
+            print(f"📷 Screenshots enabled - saving to {self.output_folder}/screenshots/")
 
         # Start processing using service
         # Events will handle view updates automatically
@@ -143,7 +174,18 @@ class BaseTabPresenter:
         """Handle cancel processing request."""
         # Events will handle view updates automatically
         self.processing_service.cancel_processing()
-    
+
+    def handle_output_folder_changed(self, folder_path: str):
+        """
+        Handle output folder change from dropdown.
+
+        Args:
+            folder_path: Selected output folder path
+        """
+        from pathlib import Path
+        self.output_folder = Path(folder_path)
+        print(f"📁 Output folder changed to: {self.output_folder}")
+
     def get_current_file(self) -> Optional[FileInfo]:
         """Get the currently loaded file info."""
         return self.current_file
@@ -159,10 +201,6 @@ class BaseTabPresenter:
     def get_processing_results(self):
         """Get processing results if available."""
         return self.processing_service.get_results()
-    
-    def export_results(self, output_path: str) -> bool:
-        """Export processing results to file."""
-        return self.processing_service.export_results(output_path)
     
     # Internal methods
     
