@@ -15,6 +15,7 @@ from gui.components.widgets.folder_picker import FolderPicker
 from gui.components.panels.panel_column_selector import PanelPreserveColumns
 from gui.components.widgets.progress_bar_segmented import RectangularProgress
 from gui.components.widgets.button_group_processing import ProcessingControls
+from gui.themes.noctua_theme import create_dark_container_theme
 from models.file_models import FileInfo
 from models.processing_models import ProcessingStatus
 from config.settings import UI_SPACING
@@ -166,7 +167,8 @@ class BaseTab(ABC):
             
             self.column_selector = PanelPreserveColumns(
                 parent_window=self.preserve_columns_group_id,
-                callback=self._on_columns_changed
+                callback=self._on_columns_changed,
+                id_suffix=f"_{self.platform}"
             )
             self.column_selector.setup_ui()
     
@@ -198,21 +200,31 @@ class BaseTab(ABC):
         with dpg.group(tag=self.results_section_id):
             dpg.add_text("Results", color=[255, 255, 255])
             dpg.add_spacer(height=5)
-            
-            # Results table (initially empty)
-            with dpg.table(
-                tag=self.results_table_id,
-                header_row=True,
-                borders_innerV=True,
-                borders_outerV=True,
-                borders_innerH=True,
-                borders_outerH=True,
-                scrollY=True,
-                height=300
+
+            # Wrap table in child_window for dark background
+            table_container_id = f"{self.platform}_table_container"
+            with dpg.child_window(
+                tag=table_container_id,
+                height=300,
+                border=True
             ):
-                dpg.add_table_column(label="URL")
-                dpg.add_table_column(label="Status")
-                dpg.add_table_column(label="Info")
+                # Results table (initially empty)
+                with dpg.table(
+                    tag=self.results_table_id,
+                    header_row=True,
+                    borders_innerV=True,
+                    borders_outerV=True,
+                    borders_innerH=True,
+                    borders_outerH=True,
+                    scrollY=True,
+                    height=-1  # Fill container
+                ):
+                    dpg.add_table_column(label="URL")
+                    dpg.add_table_column(label="Status")
+                    dpg.add_table_column(label="Info")
+
+            # Apply dark theme to table container
+            dpg.bind_item_theme(table_container_id, create_dark_container_theme())
             
 
     # UI event handlers (delegate to presenter)

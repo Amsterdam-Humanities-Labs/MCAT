@@ -52,6 +52,15 @@ class ProcessingService:
             ProcessingService._all_instances.add(self)
     
     @classmethod
+    def is_any_processing(cls) -> bool:
+        """Check if any service instance is currently processing."""
+        with cls._instances_lock:
+            for service in cls._all_instances:
+                if service._processing_state in [ProcessingState.PROCESSING, ProcessingState.PAUSED]:
+                    return True
+        return False
+
+    @classmethod
     def process_all_progress_updates(cls):
         """Process progress updates from all service instances (main thread)."""
         with cls._instances_lock:
@@ -138,13 +147,18 @@ class ProcessingService:
         Returns:
             True if processing started successfully, False otherwise
         """
+        # Check if any other platform is already processing
+        if ProcessingService.is_any_processing():
+            dispatcher.send(ProcessingEvents.ERROR, sender=self, error_message="Another platform is already processing. Please wait or cancel it first.")
+            return False
+
         # Validate the job first
         validation = self.validate_processing_request(job)
         if not validation.valid:
             error_msg = f"Cannot start processing: {validation.error_summary}"
             dispatcher.send(ProcessingEvents.ERROR, sender=self, error_message=error_msg)
             return False
-        
+
         with self._state_lock:
             if self._processing_state != ProcessingState.IDLE:
                 dispatcher.send(ProcessingEvents.ERROR, sender=self, error_message="Processing already in progress")
@@ -415,7 +429,7 @@ class ProcessingService:
         finally:
             # Reset state to IDLE so new processing can start
             with self._state_lock:
-                if self._processing_state in [ProcessingState.COMPLETED, ProcessingState.ERROR]:
+                if self._processing_state in [ProcessingState.COMPLETED, ProcessingState.ERROR, ProcessingState.CANCELLED]:
                     self._processing_state = ProcessingState.IDLE
 
             # Cleanup temp file

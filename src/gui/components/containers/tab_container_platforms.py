@@ -2,56 +2,72 @@ import dearpygui.dearpygui as dpg
 from typing import Optional
 
 from gui.components.containers.tab_youtube import YouTubeTab
+from gui.components.containers.tab_instagram import InstagramTab
 
 
 class PlatformTabs:
     """Platform-specific scraper tabs container."""
-    
+
     def __init__(self, parent_window: str):
         self.parent_window = parent_window
-        
+
         # Tab components
         self.youtube_tab: Optional[YouTubeTab] = None
-        
+        self.instagram_tab: Optional[InstagramTab] = None
+
         # Tab bar ID
         self.tab_bar_id = "platform_tab_bar"
-    
+
     def setup_ui(self):
         """Create the platform tabs UI."""
         with dpg.tab_bar(tag=self.tab_bar_id, parent=self.parent_window):
-            
+
             # YouTube Tab
             with dpg.tab(label="YouTube") as youtube_tab_id:
                 self.youtube_tab = YouTubeTab(
                     parent_window=youtube_tab_id
                 )
                 self.youtube_tab.setup_ui()
-            
+
+            # Instagram Tab
+            with dpg.tab(label="Instagram") as instagram_tab_id:
+                self.instagram_tab = InstagramTab(
+                    parent_window=instagram_tab_id
+                )
+                self.instagram_tab.setup_ui()
+
             # Facebook Tab (placeholder)
             with dpg.tab(label="Facebook"):
                 dpg.add_text("Facebook scraper - Coming soon", color=[150, 150, 150])
-            
+
             # X/Twitter Tab (placeholder)
             with dpg.tab(label="X (Twitter)"):
                 dpg.add_text("X/Twitter scraper - Coming soon", color=[150, 150, 150])
-            
+
             # TikTok Tab (placeholder)
             with dpg.tab(label="TikTok"):
                 dpg.add_text("TikTok scraper - Coming soon", color=[150, 150, 150])
-    
+
     def get_youtube_tab(self) -> Optional[YouTubeTab]:
         """Get the YouTube tab component."""
         return self.youtube_tab
+
+    def get_instagram_tab(self) -> Optional[InstagramTab]:
+        """Get the Instagram tab component."""
+        return self.instagram_tab
 
     def get_all_tabs(self) -> list:
         """Get all tab instances for console updates."""
         tabs = []
         if self.youtube_tab:
             tabs.append(self.youtube_tab)
-        # Add other tabs when implemented
+        if self.instagram_tab:
+            tabs.append(self.instagram_tab)
         return tabs
 
     def cleanup(self):
         """Clean up tab resources."""
         if self.youtube_tab:
             self.youtube_tab.cleanup()
+        if self.instagram_tab:
+            self.instagram_tab.cleanup()

@@ -112,3 +112,19 @@ def create_noctua_theme():
             dpg.add_theme_color(dpg.mvThemeCol_Text, (100, 90, 80), category=dpg.mvThemeCat_Core)
 
     return noctua_theme
+
+
+def create_dark_container_theme():
+    """
+    Create theme for dark containers (console, tables).
+
+    Use with dpg.bind_item_theme() on specific widgets.
+
+    Returns:
+        Theme ID for DearPyGUI
+    """
+    with dpg.theme() as dark_theme:
+        with dpg.theme_component(dpg.mvChildWindow):
+            dpg.add_theme_color(dpg.mvThemeCol_ChildBg, (35, 30, 25), category=dpg.mvThemeCat_Core)
+
+    return dark_theme

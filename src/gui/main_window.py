@@ -1,5 +1,6 @@
 import dearpygui.dearpygui as dpg
 from typing import Optional
+from pathlib import Path
 
 from gui.components.containers.tab_container_platforms import PlatformTabs
 from gui.components.panels.panel_console import ConsolePanel
@@ -10,7 +11,11 @@ from gui.themes.noctua_theme import create_noctua_theme
 from utils.console_logger import ConsoleLogger
 
 
-# Removed get_resource_path - no longer needed for default font
+# Font configuration
+# Path: main_window.py -> gui -> src -> MCAT -> assets
+FONT_PATH = Path(__file__).parent.parent.parent / "assets" / "IBMPlexMono-Regular.ttf"
+FONT_SIZE = 30  # Desired size
+FONT_SCALE_FACTOR = 2  # Load at 2x, then scale down to 0.5 for crisp rendering
 
 
 class MainWindow:
@@ -75,10 +80,19 @@ class MainWindow:
         dpg.configure_app(manual_callback_management=True)  # Enable manual callback management
         dpg.create_viewport(title="MCAT Content Moderation Checker", width=1050, height=850)
 
+        # Load custom font at 2x size, then scale down for crisp rendering
+        if FONT_PATH.exists():
+            with dpg.font_registry():
+                default_font = dpg.add_font(str(FONT_PATH), FONT_SIZE * FONT_SCALE_FACTOR)
+            dpg.bind_font(default_font)
+            dpg.set_global_font_scale(1.0 / FONT_SCALE_FACTOR)
+        else:
+            print(f"⚠️ Font not found: {FONT_PATH}, using default")
+
         # Apply Noctua theme
         noctua_theme = create_noctua_theme()
         dpg.bind_theme(noctua_theme)
-        
+
         self.setup_ui()
         
         dpg.setup_dearpygui()

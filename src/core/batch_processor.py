@@ -10,6 +10,7 @@ from config.settings import config
 from utils.csv_handler import CSVHandler, IncrementalCSVWriter
 from core.driver_manager import WebDriverPool
 from scrapers.youtube_scraper import YouTubeScraper
+from scrapers.instagram_scraper import InstagramScraper
 
 
 class ProcessingResult:
@@ -143,8 +144,13 @@ class BatchProcessor:
         """Create a scraper instance for the specified platform."""
         if platform == 'youtube':
             scraper = YouTubeScraper(self.driver_pool)
-            # Set resume event for efficient pause control
             scraper.set_pause_event(self.resume_event)
+            scraper.set_cancel_event(self.cancel_flag)
+            return scraper
+        elif platform == 'instagram':
+            scraper = InstagramScraper(self.driver_pool)
+            scraper.set_pause_event(self.resume_event)
+            scraper.set_cancel_event(self.cancel_flag)
             return scraper
         return None
     
@@ -172,6 +178,10 @@ class BatchProcessor:
             try:
                 # Check URL using shared scraper
                 result = scraper.check_url_status(url)
+
+                # Don't process results after cancellation - just exit silently
+                if self.cancel_flag.is_set() or result.status.lower() == 'cancelled':
+                    return
 
                 # Write to CSV incrementally if writer provided
                 if csv_writer and original_df is not None:
@@ -204,32 +214,58 @@ class BatchProcessor:
                     current_processed = processed
                     current_stats = stats.copy()
 
-                # Queue progress update for main thread
-                progress_data = {
-                    'current': current_processed,
-                    'total': total,
-                    'stats': current_stats,
-                    'current_action': f"Checking: {url[:60]}{'...' if len(url) > 60 else ''}"
-                }
-                self.progress_queue.put(progress_data)
+                # Don't send progress updates after cancellation
+                if self.cancel_flag.is_set():
+                    return
+
+                # Send progress update via callback or queue
+                current_action = f"Checking: {url[:60]}{'...' if len(url) > 60 else ''}"
+                if self.progress_callback:
+                    self.progress_callback(current_stats, total, current_processed, current_action)
+                else:
+                    progress_data = {
+                        'current': current_processed,
+                        'total': total,
+                        'stats': current_stats,
+                        'current_action': current_action
+                    }
+                    self.progress_queue.put(progress_data)
 
             except Exception as e:
-                print(f"Error processing URL {url}: {e}")
+                if not self.cancel_flag.is_set():
+                    print(f"Error processing URL {url}: {e}")
                 with stats_lock:
                     stats['errors'] += 1
                     processed += 1
 
-        # Process URLs with threading
+        # Process URLs with threading - submit in batches for better cancellation
         with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
-            futures = [executor.submit(process_single_url, url, idx) for idx, url in enumerate(urls)]
+            futures = []
 
-            for future in as_completed(futures):
+            # Submit all tasks
+            for idx, url in enumerate(urls):
                 if self.cancel_flag.is_set():
                     break
+                futures.append(executor.submit(process_single_url, url, idx))
+
+            # Wait for completion, handling cancellation
+            cancelled = False
+            for future in as_completed(futures):
+                if self.cancel_flag.is_set() and not cancelled:
+                    cancelled = True
+                    print("🛑 Cancellation requested - stopping workers...")
+                    # Cancel all pending futures
+                    for f in futures:
+                        f.cancel()
+                    # Don't break - let already-running futures complete quietly
+                    # They will check cancel_flag and exit early
+                if cancelled:
+                    continue  # Don't process results after cancellation
                 try:
                     future.result()
                 except Exception as e:
-                    print(f"Error in future result: {e}")
+                    if not self.cancel_flag.is_set():
+                        print(f"Error in future result: {e}")
     
     def get_progress_updates(self):
         """Get all pending progress updates from queue (non-blocking)."""

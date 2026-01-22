@@ -9,64 +9,71 @@ from datetime import datetime
 from typing import Optional
 
 from scrapers.base_scraper import BaseScraper, ScrapingResult
-from cookies.youtube_cookie_handler import dismiss_youtube_cookies
 
 
-class YouTubeScraper(BaseScraper):
-    """YouTube video status checker with pooled drivers and rate limiting."""
+class InstagramScraper(BaseScraper):
+    """Instagram post status checker with pooled drivers and rate limiting."""
 
     # Rate limiting configuration
-    RATE_LIMIT_MIN = 1.0  # Minimum delay between requests (seconds)
-    RATE_LIMIT_MAX = 3.0  # Maximum delay between requests (seconds)
+    RATE_LIMIT_MIN = 1.5  # Minimum delay between requests (seconds)
+    RATE_LIMIT_MAX = 3.5  # Maximum delay between requests (seconds)
 
     # Timeout configuration
     DRIVER_POOL_TIMEOUT = 30   # Max wait for available driver (seconds)
     PAGE_LOAD_TIMEOUT = 15     # Max wait for page load (seconds)
-    SPA_RENDER_WAIT = 10       # Max wait for SPA to render (seconds)
+    SPA_RENDER_WAIT = 3        # Wait for Instagram SPA to render (seconds)
 
     # Retry configuration
     MAX_RETRIES = 2            # Number of retry attempts on errors
     RETRY_DELAY = 2.0          # Delay between retries (seconds)
 
+    # Known error patterns for detection
+    ERROR_KEYWORDS = [
+        "isn't available",
+        "not available",
+        "broken",
+        "removed",
+        "sorry",
+        "page not found",
+        "content not found"
+    ]
+
     def __init__(self, driver_pool):
-        """Initialize with a WebDriver pool instead of manager."""
+        """Initialize with a WebDriver pool."""
         self.driver_pool = driver_pool
-        # Rate limiting: 1-3 second delay between requests
         self.min_delay = self.RATE_LIMIT_MIN
         self.max_delay = self.RATE_LIMIT_MAX
         self.last_request_time = 0
 
-        # Pause control - event-based instead of polling
+        # Pause control - event-based
         self.pause_event = None
 
         # Screenshot configuration
         self.save_screenshots: bool = False
         self.screenshot_base_path: Optional[Path] = None
-    
+
     def get_platform_name(self) -> str:
         """Return the platform name for this scraper."""
-        return "youtube"
-    
+        return "instagram"
+
     def _apply_rate_limit(self):
         """Apply rate limiting between requests."""
         current_time = time.time()
         time_since_last = current_time - self.last_request_time
-        
-        # Random delay between min_delay and max_delay
+
         delay = random.uniform(self.min_delay, self.max_delay)
-        
+
         if time_since_last < delay:
             sleep_time = delay - time_since_last
             time.sleep(sleep_time)
-        
+
         self.last_request_time = time.time()
-    
+
     def _check_pause(self):
         """Check if processing is paused and wait efficiently."""
         if self.pause_event:
-            # Block until pause event is cleared (much more efficient than polling)
             self.pause_event.wait()
-    
+
     def set_pause_event(self, pause_event):
         """Set threading event for pause control."""
         self.pause_event = pause_event
@@ -104,8 +111,8 @@ class YouTubeScraper(BaseScraper):
             return ""
 
         try:
-            # Extract video ID from URL
-            video_id = url.split('v=')[-1].split('&')[0][:20]  # Truncate for safety
+            # Extract post ID from URL (handle /p/, /reel/, /tv/ formats)
+            post_id = self._extract_post_id(url)
 
             # Create status-specific folder
             screenshot_dir = self.screenshot_base_path / status.lower()
@@ -113,7 +120,7 @@ class YouTubeScraper(BaseScraper):
 
             # Filename with timestamp
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            filename = f"{video_id}_{timestamp}.png"
+            filename = f"{post_id}_{timestamp}.png"
             filepath = screenshot_dir / filename
 
             # Save screenshot
@@ -124,6 +131,21 @@ class YouTubeScraper(BaseScraper):
         except Exception as e:
             print(f"⚠️ Screenshot failed for {url}: {e}")
             return ""
+
+    def _extract_post_id(self, url: str) -> str:
+        """Extract post ID from Instagram URL."""
+        try:
+            # Handle various Instagram URL formats:
+            # https://www.instagram.com/p/ABC123/
+            # https://www.instagram.com/reel/ABC123/
+            # https://www.instagram.com/tv/ABC123/
+            parts = url.rstrip('/').split('/')
+            for i, part in enumerate(parts):
+                if part in ('p', 'reel', 'tv') and i + 1 < len(parts):
+                    return parts[i + 1][:20]  # Truncate for safety
+            return url.split('/')[-1][:20]
+        except Exception:
+            return "unknown"
 
     def check_url_status(self, url: str) -> ScrapingResult:
         """Check URL status with automatic retries on transient failures."""
@@ -140,7 +162,6 @@ class YouTubeScraper(BaseScraper):
             result = self._check_url_once(url)
 
             # Retry only on errors (network issues, timeouts)
-            # Don't retry on valid statuses (Removed, Live, etc.)
             if result.status != "Error":
                 return result
 
@@ -160,9 +181,8 @@ class YouTubeScraper(BaseScraper):
         return result
 
     def _check_url_once(self, url: str) -> ScrapingResult:
-        """Check the status of a YouTube video using pooled driver."""
-        if not self.is_cancelled():
-            print(f"🔍 Checking YouTube URL: {url}")
+        """Check the status of an Instagram post using pooled driver."""
+        self._log(f"🔍 Checking Instagram URL: {url}")
 
         result = ScrapingResult()
         result.url = url
@@ -185,103 +205,54 @@ class YouTubeScraper(BaseScraper):
                 result.info = "Processing was cancelled"
                 return result
 
-            # Check if processing is paused (now that we have driver)
+            # Check if processing is paused
             self._check_pause()
 
-            # Apply rate limiting (only when ready to use driver)
+            # Apply rate limiting
             self._apply_rate_limit()
 
-            # Now make the request
+            # Navigate to URL
             driver.get(url)
 
-            # Dismiss cookie consent modal if present
-            dismiss_youtube_cookies(driver, timeout=3)
+            # Wait for Instagram SPA to render
+            time.sleep(self.SPA_RENDER_WAIT)
 
-            # Wait for YouTube's JavaScript to render dynamic content (SPA)
-            try:
-                WebDriverWait(driver, self.SPA_RENDER_WAIT).until(
-                    lambda d: d.title != "YouTube" and len(d.title) > 0
-                )
-            except TimeoutException:
-                pass  # Continue anyway, might be error page
-
-            # Wait for page to load
-            try:
-                WebDriverWait(driver, self.PAGE_LOAD_TIMEOUT).until(
-                    EC.presence_of_element_located((By.TAG_NAME, "body"))
-                )
-            except TimeoutException:
-                result.status = "Error"
-                result.error_message = "Page load timeout (15s exceeded)"
-                if not self.is_cancelled():
-                    self._log(f"❌ {url}: {result.status} - {result.error_message}")
-                return result
-
-            # Check for cancellation after page load (before expensive detection)
+            # Check for cancellation after page load (before detection)
             if self.is_cancelled():
                 result.status = "Cancelled"
                 result.info = "Processing was cancelled"
                 return result
 
-            # Check for various YouTube error/restriction indicators
-            page_source = driver.page_source.lower()
-            
-            # Video removed/unavailable
-            if any(phrase in page_source for phrase in [
-                'video unavailable', 'this video is not available',
-                'removed by the user', 'account has been terminated'
-            ]):
-                result.status = "Removed"
-                result.info = "Video unavailable"
+            # Strategy 1: Look for error SVG icon
+            if self._check_error_svg(driver, result):
+                if self.save_screenshots:
+                    result.screenshot_path = self._save_screenshot(driver, url, result.status)
+                return result
+
+            # Strategy 2: Look for specific text content in page
+            if self._check_error_text(driver, result):
+                if self.save_screenshots:
+                    result.screenshot_path = self._save_screenshot(driver, url, result.status)
+                return result
+
+            # Strategy 3: Look for error container divs
+            if self._check_error_containers(driver, result):
+                if self.save_screenshots:
+                    result.screenshot_path = self._save_screenshot(driver, url, result.status)
+                return result
+
+            # Strategy 4: Check for main article element (indicates normal post)
+            if self._check_article_exists(driver):
+                result.status = "Live"
+                result.info = "Post available"
                 self._log(f"✅ {url}: {result.status} - {result.info}")
                 if self.save_screenshots:
                     result.screenshot_path = self._save_screenshot(driver, url, result.status)
                 return result
 
-            # Age restricted
-            if 'age-restricted' in page_source or 'sign in to confirm your age' in page_source:
-                result.status = "Age-restricted"
-                result.info = "Age verification required"
-                self._log(f"✅ {url}: {result.status} - {result.info}")
-                if self.save_screenshots:
-                    result.screenshot_path = self._save_screenshot(driver, url, result.status)
-                return result
-
-            # Geo-blocked
-            if 'not available in your country' in page_source:
-                result.status = "Geo-blocked"
-                result.info = "Not available in your region"
-                self._log(f"✅ {url}: {result.status} - {result.info}")
-                if self.save_screenshots:
-                    result.screenshot_path = self._save_screenshot(driver, url, result.status)
-                return result
-
-            # Private video
-            if 'private video' in page_source:
-                result.status = "Private"
-                result.info = "Video is private"
-                self._log(f"✅ {url}: {result.status} - {result.info}")
-                if self.save_screenshots:
-                    result.screenshot_path = self._save_screenshot(driver, url, result.status)
-                return result
-
-            # Check for content warning panels
-            try:
-                warning_elements = driver.find_elements(By.CSS_SELECTOR, '[class*="warning"], [class*="restricted"]')
-                if warning_elements:
-                    warning_text = warning_elements[0].text
-                    result.status = "Restricted"
-                    result.info = f"Warning: {warning_text[:100]}"
-                    self._log(f"✅ {url}: {result.status} - {result.info}")
-                    if self.save_screenshots:
-                        result.screenshot_path = self._save_screenshot(driver, url, result.status)
-                    return result
-            except Exception:
-                pass  # Ignore failures in warning element detection
-
-            # If no restrictions found, assume live
+            # If no clear indicators, assume live (defensive default)
             result.status = "Live"
-            result.info = "Video available"
+            result.info = "Post available"
             self._log(f"✅ {url}: {result.status} - {result.info}")
             if self.save_screenshots:
                 result.screenshot_path = self._save_screenshot(driver, url, result.status)
@@ -293,18 +264,106 @@ class YouTubeScraper(BaseScraper):
             self._log(f"❌ {url}: {result.status} - {result.error_message}")
             return result
         finally:
-            # Return driver to pool instead of quitting
+            # Return driver to pool
             if driver:
-                # Validate driver is still responsive before returning to pool
                 try:
                     driver.current_url  # Quick check that driver isn't crashed
                     self.driver_pool.return_driver(driver)
                 except Exception as e:
-                    # Driver is broken, don't return to pool
                     print(f"⚠️ Driver unresponsive, discarding: {e}")
-                    # Pool will create new driver when needed
-    
+
+    def _check_error_svg(self, driver, result: ScrapingResult) -> bool:
+        """Check for Instagram error SVG icon."""
+        try:
+            driver.find_element(By.CSS_SELECTOR, 'svg[aria-label="error"]')
+            # Error icon found - extract message
+            error_messages = self._extract_error_messages(driver)
+            if error_messages:
+                result.status = "Removed"
+                result.info = " | ".join(error_messages[:2])
+            else:
+                result.status = "Removed"
+                result.info = "Post unavailable"
+            self._log(f"✅ {result.url}: {result.status} - {result.info}")
+            return True
+        except Exception:
+            return False
+
+    def _check_error_text(self, driver, result: ScrapingResult) -> bool:
+        """Check for specific error text patterns in page source."""
+        try:
+            page_text = driver.page_source.lower()
+
+            # Check for post unavailable messages
+            if "post isn't available" in page_text or "post isn't available" in page_text:
+                messages = self._extract_error_messages(driver)
+                result.status = "Removed"
+                result.info = " | ".join(messages) if messages else "Post isn't available"
+                self._log(f"✅ {result.url}: {result.status} - {result.info}")
+                return True
+
+            # Check for page unavailable
+            if "sorry, this page isn't available" in page_text:
+                result.status = "Removed"
+                result.info = "Page isn't available"
+                self._log(f"✅ {result.url}: {result.status} - {result.info}")
+                return True
+
+            # Check for page not found
+            if "page not found" in page_text:
+                result.status = "Removed"
+                result.info = "Page not found"
+                self._log(f"✅ {result.url}: {result.status} - {result.info}")
+                return True
+
+            return False
+        except Exception:
+            return False
+
+    def _check_error_containers(self, driver, result: ScrapingResult) -> bool:
+        """Check for error container divs with specific class patterns."""
+        try:
+            error_containers = driver.find_elements(
+                By.CSS_SELECTOR,
+                'div.x9f619.xjbqb8w.x78zum5'
+            )
+
+            for container in error_containers:
+                text = container.text.strip()
+                if text and any(keyword in text.lower() for keyword in self.ERROR_KEYWORDS):
+                    result.status = "Removed"
+                    result.info = text[:100]  # Truncate long messages
+                    self._log(f"✅ {result.url}: {result.status} - {result.info}")
+                    return True
+
+            return False
+        except Exception:
+            return False
+
+    def _check_article_exists(self, driver) -> bool:
+        """Check if main article element exists (indicates normal post)."""
+        try:
+            driver.find_element(By.CSS_SELECTOR, 'article[role="presentation"]')
+            return True
+        except Exception:
+            return False
+
+    def _extract_error_messages(self, driver) -> list:
+        """Extract error messages from page using Selenium."""
+        try:
+            error_messages = []
+            spans = driver.find_elements(By.CSS_SELECTOR, 'span[dir="auto"]')
+
+            for span in spans:
+                text = span.text.strip()
+                if text and len(text) > 5:
+                    if any(keyword in text.lower() for keyword in self.ERROR_KEYWORDS):
+                        error_messages.append(text)
+
+            return error_messages
+        except Exception:
+            return []
+
     def cleanup(self):
         """Clean up scraper resources."""
-        # Pool cleanup is handled by the pool itself
         pass

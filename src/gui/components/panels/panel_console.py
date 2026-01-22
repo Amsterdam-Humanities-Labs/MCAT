@@ -9,6 +9,8 @@ import dearpygui.dearpygui as dpg
 from collections import deque
 from typing import Optional
 
+from gui.themes.noctua_theme import create_dark_container_theme
+
 
 class ConsolePanel:
     """Console panel for displaying debug messages and logs."""
@@ -50,6 +52,9 @@ class ConsolePanel:
                 # Content group (messages added here)
                 with dpg.group(tag=self.content_id):
                     pass  # Start empty, messages will appear as they come
+
+            # Apply dark theme to console background
+            dpg.bind_item_theme(self.scroll_id, create_dark_container_theme())
 
     def add_message(self, message: str):
         """

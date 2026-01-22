@@ -114,8 +114,14 @@ class WebDriverPool:
                 driver.execute_script("window.sessionStorage.clear();")
             except:
                 pass
-            
+
             self.available_drivers.put(driver)
+        elif driver:
+            # Pool was cleaned up but worker still has driver - quit it
+            try:
+                driver.quit()
+            except:
+                pass
     
     def cleanup(self):
         """Clean up all drivers in the pool."""

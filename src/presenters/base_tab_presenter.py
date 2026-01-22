@@ -214,6 +214,12 @@ class BaseTabPresenter:
         dispatcher.connect(self._handle_processing_paused, ProcessingEvents.PAUSED, sender=self.processing_service)
         dispatcher.connect(self._handle_processing_resumed, ProcessingEvents.RESUMED, sender=self.processing_service)
         dispatcher.connect(self._handle_processing_cancelled, ProcessingEvents.CANCELLED, sender=self.processing_service)
+
+        # Subscribe to global events (from any platform) to update button state
+        dispatcher.connect(self._handle_global_processing_changed, ProcessingEvents.STARTED, sender=dispatcher.Any)
+        dispatcher.connect(self._handle_global_processing_changed, ProcessingEvents.COMPLETED, sender=dispatcher.Any)
+        dispatcher.connect(self._handle_global_processing_changed, ProcessingEvents.CANCELLED, sender=dispatcher.Any)
+        dispatcher.connect(self._handle_global_processing_changed, ProcessingEvents.ERROR, sender=dispatcher.Any)
     
     def _unsubscribe_from_events(self):
         """Unsubscribe from processing events to prevent memory leaks."""
@@ -224,20 +230,31 @@ class BaseTabPresenter:
         dispatcher.disconnect(self._handle_processing_paused, ProcessingEvents.PAUSED, sender=self.processing_service)
         dispatcher.disconnect(self._handle_processing_resumed, ProcessingEvents.RESUMED, sender=self.processing_service)
         dispatcher.disconnect(self._handle_processing_cancelled, ProcessingEvents.CANCELLED, sender=self.processing_service)
+
+        # Unsubscribe from global events
+        dispatcher.disconnect(self._handle_global_processing_changed, ProcessingEvents.STARTED, sender=dispatcher.Any)
+        dispatcher.disconnect(self._handle_global_processing_changed, ProcessingEvents.COMPLETED, sender=dispatcher.Any)
+        dispatcher.disconnect(self._handle_global_processing_changed, ProcessingEvents.CANCELLED, sender=dispatcher.Any)
+        dispatcher.disconnect(self._handle_global_processing_changed, ProcessingEvents.ERROR, sender=dispatcher.Any)
     
     def _validate_current_state(self):
         """Validate current file and column mapping state."""
         if not self.current_file or not self.current_file.valid:
             self.view.set_processing_enabled(False)
             return
-        
+
+        # Check if another platform is processing
+        if ProcessingService.is_any_processing():
+            self.view.set_processing_enabled(False)
+            return
+
         # Validate column mapping if we have one
         if self.current_column_mapping.post_column:
             validation_result = self.csv_service.validate_column_mapping(
-                self.current_file, 
+                self.current_file,
                 self.current_column_mapping
             )
-            
+
             if validation_result.valid:
                 self.view.set_processing_enabled(True)
                 self.view.show_validation_success()
@@ -302,7 +319,13 @@ class BaseTabPresenter:
     def _handle_processing_cancelled(self, sender=None, **kwargs):
         """Handle processing cancelled."""
         self.view.show_processing_cancelled()
-    
+
+    def _handle_global_processing_changed(self, sender=None, **kwargs):
+        """Handle processing state change from any platform - re-validate button state."""
+        print(f"🔄 Global processing changed for {self.platform}, is_any_processing={ProcessingService.is_any_processing()}")
+        # Re-validate to update button state based on global processing status
+        self._validate_current_state()
+
     # Platform-specific methods (override in subclasses)
     
     def _suggest_columns(self, file_info: FileInfo):

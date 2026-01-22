@@ -6,21 +6,24 @@ from gui.components.widgets.dropdown_widget import Dropdown
 
 class PanelPreserveColumns:
     """Component for selecting which CSV columns to preserve in output."""
-    
-    def __init__(self, parent_window: str, callback: Optional[Callable] = None):
+
+    def __init__(self, parent_window: str, callback: Optional[Callable] = None, id_suffix: str = ""):
         self.parent_window = parent_window
         self.callback = callback
+        self.id_suffix = id_suffix
         self.csv_columns: List[str] = []
         self.selected_columns: Set[str] = set()
-        
-        # UI element IDs
-        self.container_id = "preserve_columns_container"
+
+        # UI element IDs (unique per instance)
+        self.container_id = f"preserve_columns_container{id_suffix}"
         self.post_dropdown: Optional[Dropdown] = None
-        self.preserve_group_id = "preserve_columns_group"
-        self.scroll_container_id = "preserve_scroll_container"
-        
+        self.preserve_group_id = f"preserve_columns_group{id_suffix}"
+        self.scroll_container_id = f"preserve_scroll_container{id_suffix}"
+        self.toggle_all_button_id = f"preserve_toggle_all{id_suffix}"
+
         # Checkbox IDs will be generated as needed
         self.checkbox_ids = {}
+        self.all_selected = False  # Track toggle state
     
     def setup_ui(self):
         """Create the preserve columns UI."""
@@ -30,7 +33,7 @@ class PanelPreserveColumns:
                 label="Post url (required)",
                 placeholder="select post url column",
                 callback=self._on_post_column_selected,
-                id_suffix="_post_url"
+                id_suffix=f"_post_url{self.id_suffix}"
             )
             self.post_dropdown.setup_ui()
             
@@ -38,9 +41,17 @@ class PanelPreserveColumns:
             
             # Preserve columns section (hidden initially)
             with dpg.group(tag=self.preserve_group_id, show=False):
-                dpg.add_text("Preserve columns", color=[255, 255, 255])
+                with dpg.group(horizontal=True):
+                    dpg.add_text("Preserve columns", color=[255, 255, 255])
+                    dpg.add_spacer(width=10)
+                    dpg.add_button(
+                        tag=self.toggle_all_button_id,
+                        label="Select all",
+                        callback=self._on_toggle_all,
+                        small=True
+                    )
                 dpg.add_spacer(height=5)
-                
+
                 # Scrollable container for checkboxes
                 with dpg.child_window(
                     tag=self.scroll_container_id,
@@ -66,14 +77,19 @@ class PanelPreserveColumns:
         # Clear existing checkboxes
         if dpg.does_item_exist(self.scroll_container_id):
             dpg.delete_item(self.scroll_container_id, children_only=True)
-        
+
+        # Reset toggle state
+        self.all_selected = False
+        if dpg.does_item_exist(self.toggle_all_button_id):
+            dpg.configure_item(self.toggle_all_button_id, label="Select all")
+
         # Create checkboxes for each column
         self.checkbox_ids = {}
         self.selected_columns = set()
         
         with dpg.group(parent=self.scroll_container_id):
             for i, column in enumerate(csv_columns):
-                checkbox_id = f"preserve_checkbox_{i}"
+                checkbox_id = f"preserve_checkbox_{i}{self.id_suffix}"
                 self.checkbox_ids[column] = checkbox_id
 
                 dpg.add_checkbox(
@@ -99,6 +115,34 @@ class PanelPreserveColumns:
             except Exception as e:
                 print(f"Error in preserve columns callback: {e}")
     
+    def _on_toggle_all(self, sender, app_data, user_data):
+        """Toggle all checkboxes on/off."""
+        self.all_selected = not self.all_selected
+
+        # Update button label
+        new_label = "Deselect all" if self.all_selected else "Select all"
+        if dpg.does_item_exist(self.toggle_all_button_id):
+            dpg.configure_item(self.toggle_all_button_id, label=new_label)
+
+        # Update all checkboxes
+        for column, checkbox_id in self.checkbox_ids.items():
+            if dpg.does_item_exist(checkbox_id):
+                dpg.set_value(checkbox_id, self.all_selected)
+                if self.all_selected:
+                    self.selected_columns.add(column)
+                else:
+                    self.selected_columns.discard(column)
+
+        # Notify callback
+        if self.callback:
+            try:
+                self.callback('preserve_columns_changed', {
+                    'post_column': self.get_post_column(),
+                    'preserve_columns': list(self.selected_columns)
+                })
+            except Exception as e:
+                print(f"Error in preserve columns callback: {e}")
+
     def _on_checkbox_toggled(self, sender, checked, user_data):
         """Handle checkbox toggle - called by DearPyGUI."""
         column = user_data
