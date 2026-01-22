@@ -32,7 +32,7 @@ class ProcessingControls:
     def setup_ui(self, start_label: str = "Start Processing"):
         """Create the processing control buttons."""
         with dpg.group(tag=self.container_id, parent=self.parent_window):
-            # Start/Processing button
+            # Start button
             dpg.add_button(
                 tag=self.start_button_id,
                 label=start_label,
@@ -40,24 +40,13 @@ class ProcessingControls:
                 enabled=False,
                 width=-1
             )
-            
-            # Pause button (hidden initially)
+
+            # Pause button (hidden initially, will be shown during processing)
             dpg.add_button(
                 tag=self.pause_button_id,
                 label="⏸ Pause",
                 callback=self._on_pause_clicked,
                 show=False,
-                width=-1
-            )
-            
-            dpg.add_spacer(height=5)
-            
-            # Cancel button (always visible but disabled when not processing)
-            dpg.add_button(
-                tag=self.cancel_button_id,
-                label="Cancel",
-                callback=self._on_cancel_clicked,
-                enabled=False,
                 width=-1
             )
     
@@ -90,23 +79,19 @@ class ProcessingControls:
                 # Show pause button
                 if dpg.does_item_exist(self.pause_button_id):
                     dpg.configure_item(self.pause_button_id, label="⏸ Pause")
-            
-            # Hide start, show pause, enable cancel
+
+            # Hide start, show pause
             if dpg.does_item_exist(self.start_button_id):
                 dpg.configure_item(self.start_button_id, show=False)
             if dpg.does_item_exist(self.pause_button_id):
                 dpg.configure_item(self.pause_button_id, show=True)
-            if dpg.does_item_exist(self.cancel_button_id):
-                dpg.configure_item(self.cancel_button_id, enabled=True)
         else:
             self.state = ControlState.IDLE
-            # Show start, hide pause, disable cancel
+            # Show start, hide pause
             if dpg.does_item_exist(self.start_button_id):
                 dpg.configure_item(self.start_button_id, show=True)
             if dpg.does_item_exist(self.pause_button_id):
                 dpg.configure_item(self.pause_button_id, show=False)
-            if dpg.does_item_exist(self.cancel_button_id):
-                dpg.configure_item(self.cancel_button_id, enabled=False)
     
     def _on_start_clicked(self, *args, **kwargs):
         """Handle start button click."""

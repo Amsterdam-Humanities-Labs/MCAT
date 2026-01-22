@@ -21,7 +21,7 @@ def create_noctua_theme():
         with dpg.theme_component(dpg.mvAll):
             # Background colors - sandy/beige tones
             dpg.add_theme_color(dpg.mvThemeCol_WindowBg, (45, 38, 32), category=dpg.mvThemeCat_Core)
-            dpg.add_theme_color(dpg.mvThemeCol_ChildBg, (50, 42, 35), category=dpg.mvThemeCat_Core)
+            dpg.add_theme_color(dpg.mvThemeCol_ChildBg, (50, 42, 35), category=dpg.mvThemeCat_Core)  # Lighter brown for panels
             dpg.add_theme_color(dpg.mvThemeCol_PopupBg, (50, 42, 35), category=dpg.mvThemeCat_Core)
 
             # Frame backgrounds - darker brown
@@ -82,12 +82,12 @@ def create_noctua_theme():
             dpg.add_theme_color(dpg.mvThemeCol_ResizeGripHovered, (90, 74, 58), category=dpg.mvThemeCat_Core)
             dpg.add_theme_color(dpg.mvThemeCol_ResizeGripActive, (110, 90, 70), category=dpg.mvThemeCat_Core)
 
-            # Table colors - darker for contrast
+            # Table colors - dark brown background
             dpg.add_theme_color(dpg.mvThemeCol_TableHeaderBg, (55, 46, 37), category=dpg.mvThemeCat_Core)
             dpg.add_theme_color(dpg.mvThemeCol_TableBorderStrong, (65, 54, 43), category=dpg.mvThemeCat_Core)
             dpg.add_theme_color(dpg.mvThemeCol_TableBorderLight, (50, 42, 34), category=dpg.mvThemeCat_Core)
-            dpg.add_theme_color(dpg.mvThemeCol_TableRowBg, (40, 34, 28), category=dpg.mvThemeCat_Core)
-            dpg.add_theme_color(dpg.mvThemeCol_TableRowBgAlt, (45, 38, 31), category=dpg.mvThemeCat_Core)
+            dpg.add_theme_color(dpg.mvThemeCol_TableRowBg, (35, 30, 25), category=dpg.mvThemeCat_Core)  # Dark brown
+            dpg.add_theme_color(dpg.mvThemeCol_TableRowBgAlt, (40, 34, 28), category=dpg.mvThemeCat_Core)  # Slightly lighter
 
             # Menu bar - sandy
             dpg.add_theme_color(dpg.mvThemeCol_MenuBarBg, (60, 50, 40), category=dpg.mvThemeCat_Core)
@@ -98,5 +98,17 @@ def create_noctua_theme():
             dpg.add_theme_style(dpg.mvStyleVar_ChildRounding, 3, category=dpg.mvThemeCat_Core)
             dpg.add_theme_style(dpg.mvStyleVar_GrabRounding, 3, category=dpg.mvThemeCat_Core)
             dpg.add_theme_style(dpg.mvStyleVar_TabRounding, 3, category=dpg.mvThemeCat_Core)
+
+        # Disabled state styling for buttons and other controls
+        with dpg.theme_component(dpg.mvButton, enabled_state=False):
+            dpg.add_theme_color(dpg.mvThemeCol_Button, (65, 54, 43), category=dpg.mvThemeCat_Core)  # Lighter muted brown (visible against panel)
+            dpg.add_theme_color(dpg.mvThemeCol_ButtonHovered, (65, 54, 43), category=dpg.mvThemeCat_Core)  # Same as normal - no hover
+            dpg.add_theme_color(dpg.mvThemeCol_ButtonActive, (65, 54, 43), category=dpg.mvThemeCat_Core)  # Same as normal - no click effect
+            dpg.add_theme_color(dpg.mvThemeCol_Text, (120, 110, 95), category=dpg.mvThemeCat_Core)  # Lighter muted sandy text
+
+        # Disabled state for input fields
+        with dpg.theme_component(dpg.mvInputText, enabled_state=False):
+            dpg.add_theme_color(dpg.mvThemeCol_FrameBg, (40, 34, 28), category=dpg.mvThemeCat_Core)
+            dpg.add_theme_color(dpg.mvThemeCol_Text, (100, 90, 80), category=dpg.mvThemeCat_Core)
 
     return noctua_theme

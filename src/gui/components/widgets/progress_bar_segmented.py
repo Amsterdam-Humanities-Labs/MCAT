@@ -1,5 +1,5 @@
 import dearpygui.dearpygui as dpg
-from typing import Dict, Optional, Tuple
+from typing import Dict, Optional, Tuple, Callable
 
 
 class RectangularProgress:
@@ -20,11 +20,12 @@ class RectangularProgress:
     BORDER_COLOR = (80, 65, 50)       # Sandy brown border
     LEGEND_TEXT_COLOR = (230, 220, 200)  # Light sandy/cream text
     
-    def __init__(self, parent_window: str, width: int = 300, height: int = 40):
+    def __init__(self, parent_window: str, width: int = 300, height: int = 40, cancel_callback: Optional[Callable] = None):
         self.parent_window = parent_window
         self.width = width
         self.height = height
-        
+        self.cancel_callback = cancel_callback
+
         # Status counts
         self.status_counts: Dict[str, int] = {
             'pending': 0,
@@ -34,15 +35,17 @@ class RectangularProgress:
             'error': 0,
             'skipped': 0
         }
-        
+
         # UI element IDs
         self.container_id = f"progress_container_{id(self)}"
+        self.header_row_id = f"progress_header_row_{id(self)}"
         self.drawlist_id = f"progress_drawlist_{id(self)}"
         self.counter_text_id = f"progress_counter_{id(self)}"
         self.url_text_id = f"progress_url_{id(self)}"
         self.info_row_id = f"progress_info_row_{id(self)}"
         self.legend_group_id = f"progress_legend_{id(self)}"
-        
+        self.cancel_button_id = f"progress_cancel_{id(self)}"
+
         # Progress tracking
         self.total_count = 0
         self.processed_count = 0
@@ -51,10 +54,25 @@ class RectangularProgress:
     def setup_ui(self, label: str = "Processing Progress") -> None:
         """Create the progress bar UI components."""
         with dpg.group(tag=self.container_id, parent=self.parent_window):
-            # Label
-            if label:
-                dpg.add_text(label, color=[255, 255, 255])
-                dpg.add_spacer(height=5)
+            # Header row with label and cancel button
+            with dpg.group(tag=self.header_row_id, horizontal=True):
+                # Label on the left
+                if label:
+                    dpg.add_text(label, color=[255, 255, 255])
+
+                # Spacer to push cancel button to the right
+                dpg.add_spacer(width=-1)
+
+                # Cancel button (hidden by default)
+                dpg.add_button(
+                    tag=self.cancel_button_id,
+                    label="Cancel",
+                    callback=self._on_cancel_clicked,
+                    show=False,
+                    width=80
+                )
+
+            dpg.add_spacer(height=5)
             
             # Drawing area
             with dpg.drawlist(
@@ -127,8 +145,24 @@ class RectangularProgress:
         self.total_count = 0
         self.processed_count = 0
         self.clear_latest_url()
+        self.hide_cancel_button()
         self._draw_segments()
         self._update_counter_text()
+
+    def show_cancel_button(self) -> None:
+        """Show the cancel button when processing starts."""
+        if dpg.does_item_exist(self.cancel_button_id):
+            dpg.configure_item(self.cancel_button_id, show=True)
+
+    def hide_cancel_button(self) -> None:
+        """Hide the cancel button when processing stops."""
+        if dpg.does_item_exist(self.cancel_button_id):
+            dpg.configure_item(self.cancel_button_id, show=False)
+
+    def _on_cancel_clicked(self, *args, **kwargs) -> None:
+        """Handle cancel button click."""
+        if self.cancel_callback:
+            self.cancel_callback()
     
     def _draw_segments(self) -> None:
         """Draw the rectangular segments based on current status counts."""

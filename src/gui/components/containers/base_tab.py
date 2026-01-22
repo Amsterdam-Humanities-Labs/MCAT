@@ -110,11 +110,12 @@ class BaseTab(ABC):
             dpg.add_text(f"{self.get_platform_display_name()} Data", color=[255, 255, 255])
             dpg.add_spacer(height=UI_SPACING)
             
-            # Progress display
+            # Progress display with cancel callback
             self.progress_display = RectangularProgress(
                 parent_window=self.right_panel_id,
                 width=400,
-                height=30
+                height=30,
+                cancel_callback=self._on_cancel_processing
             )
             self.progress_display.setup_ui(label="Processing Progress")
             dpg.add_spacer(height=UI_SPACING)
@@ -325,6 +326,8 @@ class BaseTab(ABC):
         self._update_status("🔄 Processing started...")
         if self.processing_controls:
             self.processing_controls.set_processing_state(True, False)
+        if self.progress_display:
+            self.progress_display.show_cancel_button()
     
     def show_processing_paused(self):
         """Show that processing is paused."""
@@ -344,6 +347,7 @@ class BaseTab(ABC):
         if self.processing_controls:
             self.processing_controls.set_processing_state(False, False)
         if self.progress_display:
+            self.progress_display.hide_cancel_button()
             self.progress_display.reset()
     
     def show_processing_complete(self, result):
@@ -355,10 +359,11 @@ class BaseTab(ABC):
                 self._populate_results_table(result.dataframe)
         else:
             self._update_status(f"❌ Processing failed: {result.error_message}")
-        
+
         if self.processing_controls:
             self.processing_controls.set_processing_state(False, False)
         if self.progress_display:
+            self.progress_display.hide_cancel_button()
             self.progress_display.clear_latest_url()
     
     def show_processing_error(self, error_message: str):
@@ -367,6 +372,7 @@ class BaseTab(ABC):
         if self.processing_controls:
             self.processing_controls.set_processing_state(False, False)
         if self.progress_display:
+            self.progress_display.hide_cancel_button()
             self.progress_display.clear_latest_url()
     
     def update_progress(self, status: ProcessingStatus):
