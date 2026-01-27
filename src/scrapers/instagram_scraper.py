@@ -93,7 +93,7 @@ class InstagramScraper(BaseScraper):
         """
         self.save_screenshots = enabled
         if enabled:
-            self.screenshot_base_path = Path(base_path) / "screenshots"
+            self.screenshot_base_path = Path(base_path) / "screenshots" / self.get_platform_name()
 
     def _save_screenshot(self, driver, url: str, status: str) -> str:
         """

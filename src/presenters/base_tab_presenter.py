@@ -154,7 +154,7 @@ class BaseTabPresenter:
         # Log to console (captured by ConsoleLogger)
         print(f"🚀 Started processing {job.file_info.row_count} URLs")
         if save_screenshots:
-            print(f"📷 Screenshots enabled - saving to {self.output_folder}/screenshots/")
+            print(f"📷 Screenshots enabled - saving to {self.output_folder}/screenshots/{self.platform}/")
 
         # Start processing using service
         # Events will handle view updates automatically
