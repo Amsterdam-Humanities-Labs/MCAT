@@ -1,0 +1,52 @@
+<script lang="ts">
+  import { cn } from '$lib/utils';
+
+  interface Props {
+    value?: string;
+    placeholder?: string;
+    readonly?: boolean;
+    disabled?: boolean;
+    error?: string | null;
+    type?: 'text' | 'email' | 'password' | 'number' | 'url';
+    class?: string;
+    oninput?: (e: Event) => void;
+    onchange?: (e: Event) => void;
+    onblur?: (e: FocusEvent) => void;
+  }
+
+  let {
+    value = $bindable(''),
+    placeholder = '',
+    readonly = false,
+    disabled = false,
+    error,
+    type = 'text',
+    class: className,
+    oninput,
+    onchange,
+    onblur,
+  }: Props = $props();
+
+  const baseClasses =
+    'w-full px-3 py-2 bg-mcat-card border rounded text-mcat-text placeholder-mcat-text-muted focus:outline-none focus:ring-2 focus:ring-mcat-orange focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed';
+
+  const errorClasses = 'border-mcat-error focus:ring-mcat-error';
+  const normalClasses = 'border-mcat-border';
+</script>
+
+<div class="w-full">
+  <input
+    {type}
+    bind:value
+    {placeholder}
+    {readonly}
+    {disabled}
+    class={cn(baseClasses, error ? errorClasses : normalClasses, className)}
+    {oninput}
+    {onchange}
+    {onblur}
+  />
+  {#if error}
+    <p class="mt-1 text-sm text-mcat-error">{error}</p>
+  {/if}
+</div>

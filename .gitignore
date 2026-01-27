@@ -1,8 +1,12 @@
-# Build outputs - ignore everything in dist/
+# Build outputs
 dist/
+build/
 dev_assets/
 assets/
 data/youtube_results/
+
+# PyInstaller
+*.spec
 
 # Python cache
 __pycache__/
@@ -28,3 +32,24 @@ Thumbs.db
 
 # Logs
 *.log
+
+# Rust/Cargo
+target/
+Cargo.lock
+**/*.rs.bk
+
+# Tauri
+.tauri/
+*.app
+*.dmg
+*.deb
+*.AppImage
+*.msi
+
+# Node/pnpm
+node_modules/
+.pnpm-store/
+*.tsbuildinfo
+
+# Backend port file
+.port

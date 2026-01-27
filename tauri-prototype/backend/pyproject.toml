@@ -1,0 +1,19 @@
+[project]
+name = "mcat-backend"
+version = "0.1.0"
+description = "MCAT Backend Server"
+requires-python = ">=3.10"
+dependencies = [
+    "polars>=1.0.0",
+    "selenium>=4.0.0",
+    "chromedriver-autoinstaller>=0.6.0",
+    "pydispatcher>=2.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pyinstaller>=6.0.0",
+]
+
+[tool.pyright]
+pythonVersion = "3.10"

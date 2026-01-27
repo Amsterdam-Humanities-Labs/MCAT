@@ -1,0 +1,42 @@
+@import "tailwindcss";
+
+@theme {
+  /* Brand colors */
+  --color-mcat-orange: #e47f2f;
+  --color-mcat-orange-dark: #c66a22;
+
+  /* Background colors */
+  --color-mcat-bg: #1a1a1a;
+  --color-mcat-card: #252525;
+
+  /* Border colors */
+  --color-mcat-border: #333;
+  --color-mcat-border-light: #444;
+
+  /* Text colors */
+  --color-mcat-text: #e0e0e0;
+  --color-mcat-text-muted: #888;
+  --color-mcat-text-label: #aaa;
+
+  /* Feedback colors */
+  --color-mcat-success-bg: #2d4a2d;
+  --color-mcat-success: #7fbf7f;
+  --color-mcat-error-bg: #4a2d2d;
+  --color-mcat-error: #ff8080;
+  --color-mcat-danger: #8b3030;
+  --color-mcat-danger-hover: #a03535;
+
+  /* Status colors (for segmented progress) */
+  --color-status-live: rgb(100, 180, 90);
+  --color-status-removed: rgb(200, 80, 70);
+  --color-status-restricted: rgb(230, 140, 70);
+  --color-status-error: rgb(180, 60, 50);
+  --color-status-pending: rgb(80, 65, 50);
+
+  /* Console colors */
+  --color-console-bg: rgb(25, 22, 18);
+  --color-log-info: rgb(180, 180, 180);
+  --color-log-warning: rgb(255, 200, 100);
+  --color-log-error: rgb(255, 100, 100);
+  --color-log-success: rgb(100, 255, 100);
+}

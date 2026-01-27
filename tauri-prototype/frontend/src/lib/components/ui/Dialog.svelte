@@ -1,0 +1,76 @@
+<script lang="ts">
+  import { cn } from '$lib/utils';
+  import { Dialog } from 'melt/builders';
+
+  interface Props {
+    open?: boolean;
+    title?: string;
+    class?: string;
+    onclose?: () => void;
+    children?: import('svelte').Snippet;
+    actions?: import('svelte').Snippet;
+  }
+
+  let {
+    open = $bindable(false),
+    title,
+    class: className,
+    onclose,
+    children,
+    actions,
+  }: Props = $props();
+
+  const dialog = new Dialog({
+    open: () => open,
+    onOpenChange: (value) => {
+      open = value;
+      if (!value) {
+        onclose?.();
+      }
+    },
+    closeOnEscape: true,
+    closeOnOutsideClick: true,
+  });
+</script>
+
+<div {...dialog.overlay} class="fixed inset-0 z-50 bg-black/60"></div>
+
+<dialog
+  {...dialog.content}
+  class={cn(
+    'fixed left-1/2 top-1/2 z-50 -translate-x-1/2 -translate-y-1/2',
+    'w-full max-w-lg max-h-[85vh] overflow-auto',
+    'bg-mcat-card border border-mcat-border rounded-lg shadow-xl',
+    'p-0 m-0',
+    className
+  )}
+>
+  <div class="p-6">
+    {#if title}
+      <h2 class="text-lg font-semibold text-mcat-text mb-4">
+        {title}
+      </h2>
+    {/if}
+
+    <div class="text-mcat-text">
+      {@render children?.()}
+    </div>
+
+    {#if actions}
+      <div class="mt-6 flex justify-end gap-3">
+        {@render actions?.()}
+      </div>
+    {/if}
+  </div>
+
+  <button
+    type="button"
+    onclick={() => dialog.open = false}
+    class="absolute top-4 right-4 p-1 text-mcat-text-muted hover:text-mcat-text transition-colors"
+    aria-label="Close"
+  >
+    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+    </svg>
+  </button>
+</dialog>

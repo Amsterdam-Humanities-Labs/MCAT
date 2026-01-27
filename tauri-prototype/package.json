@@ -1,0 +1,12 @@
+{
+  "name": "mcat-tauri",
+  "private": true,
+  "scripts": {
+    "dev": "pnpm --filter tauri tauri dev",
+    "build": "pnpm --filter tauri tauri build",
+    "dev:frontend": "pnpm --filter frontend dev -- --port 5180",
+    "dev:backend": "cd backend && .venv/bin/python mcat/server.py",
+    "check": "pnpm --filter frontend check && cd tauri && cargo check",
+    "clean": "rm -rf tauri/target frontend/dist backend/.port"
+  }
+}
