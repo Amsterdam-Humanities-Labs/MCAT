@@ -21,32 +21,38 @@ from events import dispatcher, ProcessingEvents
 
 class ProcessingService:
     """Unified service for coordinating URL processing operations with threading."""
-    
+
     # Class-level progress tracking for main loop processing
     _all_instances: Set['ProcessingService'] = set()
     _instances_lock = threading.Lock()
-    
-    def __init__(self):
+
+    def __init__(self, platform: str = ""):
+        # Platform identifier
+        self.platform = platform
+
         # State management with proper synchronization
         self._state_lock = threading.RLock()
         self._processing_state = ProcessingState.IDLE
-        
+
         # Current processing data
         self.current_job: Optional[ProcessingJob] = None
         self.current_status = ProcessingStatus()
-        
+
+        # Custom URLs list (for resume functionality)
+        self._custom_urls: Optional[list] = None
+
         # Threading components (absorbed from ProcessingController)
         self._processing_thread: Optional[threading.Thread] = None
         self._batch_processor: Optional[BatchProcessor] = None
-        
+
         # Thread synchronization
         self._cancel_event = threading.Event()
         self._pause_event = threading.Event()
         self._pause_event.set()  # Start unpaused
-        
+
         # Progress tracking (thread-safe)
         self._progress_queue = Queue(maxsize=20)
-        
+
         # Register this instance for main loop progress processing
         with ProcessingService._instances_lock:
             ProcessingService._all_instances.add(self)
@@ -137,13 +143,14 @@ class ProcessingService:
         
         return result
     
-    def start_processing(self, job: ProcessingJob) -> bool:
+    def start_processing(self, job: ProcessingJob, urls: list = None) -> bool:
         """
         Start a processing job with proper threading.
-        
+
         Args:
             job: Processing job to execute
-            
+            urls: Optional custom list of URLs to process (for resume)
+
         Returns:
             True if processing started successfully, False otherwise
         """
@@ -152,28 +159,31 @@ class ProcessingService:
             dispatcher.send(ProcessingEvents.ERROR, sender=self, error_message="Another platform is already processing. Please wait or cancel it first.")
             return False
 
-        # Validate the job first
-        validation = self.validate_processing_request(job)
-        if not validation.valid:
-            error_msg = f"Cannot start processing: {validation.error_summary}"
-            dispatcher.send(ProcessingEvents.ERROR, sender=self, error_message=error_msg)
-            return False
+        # Skip validation if custom URLs provided (resume case)
+        if urls is None:
+            # Validate the job first
+            validation = self.validate_processing_request(job)
+            if not validation.valid:
+                error_msg = f"Cannot start processing: {validation.error_summary}"
+                dispatcher.send(ProcessingEvents.ERROR, sender=self, error_message=error_msg)
+                return False
 
         with self._state_lock:
             if self._processing_state != ProcessingState.IDLE:
                 dispatcher.send(ProcessingEvents.ERROR, sender=self, error_message="Processing already in progress")
                 return False
-        
+
         try:
-            # Store current job
+            # Store current job and custom URLs
             self.current_job = job
+            self._custom_urls = urls
             self.current_status = ProcessingStatus(state=ProcessingState.PROCESSING)
-            self.current_status.total_count = len(job.file_info.dataframe)
-            
+            self.current_status.total_count = len(urls) if urls else job.file_info.row_count
+
             # Reset synchronization events
             self._cancel_event.clear()
             self._pause_event.set()
-            
+
             # Start processing thread (non-daemon for proper cleanup)
             self._processing_thread = threading.Thread(
                 target=self._processing_worker,
@@ -181,25 +191,25 @@ class ProcessingService:
                 name=f"ProcessingWorker-{job.platform}",
                 daemon=False
             )
-            
+
             # Update state and emit started event
             with self._state_lock:
                 self._processing_state = ProcessingState.PROCESSING
-            
+
             dispatcher.send(ProcessingEvents.STARTED, sender=self, job=job, status=self.current_status)
-            
+
             self._processing_thread.start()
             return True
-            
+
         except Exception as e:
             with self._state_lock:
                 self._processing_state = ProcessingState.ERROR
             self.current_status.state = ProcessingState.ERROR
             self.current_status.error_message = str(e)
-            
+
             error_msg = f"Failed to start processing: {str(e)}"
             dispatcher.send(ProcessingEvents.ERROR, sender=self, error_message=error_msg)
-            
+
             return False
     
     def pause_processing(self) -> bool:
@@ -382,14 +392,22 @@ class ProcessingService:
         try:
             # Initialize batch processor in worker thread
             self._batch_processor = BatchProcessor()
-            
+
             # Set progress callback to queue-based system
             self._batch_processor.set_progress_callback(self._queue_progress_update)
-            
-            # Save current dataframe to temp file for processing
-            temp_csv_path = "/tmp/mcat_processing_temp.csv"
-            CSVHandler.save_csv(job.file_info.dataframe, temp_csv_path)
-            
+
+            # Use custom URLs if provided (resume case), otherwise use CSV
+            if self._custom_urls:
+                # Create a minimal CSV with just the URLs
+                import pandas as pd
+                temp_df = pd.DataFrame({job.column_mapping.post_column: self._custom_urls})
+                temp_csv_path = "/tmp/mcat_processing_temp.csv"
+                temp_df.to_csv(temp_csv_path, index=False)
+            else:
+                # Save current dataframe to temp file for processing
+                temp_csv_path = "/tmp/mcat_processing_temp.csv"
+                CSVHandler.save_csv(job.file_info.dataframe, temp_csv_path)
+
             # Process the CSV
             result = self._batch_processor.process_csv(
                 csv_path=temp_csv_path,
