@@ -1,4 +1,4 @@
-import pandas as pd
+import polars as pl
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -18,7 +18,7 @@ class ProcessingResult:
 
     def __init__(self):
         self.success: bool = False
-        self.dataframe: Optional[pd.DataFrame] = None
+        self.dataframe: Optional[pl.DataFrame] = None
         self.error_message: str = ""
         self.processed_count: int = 0
         self.stats: Dict[str, int] = {
@@ -95,33 +95,41 @@ class BatchProcessor:
             # Step 5: Extract URLs
             url_column = column_mapping.get('post', '')
             urls = CSVHandler.get_urls_from_column(df, url_column)
+            print(f"Extracted {len(urls)} URLs from column '{url_column}'", flush=True)
+
+            if not urls:
+                result.error_message = f"No URLs found in column '{url_column}'"
+                return result
 
             # Step 6: Process URLs with incremental writing
+            print(f"Starting batch processing of {len(urls)} URLs...", flush=True)
             self._process_batch(urls, scraper, csv_writer, df, url_column)
+            print(f"Batch processing completed", flush=True)
 
             if self.cancel_flag.is_set():
                 result.error_message = "Processing was cancelled"
                 # Still load partial results from CSV if available
                 if output_csv_path and output_csv_path.exists():
-                    result.dataframe = pd.read_csv(output_csv_path)
+                    result.dataframe = pl.read_csv(output_csv_path)
                 return result
 
             # Step 7: Load CSV back into memory for GUI table
             if output_csv_path and output_csv_path.exists():
-                result.dataframe = pd.read_csv(output_csv_path)
+                result.dataframe = pl.read_csv(output_csv_path)
             else:
                 # Fallback if no CSV was saved (shouldn't happen)
                 result.dataframe = df
 
             # Calculate final stats from loaded DataFrame
             if result.dataframe is not None:
-                status_counts = result.dataframe['status'].value_counts().to_dict()
+                status_counts = result.dataframe.group_by('status').len().to_dicts()
+                counts_dict = {row['status']: row['len'] for row in status_counts}
                 result.stats = {
-                    'live': status_counts.get('Live', 0),
-                    'removed': status_counts.get('Removed', 0),
-                    'restricted': status_counts.get('Restricted', 0) + status_counts.get('Age-restricted', 0) +
-                                  status_counts.get('Geo-blocked', 0) + status_counts.get('Private', 0),
-                    'errors': status_counts.get('Error', 0)
+                    'live': counts_dict.get('Live', 0),
+                    'removed': counts_dict.get('Removed', 0),
+                    'restricted': counts_dict.get('Restricted', 0) + counts_dict.get('Age-restricted', 0) +
+                                  counts_dict.get('Geo-blocked', 0) + counts_dict.get('Private', 0),
+                    'errors': counts_dict.get('Error', 0)
                 }
                 result.processed_count = len(result.dataframe)
 
@@ -158,9 +166,18 @@ class BatchProcessor:
         """Set callback function for progress updates."""
         self.progress_callback = callback
 
+    def set_log_callback(self, callback):
+        """Set callback function for log messages."""
+        self.log_callback = callback
+
+    def _log(self, message: str, level: str = "info"):
+        """Send log message via callback if available."""
+        if hasattr(self, 'log_callback') and self.log_callback:
+            self.log_callback(message, level)
+
     def _process_batch(self, urls: List[str], scraper,
                       csv_writer: Optional[IncrementalCSVWriter] = None,
-                      original_df: Optional[pd.DataFrame] = None,
+                      original_df: Optional[pl.DataFrame] = None,
                       url_column: str = None) -> None:
         """Process URLs in parallel batches with incremental CSV writing."""
         processed = 0
@@ -169,6 +186,9 @@ class BatchProcessor:
         # Thread-safe counters
         stats_lock = threading.Lock()
         stats = {'live': 0, 'removed': 0, 'restricted': 0, 'errors': 0, 'skipped': 0}
+
+        # Convert dataframe to list of dicts for easier row access
+        original_rows = original_df.to_dicts() if original_df is not None else []
 
         def process_single_url(url: str, row_index: int) -> None:
             nonlocal processed
@@ -184,9 +204,9 @@ class BatchProcessor:
                     return
 
                 # Write to CSV incrementally if writer provided
-                if csv_writer and original_df is not None:
+                if csv_writer and original_rows:
                     # Get original row data
-                    original_row = original_df.iloc[row_index].to_dict()
+                    original_row = original_rows[row_index].copy()
                     # Add scraping results
                     original_row.update({
                         'status': result.status,
@@ -214,6 +234,11 @@ class BatchProcessor:
                     current_processed = processed
                     current_stats = stats.copy()
 
+                # Log the result
+                short_url = url[:50] + '...' if len(url) > 50 else url
+                log_level = "success" if status == "live" else "warning" if status in ["removed", "restricted", "private"] else "error"
+                self._log(f"[{current_processed}/{total}] {short_url} → {result.status}", log_level)
+
                 # Don't send progress updates after cancellation
                 if self.cancel_flag.is_set():
                     return
@@ -239,6 +264,7 @@ class BatchProcessor:
                     processed += 1
 
         # Process URLs with threading - submit in batches for better cancellation
+        print(f"Starting ThreadPoolExecutor with {self.max_workers} workers for {len(urls)} URLs", flush=True)
         with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
             futures = []
 
@@ -247,6 +273,8 @@ class BatchProcessor:
                 if self.cancel_flag.is_set():
                     break
                 futures.append(executor.submit(process_single_url, url, idx))
+
+            print(f"Submitted {len(futures)} tasks to executor", flush=True)
 
             # Wait for completion, handling cancellation
             cancelled = False

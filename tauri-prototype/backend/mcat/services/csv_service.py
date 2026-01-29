@@ -4,7 +4,7 @@ CSV file operations service.
 Pure business logic for CSV file handling without UI dependencies.
 """
 
-import pandas as pd
+import polars as pl
 from typing import List, Dict
 import os
 
@@ -42,7 +42,7 @@ class CSVService:
 
             # Extract file information
             file_info.dataframe = dataframe
-            file_info.columns = dataframe.columns.tolist()
+            file_info.columns = dataframe.columns
             file_info.row_count = len(dataframe)
             file_info.valid = True
 
@@ -114,7 +114,7 @@ class CSVService:
         if not file_info.valid:
             return []
 
-        return file_info.columns.copy()
+        return list(file_info.columns)
 
     def get_url_column_candidates(self, file_info: FileInfo) -> List[str]:
         """
@@ -139,7 +139,7 @@ class CSVService:
 
         return candidates
 
-    def prepare_for_processing(self, file_info: FileInfo, column_mapping: ColumnMapping) -> pd.DataFrame:
+    def prepare_for_processing(self, file_info: FileInfo, column_mapping: ColumnMapping) -> pl.DataFrame:
         """
         Prepare the CSV data for processing by adding result columns.
 
@@ -150,11 +150,11 @@ class CSVService:
         Returns:
             DataFrame ready for processing
         """
-        if not file_info.valid or not file_info.dataframe is not None:
+        if not file_info.valid or file_info.dataframe is None:
             raise ValueError("File is not valid or not loaded")
 
-        # Copy the dataframe
-        df = file_info.dataframe.copy()
+        # Clone the dataframe
+        df = file_info.dataframe.clone()
 
         # Add result columns using existing CSV handler
         df = CSVHandler.add_result_columns(df)
@@ -184,5 +184,5 @@ class CSVService:
             'rows': file_info.row_count,
             'columns': len(file_info.columns),
             'column_names': file_info.columns,
-            'size_mb': round(file_info.dataframe.memory_usage(deep=True).sum() / (1024 * 1024), 2) if file_info.dataframe is not None else 0
+            'size_mb': round(file_info.dataframe.estimated_size() / (1024 * 1024), 2) if file_info.dataframe is not None else 0
         }

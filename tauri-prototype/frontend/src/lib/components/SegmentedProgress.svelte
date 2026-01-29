@@ -1,6 +1,6 @@
 <script lang="ts">
   import { cn } from '$lib/utils';
-  import type { StatusCounts } from '../../../types/results';
+  import type { StatusCounts } from '$types/results';
 
   interface Props {
     counts: StatusCounts;

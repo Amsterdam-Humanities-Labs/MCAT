@@ -13,6 +13,7 @@ export interface Project {
   name: string;
   platform: Platform;
   path: string;
+  combinedCsvPath: string;
   urlCount: number;
   urlColumn: string;
   runs: Run[];

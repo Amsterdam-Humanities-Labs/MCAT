@@ -9,7 +9,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
-import pandas as pd
+import polars as pl
 
 from models.project_models import ProjectConfig
 from models.project_state import ProjectState
@@ -70,7 +70,7 @@ class ProjectService:
         shutil.copy(source_csv, urls_csv_path)
 
         # Validate the CSV has the required column
-        df = pd.read_csv(urls_csv_path)
+        df = pl.read_csv(urls_csv_path)
         if url_column not in df.columns:
             # Cleanup on failure
             shutil.rmtree(project_path)
@@ -134,7 +134,7 @@ class ProjectService:
         Returns:
             Number of URLs in urls.csv
         """
-        df = pd.read_csv(project_state.urls_csv_path)
+        df = pl.read_csv(project_state.urls_csv_path)
         return len(df)
 
     def get_urls(self, project_state: ProjectState) -> list[str]:
@@ -147,8 +147,8 @@ class ProjectService:
         Returns:
             List of URLs
         """
-        df = pd.read_csv(project_state.urls_csv_path)
-        return df[project_state.url_column].dropna().astype(str).tolist()
+        df = pl.read_csv(project_state.urls_csv_path)
+        return df.select(pl.col(project_state.url_column).drop_nulls().cast(pl.Utf8)).to_series().to_list()
 
     def preview_url_import(
         self,
@@ -171,7 +171,7 @@ class ProjectService:
 
         try:
             # Load new CSV
-            new_df = pd.read_csv(csv_path)
+            new_df = pl.read_csv(csv_path)
 
             # Check if URL column exists
             url_column = project_state.url_column
@@ -180,12 +180,12 @@ class ProjectService:
                 return result
 
             # Get new URLs
-            new_urls = set(new_df[url_column].dropna().astype(str).tolist())
+            new_urls = set(new_df.select(pl.col(url_column).drop_nulls().cast(pl.Utf8)).to_series().to_list())
             result.total_in_file = len(new_urls)
 
             # Get existing URLs
-            existing_df = pd.read_csv(project_state.urls_csv_path)
-            existing_urls = set(existing_df[url_column].dropna().astype(str).tolist())
+            existing_df = pl.read_csv(project_state.urls_csv_path)
+            existing_urls = set(existing_df.select(pl.col(url_column).drop_nulls().cast(pl.Utf8)).to_series().to_list())
 
             # Find duplicates and new URLs
             duplicates = new_urls & existing_urls
@@ -197,17 +197,16 @@ class ProjectService:
             # Build rows to add (preserving all columns from new CSV that match)
             if urls_to_add:
                 # Filter to only rows with new URLs
-                mask = new_df[url_column].astype(str).isin(urls_to_add)
-                rows_df = new_df[mask]
+                filtered_df = new_df.filter(pl.col(url_column).cast(pl.Utf8).is_in(list(urls_to_add)))
 
                 # Keep only columns that exist in the project (url + preserve)
                 columns_to_keep = [url_column] + [
                     col for col in project_state.preserve_columns
                     if col in new_df.columns
                 ]
-                rows_df = rows_df[columns_to_keep]
+                filtered_df = filtered_df.select(columns_to_keep)
 
-                result.rows_to_add = rows_df.to_dict('records')
+                result.rows_to_add = filtered_df.to_dicts()
 
         except Exception as e:
             result.error_message = str(e)
@@ -239,22 +238,22 @@ class ProjectService:
             return 0
 
         # Load existing CSV
-        existing_df = pd.read_csv(project_state.urls_csv_path)
+        existing_df = pl.read_csv(project_state.urls_csv_path)
 
         # Create DataFrame from rows to add
-        new_rows_df = pd.DataFrame(import_result.rows_to_add)
+        new_rows_df = pl.DataFrame(import_result.rows_to_add)
 
         # Add missing columns with empty values
         for col in existing_df.columns:
             if col not in new_rows_df.columns:
-                new_rows_df[col] = ""
+                new_rows_df = new_rows_df.with_columns(pl.lit("").alias(col))
 
         # Reorder columns to match existing
-        new_rows_df = new_rows_df[existing_df.columns]
+        new_rows_df = new_rows_df.select(existing_df.columns)
 
         # Append and save
-        combined_df = pd.concat([existing_df, new_rows_df], ignore_index=True)
-        combined_df.to_csv(project_state.urls_csv_path, index=False)
+        combined_df = pl.concat([existing_df, new_rows_df])
+        combined_df.write_csv(project_state.urls_csv_path)
 
         return len(import_result.rows_to_add)
 

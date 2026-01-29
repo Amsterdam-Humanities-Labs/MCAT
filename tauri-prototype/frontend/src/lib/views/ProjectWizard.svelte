@@ -2,13 +2,15 @@
   import { cn } from '$lib/utils';
   import { wizardStore } from '$lib/stores/wizard.svelte';
   import { FormState, rules } from '$lib/utils/form.svelte';
-  import Button from '$lib/components/ui/Button.svelte';
-  import Input from '$lib/components/ui/Input.svelte';
-  import Select from '$lib/components/ui/Select.svelte';
-  import FormField from '$lib/components/form/FormField.svelte';
-  import FilePickerInput from '$lib/components/form/FilePickerInput.svelte';
-  import FolderPickerInput from '$lib/components/form/FolderPickerInput.svelte';
-  import CheckboxGroup from '$lib/components/form/CheckboxGroup.svelte';
+  import {
+    Button,
+    Input,
+    Select,
+    FormField,
+    FilePickerInput,
+    FolderPickerInput,
+    CheckboxGroup,
+  } from '$lib/components';
   import type { Platform } from '$types/project';
 
   interface Props {
@@ -184,12 +186,29 @@
           </FormField>
 
           {#if wizardStore.columns.length > 0}
+            {@const availableColumns = columnOptions.filter((o) => o.value !== step2Form.fields.urlColumn.value)}
+            {@const allSelected = availableColumns.length > 0 && wizardStore.preserveColumns.length === availableColumns.length}
             <FormField
               label="Preserve Columns"
               hint="Additional columns to keep in results (optional)"
             >
+              {#if availableColumns.length > 0}
+                <button
+                  type="button"
+                  class="text-xs text-mcat-orange hover:text-mcat-orange/80 mb-2"
+                  onclick={() => {
+                    if (allSelected) {
+                      wizardStore.setPreserveColumns([]);
+                    } else {
+                      wizardStore.setPreserveColumns(availableColumns.map(c => c.value));
+                    }
+                  }}
+                >
+                  {allSelected ? 'Deselect All' : 'Select All'}
+                </button>
+              {/if}
               <CheckboxGroup
-                options={columnOptions.filter((o) => o.value !== step2Form.fields.urlColumn.value)}
+                options={availableColumns}
                 selected={wizardStore.preserveColumns}
                 onchange={(selected) => wizardStore.setPreserveColumns(selected)}
                 layout="vertical"

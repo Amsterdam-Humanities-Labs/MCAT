@@ -1,6 +1,7 @@
-import type { ProcessingState } from '../../types';
+import { type ProcessingState, IDLE_STATES, ACTIVE_STATES, PAUSED_STATES } from '../../types';
 import type { StatusCounts } from '../../types/results';
 import { api } from '../api/client';
+import { consoleStore, type LogLevel } from './console.svelte';
 
 interface ProcessingStatus {
   state: ProcessingState;
@@ -65,13 +66,13 @@ function createProcessingStore() {
     },
 
     get isProcessing() {
-      return status.state === 'processing';
+      return ACTIVE_STATES.includes(status.state);
     },
     get isPaused() {
-      return status.state === 'paused';
+      return PAUSED_STATES.includes(status.state);
     },
     get isIdle() {
-      return status.state === 'idle';
+      return IDLE_STATES.includes(status.state);
     },
     get progress() {
       if (status.total === 0) return 0;
@@ -81,16 +82,33 @@ function createProcessingStore() {
     async load() {
       try {
         const response = await api.getProcessStatus();
-        status = {
-          state: response.state,
-          total: response.total,
-          processed: response.processed,
-          stats: response.stats,
-          action: response.action,
-          error: response.error,
-          currentUrl: (response as unknown as { current_url?: string }).current_url ?? null,
-          statusCounts: (response as unknown as { status_counts?: StatusCounts }).status_counts ?? { ...defaultStatusCounts },
-        };
+        const newStatusCounts = (response as unknown as { statusCounts?: StatusCounts }).statusCounts;
+        const logs = (response as unknown as { logs?: Array<{ id: number; text: string; level: string; timestamp: string }> }).logs;
+        const newCurrentUrl = (response as unknown as { currentUrl?: string }).currentUrl ?? null;
+
+        // Only update properties that changed to avoid unnecessary re-renders
+        if (status.state !== response.state) status.state = response.state;
+        if (status.total !== response.total) status.total = response.total;
+        if (status.processed !== response.processed) status.processed = response.processed;
+        if (status.action !== response.action) status.action = response.action;
+        if (status.error !== response.error) status.error = response.error;
+        if (status.currentUrl !== newCurrentUrl) status.currentUrl = newCurrentUrl;
+
+        // Update status counts only if changed
+        if (newStatusCounts) {
+          const sc = status.statusCounts;
+          if (sc.live !== newStatusCounts.live) sc.live = newStatusCounts.live;
+          if (sc.removed !== newStatusCounts.removed) sc.removed = newStatusCounts.removed;
+          if (sc.restricted !== newStatusCounts.restricted) sc.restricted = newStatusCounts.restricted;
+          if (sc.error !== newStatusCounts.error) sc.error = newStatusCounts.error;
+          if (sc.pending !== newStatusCounts.pending) sc.pending = newStatusCounts.pending;
+        }
+
+        // Add backend logs to console
+        if (logs && logs.length > 0) {
+          consoleStore.addBackendLogs(logs as Array<{ id: number; text: string; level: LogLevel; timestamp: string }>);
+        }
+
         storeError = null;
       } catch (e) {
         storeError = String(e);
@@ -150,7 +168,12 @@ function createProcessingStore() {
     },
 
     updateStatusCounts(counts: StatusCounts) {
-      status.statusCounts = counts;
+      const sc = status.statusCounts;
+      if (sc.live !== counts.live) sc.live = counts.live;
+      if (sc.removed !== counts.removed) sc.removed = counts.removed;
+      if (sc.restricted !== counts.restricted) sc.restricted = counts.restricted;
+      if (sc.error !== counts.error) sc.error = counts.error;
+      if (sc.pending !== counts.pending) sc.pending = counts.pending;
     },
 
     setCurrentUrl(url: string | null) {

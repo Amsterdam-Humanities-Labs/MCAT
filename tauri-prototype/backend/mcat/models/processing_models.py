@@ -5,7 +5,7 @@ Data models for processing operations.
 from dataclasses import dataclass, field
 from typing import Dict, Optional
 from enum import Enum
-import pandas as pd
+import polars as pl
 
 from .file_models import FileInfo, ColumnMapping
 
@@ -85,7 +85,7 @@ class ProcessingResult:
     """Result of a completed processing operation."""
 
     success: bool = False
-    dataframe: Optional[pd.DataFrame] = None
+    dataframe: Optional[pl.DataFrame] = None
     stats: Dict[str, int] = field(default_factory=dict)
     processed_count: int = 0
     error_message: str = ""

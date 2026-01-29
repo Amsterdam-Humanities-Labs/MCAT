@@ -9,7 +9,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
-import pandas as pd
+import polars as pl
 
 from models.project_models import RunConfig, RunStatus
 from models.project_state import ProjectState
@@ -101,8 +101,8 @@ class RunService:
         processed_urls = self.get_processed_urls(project_state, run)
 
         # Get all URLs from project
-        all_urls_df = pd.read_csv(project_state.urls_csv_path)
-        all_urls = set(all_urls_df[project_state.url_column].dropna().astype(str).tolist())
+        all_urls_df = pl.read_csv(project_state.urls_csv_path)
+        all_urls = set(all_urls_df.select(pl.col(project_state.url_column).drop_nulls().cast(pl.Utf8)).to_series().to_list())
 
         # Calculate remaining
         remaining_urls = list(all_urls - processed_urls)
@@ -175,10 +175,10 @@ class RunService:
             return set()
 
         try:
-            df = pd.read_csv(results_path)
+            df = pl.read_csv(results_path)
             url_column = project_state.url_column
             if url_column in df.columns:
-                return set(df[url_column].dropna().astype(str).tolist())
+                return set(df.select(pl.col(url_column).drop_nulls().cast(pl.Utf8)).to_series().to_list())
         except Exception:
             pass
 
@@ -217,8 +217,8 @@ class RunService:
             List of remaining URLs
         """
         # Get all URLs
-        all_urls_df = pd.read_csv(project_state.urls_csv_path)
-        all_urls = set(all_urls_df[project_state.url_column].dropna().astype(str).tolist())
+        all_urls_df = pl.read_csv(project_state.urls_csv_path)
+        all_urls = set(all_urls_df.select(pl.col(project_state.url_column).drop_nulls().cast(pl.Utf8)).to_series().to_list())
 
         # Get processed URLs
         processed_urls = self.get_processed_urls(project_state, run)
@@ -244,11 +244,11 @@ class RunService:
             # Create empty combined.csv with headers
             combined_path = project_state.combined_csv_path
             # Get columns from urls.csv
-            urls_df = pd.read_csv(project_state.urls_csv_path)
+            urls_df = pl.read_csv(project_state.urls_csv_path)
             result_columns = ['status', 'info', 'screenshot_path', 'timestamp', 'error_message', 'run_id']
             all_columns = list(urls_df.columns) + result_columns
-            empty_df = pd.DataFrame(columns=all_columns)
-            empty_df.to_csv(combined_path, index=False)
+            empty_df = pl.DataFrame(schema={col: pl.Utf8 for col in all_columns})
+            empty_df.write_csv(combined_path)
             return combined_path
 
         # Collect all results
@@ -258,24 +258,24 @@ class RunService:
             results_path = project_state.get_run_results_path(run.id)
             if results_path.exists():
                 try:
-                    df = pd.read_csv(results_path)
-                    df['run_id'] = run.id
+                    df = pl.read_csv(results_path)
+                    df = df.with_columns(pl.lit(run.id).alias('run_id'))
                     all_results.append(df)
                 except Exception as e:
                     print(f"Warning: Could not read {results_path}: {e}")
 
         if all_results:
-            combined_df = pd.concat(all_results, ignore_index=True)
+            combined_df = pl.concat(all_results)
         else:
             # No results, create empty DataFrame
-            urls_df = pd.read_csv(project_state.urls_csv_path)
+            urls_df = pl.read_csv(project_state.urls_csv_path)
             result_columns = ['status', 'info', 'screenshot_path', 'timestamp', 'error_message', 'run_id']
             all_columns = list(urls_df.columns) + result_columns
-            combined_df = pd.DataFrame(columns=all_columns)
+            combined_df = pl.DataFrame(schema={col: pl.Utf8 for col in all_columns})
 
         # Save
         combined_path = project_state.combined_csv_path
-        combined_df.to_csv(combined_path, index=False)
+        combined_df.write_csv(combined_path)
 
         return combined_path
 
@@ -301,18 +301,19 @@ class RunService:
             return stats
 
         try:
-            df = pd.read_csv(results_path)
+            df = pl.read_csv(results_path)
             if 'status' in df.columns:
-                status_counts = df['status'].value_counts().to_dict()
-                stats['live'] = status_counts.get('Live', 0)
-                stats['removed'] = status_counts.get('Removed', 0)
+                status_counts = df.group_by('status').len().to_dicts()
+                counts_dict = {row['status']: row['len'] for row in status_counts}
+                stats['live'] = counts_dict.get('Live', 0)
+                stats['removed'] = counts_dict.get('Removed', 0)
                 stats['restricted'] = (
-                    status_counts.get('Restricted', 0) +
-                    status_counts.get('Age-restricted', 0) +
-                    status_counts.get('Geo-blocked', 0) +
-                    status_counts.get('Private', 0)
+                    counts_dict.get('Restricted', 0) +
+                    counts_dict.get('Age-restricted', 0) +
+                    counts_dict.get('Geo-blocked', 0) +
+                    counts_dict.get('Private', 0)
                 )
-                stats['errors'] = status_counts.get('Error', 0)
+                stats['errors'] = counts_dict.get('Error', 0)
         except Exception:
             pass
 

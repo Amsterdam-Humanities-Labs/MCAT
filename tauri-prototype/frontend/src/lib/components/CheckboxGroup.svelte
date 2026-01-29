@@ -1,6 +1,6 @@
 <script lang="ts">
   import { cn } from '$lib/utils';
-  import Checkbox from '../ui/Checkbox.svelte';
+  import Checkbox from './Checkbox.svelte';
 
   interface Option {
     value: string;

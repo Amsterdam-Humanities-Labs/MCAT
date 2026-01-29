@@ -4,18 +4,18 @@
   import { api } from '$lib/api/client';
   import { cn } from '$lib/utils';
   import { appStore } from '$lib/stores/app.svelte';
+  import { projectStore } from '$lib/stores/project.svelte';
   import { wizardStore } from '$lib/stores/wizard.svelte';
-  import { processingStore } from '$lib/stores/processing.svelte';
+  import { resultsStore } from '$lib/stores/results.svelte';
+  import { dialogsStore } from '$lib/stores/dialogs.svelte';
   import { consoleStore } from '$lib/stores/console.svelte';
-  import ErrorBanner from '$lib/components/display/ErrorBanner.svelte';
+  import { pollingController } from '$lib/stores/polling.svelte';
+  import { ErrorBanner } from '$lib/components';
   import StartScreen from '$lib/views/StartScreen.svelte';
   import ProjectWizard from '$lib/views/ProjectWizard.svelte';
   import ProjectView from '$lib/views/ProjectView.svelte';
   import InterruptedRunDialog from '$lib/views/dialogs/InterruptedRunDialog.svelte';
   import AddUrlsDialog from '$lib/views/dialogs/AddUrlsDialog.svelte';
-  import ExportDialog from '$lib/views/dialogs/ExportDialog.svelte';
-  import type { Project } from '$types/project';
-  import type { ResultRow } from '$types/results';
 
   interface Props {
     class?: string;
@@ -23,80 +23,25 @@
 
   let { class: className }: Props = $props();
 
-  // State
-  let project = $state<Project | null>(null);
-  let results = $state<ResultRow[]>([]);
-  let pollInterval: ReturnType<typeof setInterval> | undefined;
-
-  // Dialog states
-  let showInterruptedRunDialog = $state(false);
-  let interruptedRun = $state<{ runId: string; processed: number; total: number; remaining: number } | null>(null);
-  let showAddUrlsDialog = $state(false);
-  let showExportDialog = $state(false);
-
-  async function refreshStatus() {
-    try {
-      await appStore.checkBackendHealth();
-
-      const projStatus = await api.getProject();
-      project = projStatus.project;
-
-      if (project) {
-        await processingStore.load();
-        appStore.setView('project');
-
-        // Load results
-        try {
-          const combined = await api.getCombinedResults();
-          results = combined.results;
-          processingStore.updateStatusCounts(combined.byStatus);
-        } catch {
-          // Results may not be available yet
-        }
-      } else if (appStore.view === 'project') {
-        appStore.setView('start');
-      }
-
-      // Clear connection errors
-      if (appStore.globalError?.includes('Request failed')) {
-        appStore.clearError();
-      }
-    } catch (e) {
-      if (appStore.backendConnected) {
-        appStore.setGlobalError(String(e));
-      }
-    }
-  }
-
-  async function handleNewProject() {
+  // Handlers
+  function handleNewProject() {
     wizardStore.reset();
     appStore.setView('wizard');
   }
 
   async function handleOpenProject() {
+    const selected = await open({
+      multiple: false,
+      filters: [{ name: 'Project', extensions: ['json'] }],
+      title: 'Open MCAT Project',
+    });
+    if (!selected) return;
+
     try {
-      const selected = await open({
-        multiple: false,
-        filters: [{ name: 'Project', extensions: ['json'] }],
-        title: 'Open MCAT Project',
-      });
-
-      if (!selected) return;
-
-      const result = await api.openProject(selected as string);
-      if (result?.success) {
-        await refreshStatus();
-
-        // Check for interrupted run
-        try {
-          const interrupted = await api.getInterruptedRun();
-          if (interrupted.hasInterrupted && interrupted.run) {
-            interruptedRun = interrupted.run;
-            showInterruptedRunDialog = true;
-          }
-        } catch {
-          // Ignore - no interrupted run
-        }
+      const success = await projectStore.open(selected as string);
+      if (success) {
+        await pollingController.refreshNow();
+        await pollingController.checkForInterruptedRun();
       }
     } catch (e) {
       appStore.setGlobalError(String(e));
@@ -105,17 +50,17 @@
 
   async function handleWizardComplete(data: ReturnType<typeof wizardStore.getCreateData>) {
     try {
-      const result = await api.createProject({
+      const success = await projectStore.create({
         name: data.name,
         platform: data.platform,
         location: data.location,
         csvPath: data.csvPath,
         urlColumn: data.urlColumn,
       });
-
-      if (result?.success) {
+      if (success) {
         consoleStore.success('Project created successfully');
-        await refreshStatus();
+        appStore.setView('project');
+        await pollingController.refreshNow();
       }
     } catch (e) {
       appStore.setGlobalError(String(e));
@@ -129,9 +74,8 @@
 
   async function handleCloseProject() {
     try {
-      await api.closeProject();
-      project = null;
-      results = [];
+      await projectStore.close();
+      resultsStore.clear();
       appStore.setView('start');
     } catch (e) {
       appStore.setGlobalError(String(e));
@@ -139,49 +83,43 @@
   }
 
   async function handleResumeRun() {
-    if (!interruptedRun) return;
+    const run = dialogsStore.interruptedRun;
+    if (!run) return;
     try {
-      await api.resumeRun(interruptedRun.runId);
-      consoleStore.info(`Resuming run ${interruptedRun.runId}`);
-      showInterruptedRunDialog = false;
-      interruptedRun = null;
-      await refreshStatus();
+      await api.resumeRun(run.runId);
+      consoleStore.info(`Resuming run ${run.runId}`);
+      dialogsStore.closeInterruptedRun();
+      await pollingController.refreshNow();
     } catch (e) {
       appStore.setGlobalError(String(e));
     }
   }
 
   async function handleAbandonRun() {
-    if (!interruptedRun) return;
+    const run = dialogsStore.interruptedRun;
+    if (!run) return;
     try {
-      await api.abandonRun(interruptedRun.runId);
-      consoleStore.warning(`Abandoned run ${interruptedRun.runId}`);
-      showInterruptedRunDialog = false;
-      interruptedRun = null;
+      await api.abandonRun(run.runId);
+      consoleStore.warning(`Abandoned run ${run.runId}`);
+      dialogsStore.closeInterruptedRun();
     } catch (e) {
       appStore.setGlobalError(String(e));
     }
   }
 
-  async function handleImportUrls(_csvPath: string) {
+  async function handleImportUrls() {
     try {
       const result = await api.confirmImport();
       consoleStore.success(`Added ${result.added} new URLs`);
-      showAddUrlsDialog = false;
-      await refreshStatus();
+      dialogsStore.closeAddUrls();
+      await pollingController.refreshNow();
     } catch (e) {
       appStore.setGlobalError(String(e));
     }
   }
 
-  onMount(async () => {
-    await refreshStatus();
-    pollInterval = setInterval(refreshStatus, 2000);
-  });
-
-  onDestroy(() => {
-    if (pollInterval) clearInterval(pollInterval);
-  });
+  onMount(() => pollingController.start());
+  onDestroy(() => pollingController.stop());
 </script>
 
 <main class={cn('max-w-4xl mx-auto p-4 min-h-screen bg-mcat-bg text-mcat-text font-sans', className)}>
@@ -221,33 +159,27 @@
       oncancel={handleWizardCancel}
       oncomplete={handleWizardComplete}
     />
-  {:else if appStore.view === 'project' && project}
+  {:else if appStore.view === 'project' && projectStore.project}
     <ProjectView
-      {project}
-      {results}
+      project={projectStore.project}
+      results={resultsStore.results}
       onclose={handleCloseProject}
-      onaddurls={() => (showAddUrlsDialog = true)}
-      onexport={() => (showExportDialog = true)}
+      onaddurls={() => dialogsStore.openAddUrls()}
     />
   {/if}
 
   <!-- Dialogs -->
   <InterruptedRunDialog
-    open={showInterruptedRunDialog}
-    run={interruptedRun}
+    open={dialogsStore.interruptedRunOpen}
+    run={dialogsStore.interruptedRun}
     onresume={handleResumeRun}
     onabandon={handleAbandonRun}
-    onclose={() => (showInterruptedRunDialog = false)}
+    onclose={() => dialogsStore.closeInterruptedRun()}
   />
 
   <AddUrlsDialog
-    open={showAddUrlsDialog}
-    onclose={() => (showAddUrlsDialog = false)}
+    open={dialogsStore.addUrlsOpen}
+    onclose={() => dialogsStore.closeAddUrls()}
     onimport={handleImportUrls}
-  />
-
-  <ExportDialog
-    open={showExportDialog}
-    onclose={() => (showExportDialog = false)}
   />
 </main>

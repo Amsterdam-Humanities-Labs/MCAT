@@ -18,14 +18,10 @@ fn find_backend_dir() -> Option<PathBuf> {
     let current_dir = std::env::current_dir().ok()?;
 
     let possible_paths = [
-        // From monorepo root
+        // From tauri-prototype root (pnpm dev runs from here)
         current_dir.join("backend"),
-        // From apps/desktop
-        current_dir
-            .parent()
-            .and_then(|p| p.parent())
-            .map(|p| p.join("backend"))
-            .unwrap_or_default(),
+        // From tauri/ folder
+        current_dir.parent().map(|p| p.join("backend")).unwrap_or_default(),
     ];
 
     possible_paths
@@ -48,9 +44,24 @@ fn read_port_file(backend_dir: &PathBuf) -> Option<u16> {
         .and_then(|s| s.trim().parse().ok())
 }
 
+fn kill_existing_backend() {
+    // Kill any existing mcat server.py processes from previous crashed runs
+    #[cfg(unix)]
+    {
+        let _ = Command::new("pkill")
+            .args(["-f", "python.*mcat.*server\\.py"])
+            .output();
+        // Give processes time to die
+        std::thread::sleep(Duration::from_millis(200));
+    }
+}
+
 fn spawn_python_backend(backend_dir: &PathBuf) -> Option<Child> {
     let server_path = backend_dir.join("mcat").join("server.py");
     let python = find_python(backend_dir);
+
+    // Kill any orphaned backend processes from previous runs
+    kill_existing_backend();
 
     // Remove old port file
     let _ = std::fs::remove_file(backend_dir.join(".port"));
@@ -129,6 +140,10 @@ fn get_backend_status(backend: State<Backend>) -> String {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    // Force X11 backend on Linux to fix window decorations on Wayland/KDE
+    #[cfg(target_os = "linux")]
+    std::env::set_var("GDK_BACKEND", "x11");
+
     let backend_dir = find_backend_dir().expect("Could not find backend directory");
     let python_process = spawn_python_backend(&backend_dir);
     let port = wait_for_port(&backend_dir, 5000);
@@ -142,6 +157,7 @@ pub fn run() {
     tauri::Builder::default()
         .manage(Backend(Mutex::new(backend_state)))
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_shell::init())
         .setup(|app| {
             if cfg!(debug_assertions) {
                 app.handle().plugin(

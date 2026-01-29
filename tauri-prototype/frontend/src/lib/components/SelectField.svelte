@@ -1,6 +1,6 @@
 <script lang="ts">
   import FormField from './FormField.svelte';
-  import Select from '../ui/Select.svelte';
+  import Select from './Select.svelte';
 
   interface Option {
     value: string;

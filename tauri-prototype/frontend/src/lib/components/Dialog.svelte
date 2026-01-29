@@ -12,7 +12,7 @@
   }
 
   let {
-    open = $bindable(false),
+    open = false,
     title,
     class: className,
     onclose,
@@ -22,18 +22,16 @@
 
   const dialog = new Dialog({
     open: () => open,
-    onOpenChange: (value) => {
-      open = value;
-      if (!value) {
-        onclose?.();
-      }
+    onOpenChange: (isOpen) => {
+      if (!isOpen) onclose?.();
     },
-    closeOnEscape: true,
-    closeOnOutsideClick: true,
   });
 </script>
 
-<div {...dialog.overlay} class="fixed inset-0 z-50 bg-black/60"></div>
+<div
+  {...dialog.overlay}
+  class="fixed inset-0 z-50 bg-black/60 opacity-0 transition-opacity duration-200 data-[open]:opacity-100"
+></div>
 
 <dialog
   {...dialog.content}
@@ -41,7 +39,8 @@
     'fixed left-1/2 top-1/2 z-50 -translate-x-1/2 -translate-y-1/2',
     'w-full max-w-lg max-h-[85vh] overflow-auto',
     'bg-mcat-card border border-mcat-border rounded-lg shadow-xl',
-    'p-0 m-0',
+    'p-0 m-0 opacity-0 scale-95 transition-all duration-200',
+    'data-[open]:opacity-100 data-[open]:scale-100',
     className
   )}
 >
@@ -65,7 +64,7 @@
 
   <button
     type="button"
-    onclick={() => dialog.open = false}
+    onclick={() => (dialog.open = false)}
     class="absolute top-4 right-4 p-1 text-mcat-text-muted hover:text-mcat-text transition-colors"
     aria-label="Close"
   >

@@ -1,12 +1,18 @@
 <script lang="ts">
   import { cn } from '$lib/utils';
   import { open } from '@tauri-apps/plugin-dialog';
-  import Button from '../ui/Button.svelte';
-  import Input from '../ui/Input.svelte';
+  import Button from './Button.svelte';
+  import Input from './Input.svelte';
+
+  interface FileFilter {
+    name: string;
+    extensions: string[];
+  }
 
   interface Props {
     value?: string;
     placeholder?: string;
+    filters?: FileFilter[];
     disabled?: boolean;
     error?: string | null;
     class?: string;
@@ -15,18 +21,19 @@
 
   let {
     value = $bindable(''),
-    placeholder = 'Select a folder...',
+    placeholder = 'Select a file...',
+    filters = [],
     disabled = false,
     error,
     class: className,
     onchange,
   }: Props = $props();
 
-  async function pickFolder() {
+  async function pickFile() {
     try {
       const selected = await open({
-        directory: true,
         multiple: false,
+        filters: filters.length > 0 ? filters : undefined,
       });
 
       if (selected && typeof selected === 'string') {
@@ -34,7 +41,7 @@
         onchange?.(value);
       }
     } catch (err) {
-      console.error('Folder picker error:', err);
+      console.error('File picker error:', err);
     }
   }
 </script>
@@ -52,7 +59,7 @@
     <Button
       variant="secondary"
       {disabled}
-      onclick={pickFolder}
+      onclick={pickFile}
     >
       Browse
     </Button>

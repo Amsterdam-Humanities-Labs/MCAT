@@ -1,24 +1,28 @@
 // UI Components
-export { default as Button } from './ui/Button.svelte';
-export { default as Input } from './ui/Input.svelte';
-export { default as Select } from './ui/Select.svelte';
-export { default as Checkbox } from './ui/Checkbox.svelte';
-export { default as Dialog } from './ui/Dialog.svelte';
-export { default as Tabs } from './ui/Tabs.svelte';
-export { default as Progress } from './ui/Progress.svelte';
-export { default as Badge } from './ui/Badge.svelte';
-export { default as Tooltip } from './ui/Tooltip.svelte';
+export { default as Badge } from './Badge.svelte';
+export { default as Button } from './Button.svelte';
+export { default as Checkbox } from './Checkbox.svelte';
+export { default as Dialog } from './Dialog.svelte';
+export { default as DialogActions } from './DialogActions.svelte';
+export { default as Input } from './Input.svelte';
+export { default as Progress } from './Progress.svelte';
+export { default as Select } from './Select.svelte';
+export { default as Tabs } from './Tabs.svelte';
+export { default as Tooltip } from './Tooltip.svelte';
 
 // Form Components
-export { default as FormField } from './form/FormField.svelte';
-export { default as FilePickerInput } from './form/FilePickerInput.svelte';
-export { default as FolderPickerInput } from './form/FolderPickerInput.svelte';
-export { default as SelectField } from './form/SelectField.svelte';
-export { default as CheckboxGroup } from './form/CheckboxGroup.svelte';
+export { default as CheckboxGroup } from './CheckboxGroup.svelte';
+export { default as FilePickerInput } from './FilePickerInput.svelte';
+export { default as FolderPickerInput } from './FolderPickerInput.svelte';
+export { default as FormField } from './FormField.svelte';
+export { default as SelectField } from './SelectField.svelte';
 
 // Display Components
-export { default as ErrorBanner } from './display/ErrorBanner.svelte';
-export { default as StatusBadge } from './display/StatusBadge.svelte';
-export { default as SegmentedProgress } from './display/SegmentedProgress.svelte';
-export { default as ConsolePanel } from './display/ConsolePanel.svelte';
-export { default as DataTable } from './display/DataTable.svelte';
+export { default as ConsolePanel } from './ConsolePanel.svelte';
+export { default as DataTable } from './DataTable.svelte';
+export { default as ErrorBanner } from './ErrorBanner.svelte';
+export { default as InfoBox } from './InfoBox.svelte';
+export { default as SegmentedProgress } from './SegmentedProgress.svelte';
+export { default as StatCard } from './StatCard.svelte';
+export { default as StatsGrid } from './StatsGrid.svelte';
+export { default as StatusBadge } from './StatusBadge.svelte';

@@ -15,5 +15,6 @@ export default defineConfig({
   server: {
     port: 5180,
     strictPort: false,
+    hmr: true,  // Disable WebSocket HMR to avoid WebKit crash on Linux
   },
 })

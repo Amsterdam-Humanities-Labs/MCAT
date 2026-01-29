@@ -1,6 +1,5 @@
 <script lang="ts">
-  import Dialog from '$lib/components/ui/Dialog.svelte';
-  import Button from '$lib/components/ui/Button.svelte';
+  import { Dialog, Button } from '$lib/components';
 
   interface InterruptedRun {
     runId: string;

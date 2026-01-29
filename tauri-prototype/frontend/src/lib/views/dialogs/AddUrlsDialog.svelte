@@ -1,9 +1,6 @@
 <script lang="ts">
   import { api } from '$lib/api/client';
-  import Dialog from '$lib/components/ui/Dialog.svelte';
-  import Button from '$lib/components/ui/Button.svelte';
-  import FilePickerInput from '$lib/components/form/FilePickerInput.svelte';
-  import FormField from '$lib/components/form/FormField.svelte';
+  import { Dialog, Button, FilePickerInput, FormField } from '$lib/components';
   import type { ImportPreview } from '$types/csv';
 
   interface Props {

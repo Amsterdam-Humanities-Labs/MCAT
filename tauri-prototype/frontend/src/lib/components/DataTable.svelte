@@ -1,10 +1,12 @@
 <script lang="ts" generics="T">
   import { cn } from '$lib/utils';
+  import { open } from '@tauri-apps/plugin-shell';
 
   interface Column<T> {
     key: keyof T | string;
     header: string;
     width?: string;
+    type?: 'text' | 'link' | 'status';
   }
 
   interface Props {
@@ -25,6 +27,14 @@
 
   const displayedRows = $derived(rows.slice(0, maxRows));
 
+  const statusColors: Record<string, string> = {
+    live: 'text-status-live',
+    removed: 'text-status-removed',
+    restricted: 'text-status-restricted',
+    error: 'text-status-error',
+    pending: 'text-status-pending',
+  };
+
   function getCellValue(row: T, key: keyof T | string): unknown {
     if (typeof key === 'string' && key.includes('.')) {
       return key.split('.').reduce((obj: unknown, k) => {
@@ -36,10 +46,24 @@
     }
     return row[key as keyof T];
   }
+
+  function isUrl(value: unknown): boolean {
+    if (typeof value !== 'string') return false;
+    return value.startsWith('http://') || value.startsWith('https://');
+  }
+
+  function getStatusColor(status: string): string {
+    const normalized = status.toLowerCase();
+    return statusColors[normalized] ?? 'text-mcat-text';
+  }
+
+  async function openLink(url: string) {
+    await open(url);
+  }
 </script>
 
 <div class={cn('overflow-auto border border-mcat-border rounded-lg', className)}>
-  <table class="w-full text-sm">
+  <table class="min-w-full text-sm whitespace-nowrap">
     <thead class="bg-mcat-card sticky top-0">
       <tr>
         {#each columns as col}
@@ -66,8 +90,24 @@
         {#each displayedRows as row}
           <tr class="hover:bg-mcat-card/50 transition-colors">
             {#each columns as col}
+              {@const value = getCellValue(row, col.key)}
               <td class="px-4 py-3 text-mcat-text">
-                {getCellValue(row, col.key) ?? ''}
+                {#if (col.type === 'link' || col.key === 'url') && isUrl(value)}
+                  <button
+                    type="button"
+                    class="text-mcat-orange text-left truncate max-w-[280px] block cursor-pointer"
+                    onclick={() => openLink(String(value))}
+                    title={String(value)}
+                  >
+                    {value}
+                  </button>
+                {:else if col.type === 'status' || col.key === 'status'}
+                  <span class={cn('font-medium', getStatusColor(String(value ?? '')))}>
+                    {value ?? ''}
+                  </span>
+                {:else}
+                  {value ?? ''}
+                {/if}
               </td>
             {/each}
           </tr>

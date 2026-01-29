@@ -5,6 +5,7 @@
     checked?: boolean;
     disabled?: boolean;
     label?: string;
+    size?: 'sm' | 'md';
     class?: string;
     onchange?: (checked: boolean) => void;
   }
@@ -13,9 +14,20 @@
     checked = $bindable(false),
     disabled = false,
     label,
+    size = 'md',
     class: className,
     onchange,
   }: Props = $props();
+
+  const sizeClasses = {
+    sm: 'w-4 h-4',
+    md: 'w-5 h-5',
+  };
+
+  const checkSizeClasses = {
+    sm: 'w-2.5 h-2.5',
+    md: 'w-3 h-3',
+  };
 
   function handleClick() {
     if (disabled) return;
@@ -41,7 +53,8 @@
     onclick={handleClick}
     onkeydown={handleKeydown}
     class={cn(
-      'w-5 h-5 rounded border flex items-center justify-center transition-colors',
+      'rounded border flex items-center justify-center transition-colors',
+      sizeClasses[size],
       'focus:outline-none focus:ring-2 focus:ring-mcat-orange focus:ring-offset-2 focus:ring-offset-mcat-bg',
       checked
         ? 'bg-mcat-orange border-mcat-orange'
@@ -49,7 +62,7 @@
     )}
   >
     {#if checked}
-      <svg class="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <svg class={cn('text-white', checkSizeClasses[size])} fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" />
       </svg>
     {/if}

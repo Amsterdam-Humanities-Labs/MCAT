@@ -4,7 +4,7 @@ Data models for file operations and validation.
 
 from dataclasses import dataclass, field
 from typing import List, Optional
-import pandas as pd
+import polars as pl
 
 
 @dataclass
@@ -16,7 +16,7 @@ class FileInfo:
     row_count: int = 0
     valid: bool = False
     error_message: str = ""
-    dataframe: Optional[pd.DataFrame] = None
+    dataframe: Optional[pl.DataFrame] = None
 
     @property
     def filename(self) -> str:
