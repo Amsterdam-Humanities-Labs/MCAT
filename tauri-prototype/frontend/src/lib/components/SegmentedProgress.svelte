@@ -52,10 +52,10 @@
 <div class={cn('w-full', className)}>
   <!-- Progress bar -->
   <div class="h-4 bg-mcat-border rounded-full overflow-hidden flex">
-    {#each segments as segment}
+    {#each segments as segment (segment.status)}
       {#if segment.percentage > 0}
         <div
-          class={cn('h-full transition-all duration-300', segment.color)}
+          class={cn('h-full', segment.color)}
           style="width: {segment.percentage}%"
           title="{segment.label}: {segment.count}"
         ></div>
@@ -78,7 +78,7 @@
   <!-- Legend -->
   {#if showLegend}
     <div class="mt-3 flex flex-wrap gap-4">
-      {#each segments as segment}
+      {#each segments as segment (segment.status)}
         <div class="flex items-center gap-1.5">
           <div class={cn('w-3 h-3 rounded-sm', segment.color)}></div>
           <span class="text-xs text-mcat-text-muted">

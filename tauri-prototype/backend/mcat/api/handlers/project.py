@@ -17,6 +17,7 @@ def get_status() -> dict:
             "platform": project.platform,
             "path": str(project.project_path),
             "combinedCsvPath": str(project.combined_csv_path),
+            "mtime": project.project_json_path.stat().st_mtime,
             "url_count": ctx.project_service.get_url_count(project),
             "url_column": project.url_column,
             "runs": [

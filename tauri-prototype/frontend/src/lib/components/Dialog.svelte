@@ -21,10 +21,14 @@
   }: Props = $props();
 
   const dialog = new Dialog({
-    open: () => open,
     onOpenChange: (isOpen) => {
       if (!isOpen) onclose?.();
     },
+  });
+
+  // Sync prop to dialog state
+  $effect(() => {
+    dialog.open = open;
   });
 </script>
 

@@ -14,6 +14,7 @@ export interface Project {
   platform: Platform;
   path: string;
   combinedCsvPath: string;
+  mtime: number;
   urlCount: number;
   urlColumn: string;
   runs: Run[];

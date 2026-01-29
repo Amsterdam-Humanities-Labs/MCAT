@@ -83,6 +83,7 @@ function createProjectStore() {
     },
 
     setProject(p: Project | null) {
+      if (p?.mtime === project?.mtime) return;
       project = p;
     },
 
