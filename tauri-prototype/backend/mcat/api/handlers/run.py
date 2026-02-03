@@ -3,51 +3,6 @@
 from api.context import app_context
 
 
-def start(body: dict) -> dict:
-    """Start a new run."""
-    ctx = app_context
-    if not ctx.current_project:
-        raise ValueError("No project open")
-
-    run = ctx.run_service.start_run(
-        ctx.current_project,
-        screenshots_enabled=body.get("screenshots", False)
-    )
-    return {"success": True, "run_id": run.id}
-
-
-def complete(body: dict) -> dict:
-    """Complete current run."""
-    ctx = app_context
-    if not ctx.current_project:
-        raise ValueError("No project open")
-
-    if not ctx.current_project.current_run:
-        raise ValueError("No active run")
-
-    ctx.run_service.complete_run(
-        ctx.current_project,
-        ctx.current_project.current_run
-    )
-    return {"success": True}
-
-
-def get_stats() -> dict:
-    """Get current run stats."""
-    ctx = app_context
-    if not ctx.current_project:
-        return {"stats": None}
-
-    if not ctx.current_project.current_run:
-        return {"stats": None}
-
-    stats = ctx.run_service.get_run_stats(
-        ctx.current_project,
-        ctx.current_project.current_run
-    )
-    return {"stats": stats}
-
-
 def get_interrupted() -> dict:
     """Check for interrupted runs."""
     ctx = app_context

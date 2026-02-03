@@ -1,21 +1,12 @@
 import { invoke } from '@tauri-apps/api/core';
 import type {
   HealthResponse,
-  ProjectStatusResponse,
-  ProcessStatusResponse,
   CreateProjectRequest,
   StartProcessingRequest,
   CsvInfo,
   ImportPreview,
   CombinedResults,
 } from '../../types';
-
-interface LogMessage {
-  id: number;
-  text: string;
-  level: 'info' | 'warning' | 'error' | 'success';
-  timestamp: string;
-}
 
 interface InterruptedRun {
   runId: string;
@@ -90,11 +81,13 @@ async function callBackend<T>(
 }
 
 export const api = {
+  // Backend port for SSE
+  getPort: () => invoke<number>('get_backend_port'),
+
   // Health
   health: () => callBackend<HealthResponse>('/health'),
 
   // Project
-  getProject: () => callBackend<ProjectStatusResponse>('/project/status'),
   createProject: (data: CreateProjectRequest) =>
     callBackend<{ success: boolean; projectPath?: string }>('/project/create', 'POST', data),
   openProject: (path: string) =>
@@ -103,7 +96,6 @@ export const api = {
     callBackend<{ success: boolean }>('/project/close', 'POST'),
 
   // Processing
-  getProcessStatus: () => callBackend<ProcessStatusResponse>('/process/status'),
   startProcessing: (data?: StartProcessingRequest) =>
     callBackend<{ success: boolean }>('/process/start', 'POST', data ?? {}),
   pauseProcessing: () =>
@@ -114,12 +106,6 @@ export const api = {
     callBackend<{ success: boolean }>('/process/cancel', 'POST'),
 
   // Runs
-  startRun: (screenshots = false) =>
-    callBackend<{ success: boolean; runId?: string }>('/run/start', 'POST', { screenshots }),
-  completeRun: () =>
-    callBackend<{ success: boolean }>('/run/complete', 'POST'),
-  getRunStats: () =>
-    callBackend<{ stats: unknown }>('/run/stats'),
   resumeRun: (runId: string) =>
     callBackend<{ success: boolean; remainingUrls: number }>('/run/resume', 'POST', { runId }),
   abandonRun: (runId: string) =>
@@ -142,8 +128,4 @@ export const api = {
   // Results
   getCombinedResults: () =>
     callBackend<CombinedResults>('/results/combined'),
-
-  // Logs
-  getLogs: () =>
-    callBackend<{ logs: LogMessage[] }>('/logs'),
 };

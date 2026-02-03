@@ -68,13 +68,6 @@ class ProcessingService:
                     return True
         return False
 
-    @classmethod
-    def process_all_progress_updates(cls):
-        """Process progress updates from all service instances (main thread)."""
-        with cls._instances_lock:
-            for service in cls._all_instances.copy():
-                service._process_progress_updates()
-
     # Public API
 
     def validate_processing_request(self, job: ProcessingJob) -> ValidationResult:
@@ -278,8 +271,15 @@ class ProcessingService:
         self._progress_queue.drain(handle_update)
 
     def _queue_progress_update(self, stats: dict, total: int, processed: int, action: str = ""):
-        """Queue progress update from background thread."""
+        """Queue progress update from background thread and dispatch event."""
         self._progress_queue.push(stats, total, processed, action)
+        # Update status and dispatch event immediately for SSE
+        with self._state_lock:
+            self.current_status.stats = stats
+            self.current_status.total_count = total
+            self.current_status.processed_count = processed
+            self.current_status.current_action = action
+        dispatcher.send(ProcessingEvents.PROGRESS, sender=self, status=self.current_status)
 
     def _processing_worker(self, job: ProcessingJob):
         """Main processing worker thread."""

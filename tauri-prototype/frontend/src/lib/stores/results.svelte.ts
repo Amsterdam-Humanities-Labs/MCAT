@@ -32,6 +32,10 @@ function createResultsStore() {
     clear() {
       results = [];
     },
+
+    setResults(newResults: ResultRow[]) {
+      results = newResults;
+    },
   };
 }
 

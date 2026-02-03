@@ -1,39 +1,24 @@
 import { api } from '../api/client';
+import { initSSE, closeSSE } from '../api/sse';
 import { appStore } from './app.svelte';
-import { projectStore } from './project.svelte';
-import { processingStore } from './processing.svelte';
-import { resultsStore } from './results.svelte';
 import { dialogsStore } from './dialogs.svelte';
 
-const POLL_INTERVAL = 2000;
+const HEALTH_CHECK_INTERVAL = 10000;
 
 function createPollingController() {
   let interval: ReturnType<typeof setInterval> | undefined;
-  let lastLogId = $state(-1);
+  let sseInitialized = false;
 
-  async function refresh() {
+  async function healthCheck() {
     try {
       await appStore.checkBackendHealth();
 
-      const projStatus = await api.getProject();
-      projectStore.setProject(projStatus.project);
-
-      if (projStatus.project) {
-        await processingStore.load();
-        if (appStore.view !== 'wizard') {
-          appStore.setView('project');
-        }
-
-        // Load results and update status counts when idle
-        const statusCounts = await resultsStore.load();
-        if (statusCounts && processingStore.isIdle) {
-          processingStore.updateStatusCounts(statusCounts);
-        }
-      } else if (appStore.view === 'project') {
-        appStore.setView('start');
+      if (appStore.backendConnected && !sseInitialized) {
+        const port = await api.getPort();
+        initSSE(`http://127.0.0.1:${port}`);
+        sseInitialized = true;
       }
 
-      // Clear stale connection errors
       if (appStore.globalError?.includes('Request failed')) {
         appStore.clearError();
       }
@@ -45,10 +30,6 @@ function createPollingController() {
   }
 
   return {
-    get lastLogId() {
-      return lastLogId;
-    },
-
     async checkForInterruptedRun() {
       try {
         const interrupted = await api.getInterruptedRun();
@@ -63,8 +44,8 @@ function createPollingController() {
     },
 
     start() {
-      refresh();
-      interval = setInterval(refresh, POLL_INTERVAL);
+      healthCheck();
+      interval = setInterval(healthCheck, HEALTH_CHECK_INTERVAL);
     },
 
     stop() {
@@ -72,10 +53,8 @@ function createPollingController() {
         clearInterval(interval);
         interval = undefined;
       }
-    },
-
-    async refreshNow() {
-      await refresh();
+      closeSSE();
+      sseInitialized = false;
     },
   };
 }

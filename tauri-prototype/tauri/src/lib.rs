@@ -138,6 +138,11 @@ fn get_backend_status(backend: State<Backend>) -> String {
     }
 }
 
+#[tauri::command]
+fn get_backend_port(backend: State<Backend>) -> u16 {
+    backend.0.lock().unwrap().port
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     // Force X11 backend on Linux to fix window decorations on Wayland/KDE
@@ -168,7 +173,7 @@ pub fn run() {
             }
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![call_backend, get_backend_status])
+        .invoke_handler(tauri::generate_handler![call_backend, get_backend_status, get_backend_port])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

@@ -39,12 +39,10 @@ class BatchProcessor:
         self.resume_event = threading.Event()
         self.resume_event.set()  # Start in resumed state
         self.max_workers = config.scraper_settings['max_workers']
+        self.log_callback = None
 
-        # Initialize WebDriver pool
-        self.driver_pool = WebDriverPool(
-            pool_size=self.max_workers,
-            headless=config.scraper_settings['headless']
-        )
+        # WebDriver pool initialized lazily when log_callback is set
+        self.driver_pool = None
 
         # Thread-safe progress queue for GUI updates
         self.progress_queue = Queue()
@@ -56,6 +54,14 @@ class BatchProcessor:
         result = ProcessingResult()
         csv_writer = None
         output_csv_path = None
+
+        # Ensure driver pool is initialized
+        if self.driver_pool is None:
+            self.driver_pool = WebDriverPool(
+                pool_size=self.max_workers,
+                headless=config.scraper_settings['headless'],
+                log_callback=self.log_callback
+            )
 
         try:
             # Reset cancel flag
@@ -95,16 +101,16 @@ class BatchProcessor:
             # Step 5: Extract URLs
             url_column = column_mapping.get('post', '')
             urls = CSVHandler.get_urls_from_column(df, url_column)
-            print(f"Extracted {len(urls)} URLs from column '{url_column}'", flush=True)
+            self._log(f"Extracted {len(urls)} URLs from column '{url_column}'")
 
             if not urls:
                 result.error_message = f"No URLs found in column '{url_column}'"
                 return result
 
             # Step 6: Process URLs with incremental writing
-            print(f"Starting batch processing of {len(urls)} URLs...", flush=True)
+            self._log(f"Starting batch processing of {len(urls)} URLs...")
             self._process_batch(urls, scraper, csv_writer, df, url_column)
-            print(f"Batch processing completed", flush=True)
+            self._log(f"Batch processing completed", "success")
 
             if self.cancel_flag.is_set():
                 result.error_message = "Processing was cancelled"
@@ -169,6 +175,13 @@ class BatchProcessor:
     def set_log_callback(self, callback):
         """Set callback function for log messages."""
         self.log_callback = callback
+        # Initialize driver pool with log callback
+        if self.driver_pool is None:
+            self.driver_pool = WebDriverPool(
+                pool_size=self.max_workers,
+                headless=config.scraper_settings['headless'],
+                log_callback=callback
+            )
 
     def _log(self, message: str, level: str = "info"):
         """Send log message via callback if available."""
@@ -258,13 +271,13 @@ class BatchProcessor:
 
             except Exception as e:
                 if not self.cancel_flag.is_set():
-                    print(f"Error processing URL {url}: {e}")
+                    self._log(f"Error processing URL {url}: {e}", "error")
                 with stats_lock:
                     stats['errors'] += 1
                     processed += 1
 
         # Process URLs with threading - submit in batches for better cancellation
-        print(f"Starting ThreadPoolExecutor with {self.max_workers} workers for {len(urls)} URLs", flush=True)
+        self._log(f"Starting ThreadPoolExecutor with {self.max_workers} workers for {len(urls)} URLs", "debug")
         with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
             futures = []
 
@@ -274,14 +287,14 @@ class BatchProcessor:
                     break
                 futures.append(executor.submit(process_single_url, url, idx))
 
-            print(f"Submitted {len(futures)} tasks to executor", flush=True)
+            self._log(f"Submitted {len(futures)} tasks to executor", "debug")
 
             # Wait for completion, handling cancellation
             cancelled = False
             for future in as_completed(futures):
                 if self.cancel_flag.is_set() and not cancelled:
                     cancelled = True
-                    print("Cancellation requested - stopping workers...")
+                    self._log("Cancellation requested - stopping workers...", "warning")
                     # Cancel all pending futures
                     for f in futures:
                         f.cancel()
@@ -293,7 +306,7 @@ class BatchProcessor:
                     future.result()
                 except Exception as e:
                     if not self.cancel_flag.is_set():
-                        print(f"Error in future result: {e}")
+                        self._log(f"Error in future result: {e}", "error")
 
     def get_progress_updates(self):
         """Get all pending progress updates from queue (non-blocking)."""

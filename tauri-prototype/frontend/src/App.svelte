@@ -9,6 +9,7 @@
   import { resultsStore } from '$lib/stores/results.svelte';
   import { dialogsStore } from '$lib/stores/dialogs.svelte';
   import { consoleStore } from '$lib/stores/console.svelte';
+  import { processingStore } from '$lib/stores/processing.svelte';
   import { pollingController } from '$lib/stores/polling.svelte';
   import { ErrorBanner } from '$lib/components';
   import StartScreen from '$lib/views/StartScreen.svelte';
@@ -40,7 +41,6 @@
     try {
       const success = await projectStore.open(selected as string);
       if (success) {
-        await pollingController.refreshNow();
         await pollingController.checkForInterruptedRun();
       }
     } catch (e) {
@@ -60,7 +60,6 @@
       if (success) {
         consoleStore.success('Project created successfully');
         appStore.setView('project');
-        await pollingController.refreshNow();
       }
     } catch (e) {
       appStore.setGlobalError(String(e));
@@ -89,7 +88,6 @@
       await api.resumeRun(run.runId);
       consoleStore.info(`Resuming run ${run.runId}`);
       dialogsStore.closeInterruptedRun();
-      await pollingController.refreshNow();
     } catch (e) {
       appStore.setGlobalError(String(e));
     }
@@ -112,7 +110,6 @@
       const result = await api.confirmImport();
       consoleStore.success(`Added ${result.added} new URLs`);
       dialogsStore.closeAddUrls();
-      await pollingController.refreshNow();
     } catch (e) {
       appStore.setGlobalError(String(e));
     }
@@ -156,6 +153,7 @@
     />
   {:else if appStore.view === 'wizard'}
     <ProjectWizard
+      wizard={wizardStore}
       oncancel={handleWizardCancel}
       oncomplete={handleWizardComplete}
     />
@@ -163,6 +161,8 @@
     <ProjectView
       project={projectStore.project}
       results={resultsStore.results}
+      processing={processingStore}
+      messages={consoleStore.messages}
       onclose={handleCloseProject}
       onaddurls={() => dialogsStore.openAddUrls()}
     />

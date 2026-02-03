@@ -1,7 +1,5 @@
 <script lang="ts">
   import { cn } from '$lib/utils';
-  import { processingStore } from '$lib/stores/processing.svelte';
-  import { consoleStore } from '$lib/stores/console.svelte';
   import {
     Button,
     Badge,
@@ -11,10 +9,14 @@
   } from '$lib/components';
   import type { Project } from '$types/project';
   import type { ResultRow } from '$types/results';
+  import type { LogMessage } from '$lib/stores/console.svelte';
+  import type { processingStore as ProcessingStoreType } from '$lib/stores/processing.svelte';
 
   interface Props {
     project: Project;
     results?: ResultRow[];
+    processing: typeof ProcessingStoreType;
+    messages: LogMessage[];
     class?: string;
     onclose?: () => void;
     onaddurls?: () => void;
@@ -23,12 +25,13 @@
   let {
     project,
     results = [],
+    processing,
+    messages,
     class: className,
     onclose,
     onaddurls,
   }: Props = $props();
 
-  // Build columns: URL, status, timestamp + any preserved columns from results
   const tableColumns = $derived.by(() => {
     const baseColumns: Array<{ key: string; header: string; width?: string; type?: string }> = [
       { key: 'url', header: 'URL', width: '300px', type: 'link' },
@@ -36,10 +39,8 @@
       { key: 'timestamp', header: 'Time', width: '150px' },
     ];
 
-    // Add preserved columns from results
     if (results.length > 0) {
       const firstRow = results[0];
-      // Exclude internal/duplicate columns
       const knownKeys = new Set([
         'url', 'status', 'info', 'timestamp', 'errorMessage', 'error_message',
         'screenshot_path', 'platform', 'run_id', project.urlColumn
@@ -52,22 +53,6 @@
     }
     return baseColumns;
   });
-
-  async function handleStart() {
-    await processingStore.start();
-  }
-
-  async function handlePause() {
-    await processingStore.pause();
-  }
-
-  async function handleResume() {
-    await processingStore.resume();
-  }
-
-  async function handleCancel() {
-    await processingStore.cancel();
-  }
 </script>
 
 <div class={cn('space-y-4', className)}>
@@ -95,30 +80,30 @@
     <div class="flex items-center gap-4">
       <div class="flex-1">
         <SegmentedProgress
-          counts={processingStore.statusCounts}
-          total={processingStore.total || project.urlCount}
-          processed={processingStore.processed}
-          currentUrl={processingStore.currentUrl ?? undefined}
+          counts={processing.statusCounts}
+          total={processing.total || project.urlCount}
+          processed={processing.processed}
+          currentUrl={processing.currentUrl ?? undefined}
           showLegend={true}
         />
       </div>
       <div class="flex gap-2">
-        {#if processingStore.isIdle}
-          <Button variant="primary" size="sm" onclick={handleStart}>
+        {#if processing.isIdle}
+          <Button variant="primary" size="sm" onclick={() => processing.start()}>
             Start
           </Button>
-        {:else if processingStore.isProcessing}
-          <Button variant="secondary" size="sm" onclick={handlePause}>
+        {:else if processing.isProcessing}
+          <Button variant="secondary" size="sm" onclick={() => processing.pause()}>
             Pause
           </Button>
-          <Button variant="danger" size="sm" onclick={handleCancel}>
+          <Button variant="danger" size="sm" onclick={() => processing.cancel()}>
             Cancel
           </Button>
-        {:else if processingStore.isPaused}
-          <Button variant="primary" size="sm" onclick={handleResume}>
+        {:else if processing.isPaused}
+          <Button variant="primary" size="sm" onclick={() => processing.resume()}>
             Resume
           </Button>
-          <Button variant="danger" size="sm" onclick={handleCancel}>
+          <Button variant="danger" size="sm" onclick={() => processing.cancel()}>
             Cancel
           </Button>
         {/if}
@@ -148,7 +133,7 @@
   <!-- Console -->
   <div class="bg-mcat-card border border-mcat-border rounded-lg p-4">
     <ConsolePanel
-      messages={consoleStore.messages}
+      {messages}
       maxHeight="200px"
     />
   </div>

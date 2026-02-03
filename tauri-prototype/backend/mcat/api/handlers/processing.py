@@ -1,19 +1,18 @@
 """Processing handlers."""
 
 import polars as pl
-from urllib.parse import urlparse, parse_qs
 
-from api.context import app_context, log_buffer
+from api.context import app_context, log_buffer, event_bus
 from models.processing_models import ProcessingJob
 from models.file_models import FileInfo, ColumnMapping
 from events import dispatcher, ProcessingEvents
 
 
-def get_status(request_path: str) -> dict:
-    """Get processing status."""
+def _build_status_dict() -> dict:
+    """Build processing status dictionary."""
     ctx = app_context
     if not ctx.processing_service:
-        return {"status": "no_project"}
+        return {"state": "no_project"}
 
     ctx.processing_service._process_progress_updates()
     status = ctx.processing_service.get_current_status()
@@ -27,19 +26,28 @@ def get_status(request_path: str) -> dict:
         "pending": max(0, status.total_count - status.processed_count),
     }
 
-    query = parse_qs(urlparse(request_path).query)
-    since_id = int(query.get("since_log_id", ["-1"])[0])
-
     return {
         "state": status.state.value if status.state else "idle",
         "total": status.total_count,
         "processed": status.processed_count,
-        "stats": stats,
-        "status_counts": status_counts,
+        "statusCounts": status_counts,
         "action": status.current_action,
         "error": status.error_message,
-        "logs": log_buffer.get_logs_since(since_id),
+        "currentUrl": status.current_action.replace("Checking: ", "") if status.current_action and status.current_action.startswith("Checking: ") else None,
     }
+
+
+def _publish_status():
+    """Publish processing status via SSE."""
+    event_bus.publish({
+        "type": "processing",
+        **_build_status_dict(),
+    })
+
+
+def _on_processing_progress(sender, **kwargs):
+    """Handle processing progress - publish SSE event."""
+    _publish_status()
 
 
 def _on_processing_completed(sender, **kwargs):
@@ -49,6 +57,7 @@ def _on_processing_completed(sender, **kwargs):
         run = ctx.current_project.current_run
         ctx.run_service.complete_run(ctx.current_project, run)
         log_buffer.success(f"Results saved to {ctx.current_project.combined_csv_path}")
+    _publish_status()
 
 
 def _on_processing_error(sender, **kwargs):
@@ -59,11 +68,25 @@ def _on_processing_error(sender, **kwargs):
         run.status = "failed"
         ctx.current_project.current_run = None
         ctx.current_project.save()
+    _publish_status()
+
+
+def _on_processing_paused(sender, **kwargs):
+    """Handle processing paused."""
+    _publish_status()
+
+
+def _on_processing_resumed(sender, **kwargs):
+    """Handle processing resumed."""
+    _publish_status()
 
 
 # Register event handlers
+dispatcher.connect(_on_processing_progress, signal=ProcessingEvents.PROGRESS)
 dispatcher.connect(_on_processing_completed, signal=ProcessingEvents.COMPLETED)
 dispatcher.connect(_on_processing_error, signal=ProcessingEvents.ERROR)
+dispatcher.connect(_on_processing_paused, signal=ProcessingEvents.PAUSED)
+dispatcher.connect(_on_processing_resumed, signal=ProcessingEvents.RESUMED)
 
 
 def start(body: dict) -> dict:
@@ -110,6 +133,8 @@ def start(body: dict) -> dict:
         log_buffer.error("Failed to start processing")
         # Abandon the run if start failed
         ctx.run_service.abandon_run(project, run)
+    else:
+        _publish_status()
     return {"success": success, "run_id": run.id}
 
 

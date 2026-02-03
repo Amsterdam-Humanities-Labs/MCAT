@@ -20,29 +20,12 @@ function createProjectStore() {
       return project !== null;
     },
 
-    async load() {
-      loading = true;
-      error = null;
-      try {
-        const response = await api.getProject();
-        project = response.project;
-      } catch (e) {
-        error = String(e);
-      } finally {
-        loading = false;
-      }
-    },
-
     async create(data: CreateProjectRequest) {
       loading = true;
       error = null;
       try {
         const response = await api.createProject(data);
-        if (response.success) {
-          await this.load();
-          return true;
-        }
-        return false;
+        return response.success;
       } catch (e) {
         error = String(e);
         return false;
@@ -56,11 +39,7 @@ function createProjectStore() {
       error = null;
       try {
         const response = await api.openProject(path);
-        if (response.success) {
-          await this.load();
-          return true;
-        }
-        return false;
+        return response.success;
       } catch (e) {
         error = String(e);
         return false;
@@ -74,7 +53,6 @@ function createProjectStore() {
       error = null;
       try {
         await api.closeProject();
-        project = null;
       } catch (e) {
         error = String(e);
       } finally {
@@ -83,7 +61,6 @@ function createProjectStore() {
     },
 
     setProject(p: Project | null) {
-      if (p?.mtime === project?.mtime) return;
       project = p;
     },
 

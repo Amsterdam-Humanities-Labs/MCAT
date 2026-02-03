@@ -11,10 +11,11 @@ import chromedriver_autoinstaller
 class WebDriverPool:
     """Thread-safe WebDriver pool for reusing browser instances."""
 
-    def __init__(self, pool_size: int, headless: bool = True):
+    def __init__(self, pool_size: int, headless: bool = True, log_callback=None):
         self.pool_size = pool_size
         self.headless = headless
         self.chromedriver_path = None
+        self._log_callback = log_callback
         self._setup_chromedriver()
 
         # Thread-safe driver pool
@@ -24,6 +25,12 @@ class WebDriverPool:
 
         # Initialize the pool
         self._initialize_pool()
+
+    def _log(self, message: str, level: str = "info"):
+        """Log message via callback or print."""
+        if self._log_callback:
+            self._log_callback(message, level)
+        print(message, flush=True)
 
     def __del__(self):
         """Destructor to ensure cleanup on object deletion."""
@@ -36,7 +43,7 @@ class WebDriverPool:
         """Install and setup ChromeDriver automatically."""
         try:
             self.chromedriver_path = chromedriver_autoinstaller.install()
-            print(f"ChromeDriver installed at: {self.chromedriver_path}")
+            self._log(f"ChromeDriver installed at: {self.chromedriver_path}", "debug")
         except Exception as e:
             raise Exception(f"Failed to install ChromeDriver: {e}")
 
@@ -80,7 +87,7 @@ class WebDriverPool:
 
     def _initialize_pool(self):
         """Initialize the driver pool with browser instances."""
-        print(f"Initializing WebDriver pool with {self.pool_size} instances...")
+        self._log(f"Initializing WebDriver pool with {self.pool_size} instances...")
         chrome_options = self._create_driver_options()
         service = Service(self.chromedriver_path)
 
@@ -90,9 +97,9 @@ class WebDriverPool:
                 driver.set_page_load_timeout(30)
                 self.all_drivers.append(driver)
                 self.available_drivers.put(driver)
-                print(f"WebDriver {i+1}/{self.pool_size} initialized")
+                self._log(f"WebDriver {i+1}/{self.pool_size} initialized")
             except Exception as e:
-                print(f"Failed to create WebDriver {i+1}: {e}")
+                self._log(f"Failed to create WebDriver {i+1}: {e}", "error")
                 break
 
     def get_driver(self, timeout: int = 30) -> webdriver.Chrome:
@@ -125,7 +132,7 @@ class WebDriverPool:
 
     def cleanup(self):
         """Clean up all drivers in the pool."""
-        print("Cleaning up WebDriver pool...")
+        self._log("Cleaning up WebDriver pool...", "debug")
 
         # Suppress urllib3 warnings during cleanup
         import urllib3

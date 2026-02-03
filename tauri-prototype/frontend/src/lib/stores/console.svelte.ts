@@ -112,13 +112,10 @@ function createConsoleStore() {
       add('Processing cancelled', 'warning', 'processing');
     },
 
-    // Add logs from backend response
-    addBackendLogs(logs: Array<{ id: number; text: string; level: LogLevel; timestamp: string }>) {
-      for (const log of logs) {
-        if (log.id > lastBackendLogId) {
-          add(log.text, log.level, 'backend');
-          lastBackendLogId = log.id;
-        }
+    addBackendLog(log: { id: number; text: string; level: LogLevel; timestamp: string }) {
+      if (log.id > lastBackendLogId) {
+        add(log.text, log.level, 'backend');
+        lastBackendLogId = log.id;
       }
     },
 

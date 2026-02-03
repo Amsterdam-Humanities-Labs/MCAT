@@ -1,9 +1,8 @@
 """Results handlers."""
 
-from datetime import datetime
 import polars as pl
 
-from api.context import app_context, log_buffer
+from api.context import app_context
 
 
 def get_combined() -> dict:
@@ -46,8 +45,3 @@ def get_combined() -> dict:
             "results": [],
             "by_status": {"live": 0, "removed": 0, "restricted": 0, "error": 0, "pending": 0}
         }
-
-
-def get_logs() -> dict:
-    """Get processing logs."""
-    return {"logs": log_buffer.get_all()}

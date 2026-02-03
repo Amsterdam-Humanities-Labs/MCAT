@@ -1,6 +1,5 @@
 <script lang="ts">
   import { cn } from '$lib/utils';
-  import { wizardStore } from '$lib/stores/wizard.svelte';
   import { FormState, rules } from '$lib/utils/form.svelte';
   import {
     Button,
@@ -12,14 +11,17 @@
     CheckboxGroup,
   } from '$lib/components';
   import type { Platform } from '$types/project';
+  import type { wizardStore as WizardStoreType } from '$lib/stores/wizard.svelte';
 
   interface Props {
+    wizard: typeof WizardStoreType;
     class?: string;
     oncancel?: () => void;
-    oncomplete?: (data: ReturnType<typeof wizardStore.getCreateData>) => void;
+    oncomplete?: (data: ReturnType<typeof WizardStoreType.getCreateData>) => void;
   }
 
   let {
+    wizard,
     class: className,
     oncancel,
     oncomplete,
@@ -44,18 +46,18 @@
   });
 
   const columnOptions = $derived(
-    wizardStore.columns.map((col) => ({ value: col, label: col }))
+    wizard.columns.map((col) => ({ value: col, label: col }))
   );
 
   async function handleCsvChange(path: string) {
     step1Form.setValue('csvPath', path);
     if (path) {
-      await wizardStore.loadCsvColumns(path);
+      await wizard.loadCsvColumns(path);
     }
   }
 
   function handleBack() {
-    wizardStore.setStep(1);
+    wizard.setStep(1);
   }
 
   function handleNext() {
@@ -63,10 +65,10 @@
 
     if (step1Form.valid) {
       // Sync to wizard store
-      wizardStore.setName(step1Form.getValue('name'));
-      wizardStore.setPlatform(step1Form.getValue('platform') as Platform);
-      wizardStore.setLocation(step1Form.getValue('location'));
-      wizardStore.setStep(2);
+      wizard.setName(step1Form.getValue('name'));
+      wizard.setPlatform(step1Form.getValue('platform') as Platform);
+      wizard.setLocation(step1Form.getValue('location'));
+      wizard.setStep(2);
     }
   }
 
@@ -74,13 +76,13 @@
     step2Form.touchAll();
 
     if (step1Form.valid && step2Form.valid) {
-      wizardStore.setUrlColumn(step2Form.getValue('urlColumn'));
-      oncomplete?.(wizardStore.getCreateData());
+      wizard.setUrlColumn(step2Form.getValue('urlColumn'));
+      oncomplete?.(wizard.getCreateData());
     }
   }
 
   function handleCancel() {
-    wizardStore.reset();
+    wizard.reset();
     step1Form.reset();
     step2Form.reset();
     oncancel?.();
@@ -95,7 +97,7 @@
         Create New Project
       </h2>
       <p class="text-sm text-mcat-text-muted mt-1">
-        Step {wizardStore.step} of 2
+        Step {wizard.step} of 2
       </p>
     </div>
 
@@ -105,13 +107,13 @@
         <div
           class={cn(
             'flex-1 h-1 rounded-full transition-colors',
-            wizardStore.step >= 1 ? 'bg-mcat-orange' : 'bg-mcat-border'
+            wizard.step >= 1 ? 'bg-mcat-orange' : 'bg-mcat-border'
           )}
         ></div>
         <div
           class={cn(
             'flex-1 h-1 rounded-full transition-colors',
-            wizardStore.step >= 2 ? 'bg-mcat-orange' : 'bg-mcat-border'
+            wizard.step >= 2 ? 'bg-mcat-orange' : 'bg-mcat-border'
           )}
         ></div>
       </div>
@@ -119,13 +121,13 @@
 
     <!-- Content -->
     <div class="p-6">
-      {#if wizardStore.error}
+      {#if wizard.error}
         <div class="mb-4 p-3 bg-mcat-error-bg border border-mcat-error/30 rounded text-sm text-mcat-error">
-          {wizardStore.error}
+          {wizard.error}
         </div>
       {/if}
 
-      {#if wizardStore.step === 1}
+      {#if wizard.step === 1}
         <!-- Step 1: Basic Info -->
         <div class="space-y-4">
           <FormField label="Project Name" required error={step1Form.fields.name.error}>
@@ -180,14 +182,14 @@
               value={step2Form.fields.urlColumn.value}
               onchange={(val) => step2Form.setValue('urlColumn', val)}
               placeholder="Select URL column..."
-              disabled={wizardStore.columns.length === 0}
+              disabled={wizard.columns.length === 0}
               error={step2Form.fields.urlColumn.error}
             />
           </FormField>
 
-          {#if wizardStore.columns.length > 0}
+          {#if wizard.columns.length > 0}
             {@const availableColumns = columnOptions.filter((o) => o.value !== step2Form.fields.urlColumn.value)}
-            {@const allSelected = availableColumns.length > 0 && wizardStore.preserveColumns.length === availableColumns.length}
+            {@const allSelected = availableColumns.length > 0 && wizard.preserveColumns.length === availableColumns.length}
             <FormField
               label="Preserve Columns"
               hint="Additional columns to keep in results (optional)"
@@ -198,9 +200,9 @@
                   class="text-xs text-mcat-orange hover:text-mcat-orange/80 mb-2"
                   onclick={() => {
                     if (allSelected) {
-                      wizardStore.setPreserveColumns([]);
+                      wizard.setPreserveColumns([]);
                     } else {
-                      wizardStore.setPreserveColumns(availableColumns.map(c => c.value));
+                      wizard.setPreserveColumns(availableColumns.map(c => c.value));
                     }
                   }}
                 >
@@ -209,8 +211,8 @@
               {/if}
               <CheckboxGroup
                 options={availableColumns}
-                selected={wizardStore.preserveColumns}
-                onchange={(selected) => wizardStore.setPreserveColumns(selected)}
+                selected={wizard.preserveColumns}
+                onchange={(selected) => wizard.setPreserveColumns(selected)}
                 layout="vertical"
               />
             </FormField>
@@ -226,13 +228,13 @@
       </Button>
 
       <div class="flex gap-2">
-        {#if wizardStore.step === 2}
+        {#if wizard.step === 2}
           <Button variant="secondary" onclick={handleBack}>
             Back
           </Button>
         {/if}
 
-        {#if wizardStore.step === 1}
+        {#if wizard.step === 1}
           <Button
             variant="primary"
             onclick={handleNext}
@@ -244,7 +246,7 @@
           <Button
             variant="primary"
             onclick={handleCreate}
-            loading={wizardStore.loading}
+            loading={wizard.loading}
             disabled={!step2Form.valid}
           >
             Create Project

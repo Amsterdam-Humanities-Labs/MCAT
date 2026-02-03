@@ -3,7 +3,8 @@
 import threading
 from collections import deque
 from datetime import datetime
-from typing import Optional
+from queue import Queue, Empty
+from typing import Optional, Set
 
 from services.project_service import ProjectService
 from services.run_service import RunService
@@ -11,6 +12,46 @@ from services.processing_service import ProcessingService
 from models.project_state import ProjectState
 
 MAX_LOG_ENTRIES = 100
+
+
+class EventBus:
+    """Thread-safe event bus for SSE broadcasting."""
+
+    def __init__(self):
+        self._subscribers: Set[Queue] = set()
+        self._lock = threading.Lock()
+
+    def subscribe(self) -> Queue:
+        """Subscribe to events. Returns a queue to receive events."""
+        queue: Queue = Queue()
+        with self._lock:
+            self._subscribers.add(queue)
+        return queue
+
+    def unsubscribe(self, queue: Queue):
+        """Unsubscribe from events."""
+        with self._lock:
+            self._subscribers.discard(queue)
+
+    def publish(self, event: dict):
+        """Publish an event to all subscribers."""
+        with self._lock:
+            dead_queues = []
+            for queue in self._subscribers:
+                try:
+                    queue.put_nowait(event)
+                except:
+                    dead_queues.append(queue)
+            # Clean up dead queues
+            for q in dead_queues:
+                self._subscribers.discard(q)
+
+    def get_event(self, queue: Queue, timeout: float = None) -> Optional[dict]:
+        """Get an event from a subscription queue."""
+        try:
+            return queue.get(timeout=timeout)
+        except Empty:
+            return None
 
 
 class LogBuffer:
@@ -23,13 +64,20 @@ class LogBuffer:
 
     def add(self, text: str, level: str = "info"):
         with self._lock:
-            self._logs.append({
+            log_entry = {
                 "id": self._next_id,
                 "text": text,
                 "level": level,
                 "timestamp": datetime.now().isoformat(),
-            })
+            }
+            self._logs.append(log_entry)
             self._next_id += 1
+
+        # Publish log event via SSE
+        event_bus.publish({
+            "type": "log",
+            "log": log_entry,
+        })
 
     def debug(self, text: str):
         self.add(text, "debug")
@@ -45,14 +93,6 @@ class LogBuffer:
 
     def success(self, text: str):
         self.add(text, "success")
-
-    def get_logs_since(self, since_id: int = -1) -> list:
-        with self._lock:
-            return [log for log in self._logs if log["id"] > since_id]
-
-    def get_all(self) -> list:
-        with self._lock:
-            return list(self._logs)
 
     def clear(self):
         with self._lock:
@@ -104,5 +144,6 @@ class AppContext:
 
 
 # Global instances
+event_bus = EventBus()
 log_buffer = LogBuffer()
 app_context = AppContext()

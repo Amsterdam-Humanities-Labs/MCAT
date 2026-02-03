@@ -7,7 +7,9 @@ Lean HTTP server entry point. Business logic is in api/handlers/.
 import json
 import socket
 import sys
-from http.server import HTTPServer, BaseHTTPRequestHandler
+import threading
+import time
+from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 from pathlib import Path
 from urllib.parse import urlparse
 
@@ -17,6 +19,7 @@ if str(mcat_dir) not in sys.path:
     sys.path.insert(0, str(mcat_dir))
 
 from api.router import get_routes, post_routes
+from api.context import event_bus
 
 DEFAULT_PORT = 9876
 MAX_PORT_ATTEMPTS = 10
@@ -69,6 +72,12 @@ class MCATHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         """Handle GET requests."""
         path = urlparse(self.path).path
+
+        # SSE endpoint
+        if path == "/events":
+            self._handle_sse()
+            return
+
         routes = get_routes()
 
         handler = routes.get(path)
@@ -80,6 +89,37 @@ class MCATHandler(BaseHTTPRequestHandler):
                 self._send_error(str(e))
         else:
             self._send_error("Not found", 404)
+
+    def _handle_sse(self):
+        """Handle Server-Sent Events connection."""
+        self.send_response(200)
+        self.send_header("Content-Type", "text/event-stream")
+        self.send_header("Cache-Control", "no-cache")
+        self.send_header("Connection", "keep-alive")
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.end_headers()
+
+        # Subscribe to events
+        queue = event_bus.subscribe()
+
+        try:
+            while True:
+                # Get event with timeout for heartbeat
+                event = event_bus.get_event(queue, timeout=15.0)
+                if event is None:
+                    # Send heartbeat comment to keep connection alive
+                    self.wfile.write(b": heartbeat\n\n")
+                else:
+                    # Send event
+                    event_type = event.get("type", "message")
+                    data = json.dumps(event)
+                    self.wfile.write(f"event: {event_type}\ndata: {data}\n\n".encode())
+                self.wfile.flush()
+        except (BrokenPipeError, ConnectionResetError):
+            # Client disconnected
+            pass
+        finally:
+            event_bus.unsubscribe(queue)
 
     def do_POST(self):
         """Handle POST requests."""
@@ -107,7 +147,8 @@ class MCATHandler(BaseHTTPRequestHandler):
     def log_message(self, format, *args):
         """Log to stdout, suppressing routine polling requests."""
         message = args[0] if args else ""
-        if "/health" in message or "/project/status" in message or "/process/status" in message:
+        # Suppress frequent polling endpoints and SSE from API logs
+        if any(ep in message for ep in ["/health", "/project/status", "/events"]):
             return
         print(f"[API] {message}", flush=True)
 
@@ -119,7 +160,7 @@ def main():
     port_file = Path(__file__).parent.parent / ".port"
     port_file.write_text(str(port))
 
-    server = HTTPServer(("127.0.0.1", port), MCATHandler)
+    server = ThreadingHTTPServer(("127.0.0.1", port), MCATHandler)
     print(f"Backend ready at http://127.0.0.1:{port}", flush=True)
 
     try:

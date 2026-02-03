@@ -1,36 +1,32 @@
 """Project management handlers."""
 
 from pathlib import Path
-from api.context import app_context
+from api.context import app_context, event_bus
 
 
-def get_status() -> dict:
-    """Get current project status."""
+def _build_project_dict() -> dict | None:
+    """Build project data dictionary."""
     ctx = app_context
     if not ctx.current_project:
-        return {"project": None}
+        return None
 
     project = ctx.current_project
     return {
-        "project": {
-            "name": project.name,
-            "platform": project.platform,
-            "path": str(project.project_path),
-            "combinedCsvPath": str(project.combined_csv_path),
-            "mtime": project.project_json_path.stat().st_mtime,
-            "url_count": ctx.project_service.get_url_count(project),
-            "url_column": project.url_column,
-            "runs": [
-                {
-                    "id": r.id,
-                    "status": r.status.value,
-                    "started_at": r.started_at.isoformat() if r.started_at else None,
-                    "completed_at": r.completed_at.isoformat() if r.completed_at else None,
-                }
-                for r in project.config.runs
-            ]
-        }
+        "name": project.name,
+        "platform": project.platform,
+        "path": str(project.project_path),
+        "combinedCsvPath": str(project.combined_csv_path),
+        "urlCount": ctx.project_service.get_url_count(project),
+        "urlColumn": project.url_column,
     }
+
+
+def _publish_project():
+    """Publish project status via SSE."""
+    event_bus.publish({
+        "type": "project",
+        "project": _build_project_dict(),
+    })
 
 
 def create(body: dict) -> dict:
@@ -50,6 +46,7 @@ def create(body: dict) -> dict:
         preserve_columns=body.get("preserve_columns", [])
     )
     ctx.set_project(project)
+    _publish_project()
     return {"success": True, "project_path": str(project.project_path)}
 
 
@@ -64,12 +61,14 @@ def open_project(body: dict) -> dict:
         path = path.parent
     project = ctx.project_service.open_project(path)
     ctx.set_project(project)
+    _publish_project()
     return {"success": True, "name": project.name}
 
 
 def close() -> dict:
     """Close current project."""
     app_context.close_project()
+    _publish_project()
     return {"success": True}
 
 
@@ -118,4 +117,5 @@ def confirm_import(body: dict) -> dict:
         ctx._pending_import
     )
     ctx._pending_import = None
+    _publish_project()
     return {"added": added}
