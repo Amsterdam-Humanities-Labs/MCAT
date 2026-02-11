@@ -39,3 +39,13 @@ class ValidationEvents:
     VALIDATION_REQUESTED = "validation.requested"
     VALIDATION_PASSED = "validation.passed"
     VALIDATION_FAILED = "validation.failed"
+
+
+class TrackingEvents:
+    """Tracking-related event types for scheduled URL checks."""
+
+    STARTED = "tracking.started"
+    STOPPED = "tracking.stopped"
+    RUN_STARTED = "tracking.run_started"
+    RUN_COMPLETED = "tracking.run_completed"
+    CHANGES_DETECTED = "tracking.changes_detected"

@@ -6,7 +6,11 @@
     SegmentedProgress,
     ConsolePanel,
     DataTable,
+    TrackingControls,
+    TrackingHistory,
   } from '$lib/components';
+  import { trackingStore } from '$lib/stores/tracking.svelte';
+  import { api } from '$lib/api/client';
   import type { Project } from '$types/project';
   import type { ResultRow } from '$types/results';
   import type { LogMessage } from '$lib/stores/console.svelte';
@@ -31,6 +35,20 @@
     onclose,
     onaddurls,
   }: Props = $props();
+
+  let selectedTrackingRunId = $state<string | null>(null);
+  let trackingRunResults = $state<ResultRow[]>([]);
+
+  async function handleSelectTrackingRun(runId: string) {
+    selectedTrackingRunId = runId;
+    try {
+      const result = await api.getRunResults(runId);
+      trackingRunResults = result.results || [];
+    } catch (error) {
+      console.error('Failed to load tracking run results:', error);
+      trackingRunResults = [];
+    }
+  }
 
   const tableColumns = $derived.by(() => {
     const baseColumns: Array<{ key: string; header: string; width?: string; type?: string }> = [
@@ -75,6 +93,9 @@
     </div>
   </div>
 
+  <!-- Tracking Controls -->
+  <TrackingControls />
+
   <!-- Progress + Controls -->
   <div class="bg-mcat-card border border-mcat-border rounded-lg p-4">
     <div class="flex flex-col gap-4">
@@ -111,11 +132,23 @@
     </div>
   </div>
 
+  <!-- Tracking History -->
+  <div class="bg-mcat-card border border-mcat-border rounded-lg p-4">
+    <h3 class="text-sm font-medium mb-3">Tracking History</h3>
+    <TrackingHistory onSelectRun={handleSelectTrackingRun} />
+  </div>
+
   <!-- Results Table -->
   <div class="bg-mcat-card border border-mcat-border rounded-lg p-4">
     <div class="flex items-center justify-between mb-3">
-      <h3 class="text-sm font-medium text-mcat-text m-0">Results ({results.length})</h3>
-      {#if results.length > 0}
+      <h3 class="text-sm font-medium text-mcat-text m-0">
+        {#if selectedTrackingRunId}
+          Results ({selectedTrackingRunId}) ({trackingRunResults.length})
+        {:else}
+          Results ({results.length})
+        {/if}
+      </h3>
+      {#if !selectedTrackingRunId && results.length > 0}
         <code class="text-xs text-mcat-text-muted font-mono">
           {project.combinedCsvPath}
         </code>
@@ -123,7 +156,7 @@
     </div>
     <DataTable
       columns={tableColumns}
-      rows={results}
+      rows={selectedTrackingRunId ? trackingRunResults : results}
       maxRows={100}
       emptyMessage="No results yet. Start processing to check URLs."
       class="max-h-[300px]"

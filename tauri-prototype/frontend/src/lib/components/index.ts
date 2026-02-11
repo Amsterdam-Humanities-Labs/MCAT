@@ -26,3 +26,7 @@ export { default as SegmentedProgress } from './SegmentedProgress.svelte';
 export { default as StatCard } from './StatCard.svelte';
 export { default as StatsGrid } from './StatsGrid.svelte';
 export { default as StatusBadge } from './StatusBadge.svelte';
+
+// Tracking Components
+export { default as TrackingControls } from './TrackingControls.svelte';
+export { default as TrackingHistory } from './TrackingHistory.svelte';

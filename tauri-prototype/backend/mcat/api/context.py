@@ -9,6 +9,7 @@ from typing import Optional, Set
 from services.project_service import ProjectService
 from services.run_service import RunService
 from services.processing_service import ProcessingService
+from services.tracking_service import TrackingService
 from models.project_state import ProjectState
 
 MAX_LOG_ENTRIES = 100
@@ -120,6 +121,7 @@ class AppContext:
         self.project_service = ProjectService()
         self.run_service = RunService()
         self.processing_service: Optional[ProcessingService] = None
+        self.tracking_service = TrackingService()
         self.current_project: Optional[ProjectState] = None
         self._pending_import = None
         self._initialized = True
@@ -133,9 +135,18 @@ class AppContext:
             platform=project.platform,
             log_callback=lambda msg, level: log_buffer.add(msg, level)
         )
+        # Initialize tracking service with dependencies
+        self.tracking_service.initialize(
+            processing_service=self.processing_service,
+            run_service=self.run_service,
+            log_callback=lambda msg, level: log_buffer.add(msg, level),
+            event_bus=event_bus
+        )
 
     def close_project(self):
         """Close current project and cleanup."""
+        if self.current_project and self.tracking_service:
+            self.tracking_service.stop_tracking(self.current_project)
         if self.processing_service:
             self.processing_service.cleanup()
         self.current_project = None

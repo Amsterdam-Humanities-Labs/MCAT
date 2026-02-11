@@ -26,19 +26,26 @@ class RunService:
     - Generate combined.csv from completed runs
     """
 
-    def generate_run_id(self) -> str:
+    def generate_run_id(self, run_type: str = "manual") -> str:
         """
         Generate a unique run ID based on current timestamp.
 
+        Args:
+            run_type: Type of run ("manual" or "tracking")
+
         Returns:
-            Run ID in format "YYYY-MM-DDTHH-MM"
+            Run ID in format "TRACK-YYYY-MM-DDTHH-MM" for tracking, "YYYY-MM-DDTHH-MM" for manual
         """
-        return datetime.now().strftime("%Y-%m-%dT%H-%M")
+        timestamp = datetime.now().strftime("%Y-%m-%dT%H-%M")
+        if run_type == "tracking":
+            return f"TRACK-{timestamp}"
+        return timestamp
 
     def start_run(
         self,
         project_state: ProjectState,
-        screenshots_enabled: bool = False
+        screenshots_enabled: bool = False,
+        run_type: str = "manual"
     ) -> RunConfig:
         """
         Start a new processing run.
@@ -48,11 +55,12 @@ class RunService:
         Args:
             project_state: Current project state
             screenshots_enabled: Whether to save screenshots
+            run_type: Type of run ("manual" or "tracking")
 
         Returns:
             RunConfig for the new run
         """
-        run_id = self.generate_run_id()
+        run_id = self.generate_run_id(run_type)
 
         # Create run folder
         run_path = project_state.get_run_path(run_id)
@@ -68,7 +76,8 @@ class RunService:
             id=run_id,
             started_at=datetime.now(),
             status=RunStatus.IN_PROGRESS,
-            screenshots_enabled=screenshots_enabled
+            screenshots_enabled=screenshots_enabled,
+            run_type=run_type
         )
 
         # Add to project and save

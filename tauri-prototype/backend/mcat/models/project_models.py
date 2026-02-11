@@ -26,6 +26,7 @@ class RunConfig:
     completed_at: Optional[datetime] = None
     status: RunStatus = RunStatus.IN_PROGRESS
     screenshots_enabled: bool = False
+    run_type: str = "manual"  # "manual" or "tracking"
 
     def to_dict(self) -> dict:
         """Convert to dictionary for JSON serialization."""
@@ -34,7 +35,8 @@ class RunConfig:
             "started_at": self.started_at.isoformat(),
             "completed_at": self.completed_at.isoformat() if self.completed_at else None,
             "status": self.status.value,
-            "screenshots_enabled": self.screenshots_enabled
+            "screenshots_enabled": self.screenshots_enabled,
+            "run_type": self.run_type
         }
 
     @classmethod
@@ -45,7 +47,8 @@ class RunConfig:
             started_at=datetime.fromisoformat(data["started_at"]),
             completed_at=datetime.fromisoformat(data["completed_at"]) if data.get("completed_at") else None,
             status=RunStatus(data["status"]),
-            screenshots_enabled=data.get("screenshots_enabled", False)
+            screenshots_enabled=data.get("screenshots_enabled", False),
+            run_type=data.get("run_type", "manual")
         )
 
     @property
@@ -58,6 +61,39 @@ class RunConfig:
         """Check if run was interrupted (still in progress but not running)."""
         return self.status == RunStatus.IN_PROGRESS
 
+    @property
+    def is_tracking_run(self) -> bool:
+        """Check if this is a tracking run."""
+        return self.run_type == "tracking"
+
+
+@dataclass
+class TrackingConfig:
+    """Configuration for URL tracking."""
+    enabled: bool = False
+    interval_minutes: int = 60
+    last_check: Optional[datetime] = None
+    next_check: Optional[datetime] = None
+
+    def to_dict(self) -> dict:
+        """Convert to dictionary for JSON serialization."""
+        return {
+            "enabled": self.enabled,
+            "interval_minutes": self.interval_minutes,
+            "last_check": self.last_check.isoformat() if self.last_check else None,
+            "next_check": self.next_check.isoformat() if self.next_check else None,
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "TrackingConfig":
+        """Create TrackingConfig from dictionary."""
+        return cls(
+            enabled=data.get("enabled", False),
+            interval_minutes=data.get("interval_minutes", 60),
+            last_check=datetime.fromisoformat(data["last_check"]) if data.get("last_check") else None,
+            next_check=datetime.fromisoformat(data["next_check"]) if data.get("next_check") else None,
+        )
+
 
 @dataclass
 class ProjectConfig:
@@ -69,6 +105,7 @@ class ProjectConfig:
     url_column: str
     preserve_columns: List[str] = field(default_factory=list)
     runs: List[RunConfig] = field(default_factory=list)
+    tracking: TrackingConfig = field(default_factory=TrackingConfig)
 
     def to_dict(self) -> dict:
         """Convert to dictionary for JSON serialization."""
@@ -78,7 +115,8 @@ class ProjectConfig:
             "created_at": self.created_at.isoformat(),
             "url_column": self.url_column,
             "preserve_columns": self.preserve_columns,
-            "runs": [run.to_dict() for run in self.runs]
+            "runs": [run.to_dict() for run in self.runs],
+            "tracking": self.tracking.to_dict()
         }
 
     @classmethod
@@ -90,7 +128,8 @@ class ProjectConfig:
             created_at=datetime.fromisoformat(data["created_at"]),
             url_column=data["url_column"],
             preserve_columns=data.get("preserve_columns", []),
-            runs=[RunConfig.from_dict(r) for r in data.get("runs", [])]
+            runs=[RunConfig.from_dict(r) for r in data.get("runs", [])],
+            tracking=TrackingConfig.from_dict(data.get("tracking", {}))
         )
 
     def save(self, path: Path) -> None:
