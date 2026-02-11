@@ -77,8 +77,8 @@
 
   <!-- Progress + Controls -->
   <div class="bg-mcat-card border border-mcat-border rounded-lg p-4">
-    <div class="flex items-center gap-4">
-      <div class="flex-1">
+    <div class="flex flex-col gap-4">
+      <div class="w-full">
         <SegmentedProgress
           counts={processing.statusCounts}
           total={processing.total || project.urlCount}
