@@ -7,6 +7,7 @@ export interface Run {
   status: RunStatus;
   startedAt: string | null;
   completedAt: string | null;
+  runType?: 'manual' | 'tracking';
 }
 
 export interface Project {

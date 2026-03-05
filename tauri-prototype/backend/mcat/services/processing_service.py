@@ -292,7 +292,11 @@ class ProcessingService:
                 self._batch_processor.set_log_callback(self._log_callback)
 
             if self._custom_urls:
-                temp_df = pl.DataFrame({job.column_mapping.post_column: self._custom_urls})
+                # Filter the original dataframe to only include custom URLs (preserves all columns)
+                url_column = job.column_mapping.post_column
+                temp_df = job.file_info.dataframe.filter(
+                    pl.col(url_column).is_in(self._custom_urls)
+                )
                 temp_df.write_csv(temp_csv_path)
             else:
                 CSVHandler.save_csv(job.file_info.dataframe, temp_csv_path)

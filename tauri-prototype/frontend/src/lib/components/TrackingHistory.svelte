@@ -16,22 +16,20 @@
 
   onMount(async () => {
     // Get the project to access runs
-    const project = projectStore.current;
+    const project = projectStore.project;
     if (!project) return;
 
     try {
       isLoading = true;
-      // Get combined results which includes run info
-      const result = await api.getCombinedResults();
 
-      // Extract unique tracking runs from project data
+      // Extract tracking runs from project data
       if (project && project.runs) {
         const trackingRuns = project.runs
-          .filter((r: any) => r.run_type === 'tracking' || r.id.startsWith('TRACK-'))
-          .sort((a: any, b: any) => new Date(b.started_at).getTime() - new Date(a.started_at).getTime())
+          .filter((r: any) => r.id.startsWith('TRACK-'))
+          .sort((a: any, b: any) => new Date(b.startedAt || 0).getTime() - new Date(a.startedAt || 0).getTime())
           .map((r: any) => ({
             value: r.id,
-            label: `${r.id} - ${new Date(r.started_at).toLocaleString()}`
+            label: `${r.id} - ${r.startedAt ? new Date(r.startedAt).toLocaleString() : 'Unknown time'}`
           }));
 
         runs = trackingRuns;

@@ -8,10 +8,11 @@
 
   let { class: className }: Props = $props();
 
-  let selectedInterval = $state<number | null>(trackingStore.intervalMinutes);
+  let selectedInterval = $state<number | null>(trackingStore.intervalMinutes || 5);
   let isLoading = $state(false);
 
   const intervals = [
+    { value: 5, label: 'Every 5 minutes (debug)' },
     { value: 30, label: 'Every 30 minutes' },
     { value: 60, label: 'Every hour' },
     { value: 360, label: 'Every 6 hours' },

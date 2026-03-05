@@ -6,7 +6,7 @@
     SegmentedProgress,
     ConsolePanel,
     DataTable,
-    TrackingControls,
+    Select,
     TrackingHistory,
   } from '$lib/components';
   import { trackingStore } from '$lib/stores/tracking.svelte';
@@ -38,6 +38,33 @@
 
   let selectedTrackingRunId = $state<string | null>(null);
   let trackingRunResults = $state<ResultRow[]>([]);
+  let selectedInterval = $state<number>(0); // 0 = "Once", otherwise minutes
+  let isStartingTracking = $state(false);
+
+  const intervalOptions = [
+    { value: 0, label: 'Once' },
+    { value: 5, label: 'Every 5 minutes' },
+    { value: 30, label: 'Every 30 minutes' },
+    { value: 60, label: 'Every hour' },
+    { value: 360, label: 'Every 6 hours' },
+    { value: 1440, label: 'Daily' },
+  ];
+
+  async function handleStart() {
+    // If interval is "Once", just do normal start
+    // If interval > 0, also enable tracking
+    if (selectedInterval > 0) {
+      isStartingTracking = true;
+      try {
+        await trackingStore.startTracking(selectedInterval);
+      } catch (error) {
+        console.error('Failed to start tracking:', error);
+      } finally {
+        isStartingTracking = false;
+      }
+    }
+    // Normal start happens via processing.start() in button
+  }
 
   async function handleSelectTrackingRun(runId: string) {
     selectedTrackingRunId = runId;
@@ -93,9 +120,6 @@
     </div>
   </div>
 
-  <!-- Tracking Controls -->
-  <TrackingControls />
-
   <!-- Progress + Controls -->
   <div class="bg-mcat-card border border-mcat-border rounded-lg p-4">
     <div class="flex flex-col gap-4">
@@ -108,11 +132,24 @@
           showLegend={true}
         />
       </div>
-      <div class="flex gap-2">
+      <div class="flex gap-2 items-center">
         {#if processing.isIdle}
-          <Button variant="primary" size="sm" onclick={() => processing.start()}>
+          <Button
+            variant="primary"
+            size="sm"
+            onclick={() => {
+              handleStart();
+              processing.start();
+            }}
+            disabled={isStartingTracking}
+          >
             Start
           </Button>
+          <Select
+            bind:value={selectedInterval}
+            options={intervalOptions}
+            disabled={isStartingTracking}
+          />
         {:else if processing.isProcessing}
           <Button variant="secondary" size="sm" onclick={() => processing.pause()}>
             Pause
@@ -171,3 +208,9 @@
     />
   </div>
 </div>
+
+<style>
+  :global(.tracking-history select) {
+    max-width: 300px;
+  }
+</style>

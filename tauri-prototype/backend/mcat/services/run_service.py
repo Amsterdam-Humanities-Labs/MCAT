@@ -252,35 +252,92 @@ class RunService:
         if not completed_runs:
             # Create empty combined.csv with headers
             combined_path = project_state.combined_csv_path
-            # Get columns from urls.csv
+            # Get columns from urls.csv with proper types
             urls_df = pl.read_csv(project_state.urls_csv_path)
+
+            # Build schema: preserve original column types from urls.csv, add result columns as Utf8
+            schema = {}
+            for col in urls_df.columns:
+                schema[col] = urls_df.schema[col]
+
+            # Add result columns as String type
             result_columns = ['status', 'info', 'screenshot_path', 'timestamp', 'error_message', 'run_id']
-            all_columns = list(urls_df.columns) + result_columns
-            empty_df = pl.DataFrame(schema={col: pl.Utf8 for col in all_columns})
+            for col in result_columns:
+                schema[col] = pl.Utf8
+
+            empty_df = pl.DataFrame(schema=schema)
             empty_df.write_csv(combined_path)
             return combined_path
 
-        # Collect all results
-        all_results = []
+        # Get expected columns from urls.csv
+        urls_df = pl.read_csv(project_state.urls_csv_path)
+        base_columns = list(urls_df.columns)
+        result_columns = ['status', 'info', 'screenshot_path', 'timestamp', 'error_message', 'run_id']
 
+        # Collect all results with schema normalization
+        all_results = []
+        all_column_names = set()
+
+        # First pass: collect all columns across all runs
+        for run in completed_runs:
+            results_path = project_state.get_run_results_path(run.id)
+            if results_path.exists():
+                try:
+                    df = pl.read_csv(results_path)
+                    all_column_names.update(df.columns)
+                except Exception as e:
+                    print(f"Warning: Could not read {results_path}: {e}")
+
+        # Ensure run_id is in the list
+        all_column_names.add('run_id')
+
+        # Get schema from urls.csv to use for type consistency
+        urls_schema = urls_df.schema
+
+        # Second pass: normalize all DataFrames to have same columns
         for run in completed_runs:
             results_path = project_state.get_run_results_path(run.id)
             if results_path.exists():
                 try:
                     df = pl.read_csv(results_path)
                     df = df.with_columns(pl.lit(run.id).alias('run_id'))
+
+                    # Add any missing columns with null values using proper types
+                    for col in all_column_names:
+                        if col not in df.columns:
+                            # Use original type from urls.csv if available, else String
+                            col_type = urls_schema.get(col, pl.Utf8)
+                            df = df.with_columns(pl.lit(None, dtype=col_type).alias(col))
+
+                    # Select columns in consistent order (base columns first, then results)
+                    available_cols = [c for c in (base_columns + result_columns) if c in all_column_names]
+                    # Add any extra columns not in our expected list
+                    for col in all_column_names:
+                        if col not in available_cols:
+                            available_cols.append(col)
+
+                    df = df.select(available_cols)
                     all_results.append(df)
                 except Exception as e:
-                    print(f"Warning: Could not read {results_path}: {e}")
+                    print(f"Warning: Could not normalize {results_path}: {e}")
 
         if all_results:
             combined_df = pl.concat(all_results)
         else:
-            # No results, create empty DataFrame
+            # No results, create empty DataFrame with proper schema
             urls_df = pl.read_csv(project_state.urls_csv_path)
+
+            # Build schema: preserve original column types from urls.csv
+            schema = {}
+            for col in urls_df.columns:
+                schema[col] = urls_df.schema[col]
+
+            # Add result columns as String type
             result_columns = ['status', 'info', 'screenshot_path', 'timestamp', 'error_message', 'run_id']
-            all_columns = list(urls_df.columns) + result_columns
-            combined_df = pl.DataFrame(schema={col: pl.Utf8 for col in all_columns})
+            for col in result_columns:
+                schema[col] = pl.Utf8
+
+            combined_df = pl.DataFrame(schema=schema)
 
         # Save
         combined_path = project_state.combined_csv_path
