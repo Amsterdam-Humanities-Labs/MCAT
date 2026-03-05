@@ -28,7 +28,7 @@
   {...tooltip.content}
   class={cn(
     'z-50 px-2 py-1 text-sm',
-    'bg-mcat-card border border-mcat-border rounded shadow-lg text-mcat-text'
+    'bg-bg-controls border border-border-mid rounded shadow-lg text-text-body'
   )}
 >
   <div {...tooltip.arrow}></div>

@@ -22,11 +22,11 @@
 
 <div
   {...progress.root}
-  class={cn('w-full h-2 bg-mcat-border rounded-full overflow-hidden', className)}
+  class={cn('w-full h-2 bg-progress-track rounded-full overflow-hidden', className)}
 >
   <div
     {...progress.progress}
-    class="h-full bg-mcat-orange transition-all duration-300 ease-out"
+    class="h-full bg-accent-brown transition-all duration-300 ease-out"
     style="width: {max > 0 ? (value / max) * 100 : 0}%"
   ></div>
 </div>

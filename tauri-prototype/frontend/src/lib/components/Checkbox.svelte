@@ -55,10 +55,10 @@
     class={cn(
       'rounded border flex items-center justify-center transition-colors',
       sizeClasses[size],
-      'focus:outline-none focus:ring-2 focus:ring-mcat-orange focus:ring-offset-2 focus:ring-offset-mcat-bg',
+      'focus:outline-none focus:ring-2 focus:ring-accent-brown focus:ring-offset-2 focus:ring-offset-bg-primary',
       checked
-        ? 'bg-mcat-orange border-mcat-orange'
-        : 'bg-mcat-card border-mcat-border hover:border-mcat-border-light'
+        ? 'bg-accent-brown border-accent-brown'
+        : 'bg-bg-controls border-border-mid hover:border-border-light'
     )}
   >
     {#if checked}
@@ -68,6 +68,6 @@
     {/if}
   </button>
   {#if label}
-    <span class="text-mcat-text text-sm">{label}</span>
+    <span class="text-text-body text-sm">{label}</span>
   {/if}
 </label>

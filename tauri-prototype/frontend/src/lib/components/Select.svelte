@@ -53,17 +53,17 @@
       onblur?.();
     }}
     class={cn(
-      'w-full flex items-center justify-between px-3 py-2 bg-mcat-card border rounded text-mcat-text text-left',
-      'focus:outline-none focus:ring-2 focus:ring-mcat-orange focus:border-transparent',
+      'w-full flex items-center justify-between px-3 py-2 bg-bg-controls border rounded text-text-body text-left',
+      'focus:outline-none focus:ring-2 focus:ring-accent-brown focus:border-transparent',
       'disabled:opacity-50 disabled:cursor-not-allowed',
-      error ? 'border-mcat-error' : 'border-mcat-border'
+      error ? 'border-status-removed' : 'border-border-mid'
     )}
   >
-    <span class={selectedOption ? '' : 'text-mcat-text-muted'}>
+    <span class={selectedOption ? '' : 'text-text-muted'}>
       {selectedOption?.label ?? placeholder}
     </span>
     <svg
-      class="w-4 h-4 text-mcat-text-muted transition-transform"
+      class="w-4 h-4 text-text-muted transition-transform"
       class:rotate-180={select.trigger['aria-expanded']}
       fill="none"
       stroke="currentColor"
@@ -80,16 +80,16 @@
 
   <div
     {...select.content}
-    class="absolute z-50 mt-1 w-full bg-mcat-card border border-mcat-border rounded shadow-lg max-h-60 overflow-auto"
+    class="absolute z-50 mt-1 w-full bg-bg-controls border border-border-mid rounded shadow-lg max-h-60 overflow-auto"
   >
     {#each options as opt}
       <div
         {...select.getOption(opt.value, opt.label)}
         class={cn(
-          'px-3 py-2 cursor-pointer text-mcat-text',
-          'hover:bg-mcat-border',
-          'data-[highlighted]:bg-mcat-border',
-          select.isSelected(opt.value) && 'bg-mcat-orange text-white',
+          'px-3 py-2 cursor-pointer text-text-body',
+          'hover:bg-border-light',
+          'data-[highlighted]:bg-bg-controls',
+          select.isSelected(opt.value) && 'bg-accent-brown text-white',
           opt.disabled && 'opacity-50 cursor-not-allowed pointer-events-none'
         )}
       >
@@ -99,6 +99,6 @@
   </div>
 
   {#if error}
-    <p class="mt-1 text-sm text-mcat-error">{error}</p>
+    <p class="mt-1 text-sm text-status-removed">{error}</p>
   {/if}
 </div>

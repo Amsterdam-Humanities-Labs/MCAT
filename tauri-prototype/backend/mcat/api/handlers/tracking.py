@@ -12,10 +12,11 @@ def start_tracking(body: dict) -> dict:
     if not ctx.tracking_service:
         raise ValueError("Tracking service not initialized")
 
-    interval_minutes = body.get("interval_minutes", 60)
+    interval_value = body.get("interval_value", 30)
+    interval_unit = body.get("interval_unit", "minutes")
 
-    result = ctx.tracking_service.start_tracking(ctx.current_project, interval_minutes)
-    log_buffer.info(f"Tracking enabled: checks every {interval_minutes} minutes")
+    result = ctx.tracking_service.start_tracking(ctx.current_project, interval_value, interval_unit)
+    log_buffer.info(f"Tracking enabled: checks every {interval_value} {interval_unit}")
 
     return result
 

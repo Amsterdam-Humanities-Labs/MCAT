@@ -28,10 +28,10 @@
   }: Props = $props();
 
   const baseClasses =
-    'w-full px-3 py-2 bg-mcat-card border rounded text-mcat-text placeholder-mcat-text-muted focus:outline-none focus:ring-2 focus:ring-mcat-orange focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed';
+    'w-full px-3 py-2 bg-bg-controls border rounded text-text-body placeholder-text-muted focus:outline-none focus:ring-2 focus:ring-accent-brown focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed';
 
-  const errorClasses = 'border-mcat-error focus:ring-mcat-error';
-  const normalClasses = 'border-mcat-border';
+  const errorClasses = 'border-status-removed focus:ring-status-removed';
+  const normalClasses = 'border-border-mid';
 </script>
 
 <div class="w-full">
@@ -47,6 +47,6 @@
     {onblur}
   />
   {#if error}
-    <p class="mt-1 text-sm text-mcat-error">{error}</p>
+    <p class="mt-1 text-sm text-status-removed">{error}</p>
   {/if}
 </div>

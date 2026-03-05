@@ -22,11 +22,23 @@ export { default as ConsolePanel } from './ConsolePanel.svelte';
 export { default as DataTable } from './DataTable.svelte';
 export { default as ErrorBanner } from './ErrorBanner.svelte';
 export { default as InfoBox } from './InfoBox.svelte';
-export { default as SegmentedProgress } from './SegmentedProgress.svelte';
-export { default as StatCard } from './StatCard.svelte';
-export { default as StatsGrid } from './StatsGrid.svelte';
 export { default as StatusBadge } from './StatusBadge.svelte';
 
-// Tracking Components
-export { default as TrackingControls } from './TrackingControls.svelte';
-export { default as TrackingHistory } from './TrackingHistory.svelte';
+// Layout Components
+export { default as Toolbar } from './Toolbar.svelte';
+export { default as ToolbarBadge } from './ToolbarBadge.svelte';
+export { default as Controls } from './Controls.svelte';
+export { default as ControlsStartButton } from './ControlsStartButton.svelte';
+export { default as ControlsInterval } from './ControlsInterval.svelte';
+export { default as ControlsHint } from './ControlsHint.svelte';
+export { default as ProgressSection } from './ProgressSection.svelte';
+export { default as ProgressBar } from './ProgressBar.svelte';
+export { default as ProgressLegend } from './ProgressLegend.svelte';
+export { default as Timeline } from './Timeline.svelte';
+export { default as TimelineAxis } from './TimelineAxis.svelte';
+export { default as TimelineDot } from './TimelineDot.svelte';
+export { default as TimelineLabel } from './TimelineLabel.svelte';
+export { default as TimelineRunning } from './TimelineRunning.svelte';
+export { default as ConsoleHeader } from './ConsoleHeader.svelte';
+export { default as ConsoleBody } from './ConsoleBody.svelte';
+export { default as ConsoleEntry } from './ConsoleEntry.svelte';

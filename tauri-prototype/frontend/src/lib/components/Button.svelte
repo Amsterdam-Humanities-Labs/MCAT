@@ -24,17 +24,17 @@
   }: Props = $props();
 
   const baseClasses =
-    'inline-flex items-center justify-center font-medium rounded transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-mcat-bg disabled:opacity-50 disabled:cursor-not-allowed';
+    'inline-flex items-center justify-center font-medium rounded transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-bg-primary disabled:opacity-50 disabled:cursor-not-allowed';
 
   const variants = {
     primary:
-      'bg-mcat-orange hover:bg-mcat-orange-dark text-white focus:ring-mcat-orange',
+      'bg-accent-brown hover:bg-accent-brown/90 text-white focus:ring-accent-brown',
     secondary:
-      'bg-mcat-card hover:bg-mcat-border text-mcat-text border border-mcat-border focus:ring-mcat-border',
+      'bg-bg-controls hover:bg-border-light text-text-body border border-border-mid focus:ring-border-mid',
     danger:
-      'bg-mcat-danger hover:bg-mcat-danger-hover text-white focus:ring-mcat-danger',
+      'bg-status-removed hover:bg-status-removed/90 text-white focus:ring-status-removed',
     ghost:
-      'bg-transparent hover:bg-mcat-card text-mcat-text focus:ring-mcat-border',
+      'bg-transparent hover:bg-bg-controls text-text-body focus:ring-border-mid',
   };
 
   const sizes = {

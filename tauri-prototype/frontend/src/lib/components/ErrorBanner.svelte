@@ -19,14 +19,14 @@
 {#if message}
   <div
     class={cn(
-      'flex items-center justify-between gap-4 px-4 py-3 bg-mcat-error-bg border border-mcat-error/30 rounded-lg',
+      'flex items-center justify-between gap-4 px-4 py-3 bg-status-removed/10 border border-status-removed/30 rounded-lg',
       className
     )}
     role="alert"
   >
     <div class="flex items-center gap-3">
       <svg
-        class="w-5 h-5 text-mcat-error flex-shrink-0"
+        class="w-5 h-5 text-status-removed flex-shrink-0"
         fill="none"
         stroke="currentColor"
         viewBox="0 0 24 24"
@@ -38,13 +38,13 @@
           d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
         />
       </svg>
-      <p class="text-sm text-mcat-error">{message}</p>
+      <p class="text-sm text-status-removed">{message}</p>
     </div>
 
     {#if dismissible && ondismiss}
       <button
         type="button"
-        class="p-1 text-mcat-error/70 hover:text-mcat-error transition-colors"
+        class="p-1 text-status-removed/70 hover:text-status-removed transition-colors"
         onclick={ondismiss}
         aria-label="Dismiss"
       >

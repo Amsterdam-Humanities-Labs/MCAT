@@ -15,6 +15,16 @@ export const ACTIVE_STATES: ProcessingState[] = ['processing'];
 // States where processing is paused
 export const PAUSED_STATES: ProcessingState[] = ['paused'];
 
+export type ContentStatus = 'live' | 'removed' | 'restricted' | 'error' | 'pending';
+
+export interface StatusCounts {
+  live: number;
+  removed: number;
+  restricted: number;
+  error: number;
+  pending: number;
+}
+
 export interface ProcessingStats {
   [key: string]: number;
 }

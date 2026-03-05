@@ -1,9 +1,7 @@
 import { processingStore } from '../stores/processing.svelte';
 import { projectStore } from '../stores/project.svelte';
 import { consoleStore } from '../stores/console.svelte';
-import { resultsStore } from '../stores/results.svelte';
 import { appStore } from '../stores/app.svelte';
-import { trackingStore } from '../stores/tracking.svelte';
 
 let eventSource: EventSource | null = null;
 let reconnectTimeout: ReturnType<typeof setTimeout> | null = null;
@@ -54,11 +52,8 @@ function connect() {
       const data = JSON.parse(event.data);
       projectStore.setProject(data.project);
       if (data.project) {
-        if (appStore.view !== 'wizard') {
-          appStore.setView('project');
-        }
-        resultsStore.load();
-      } else {
+        appStore.setView('project');
+      } else if (appStore.view === 'project') {
         appStore.setView('start');
       }
     } catch (e) {
@@ -82,57 +77,6 @@ function connect() {
       }
     } catch (e) {
       console.error('[SSE] Failed to parse log event:', e);
-    }
-  });
-
-  eventSource.addEventListener('results', (event) => {
-    try {
-      const data = JSON.parse(event.data);
-      if (data.results) {
-        resultsStore.setResults(data.results);
-      }
-    } catch (e) {
-      console.error('[SSE] Failed to parse results event:', e);
-    }
-  });
-
-  eventSource.addEventListener('tracking.started', (event) => {
-    try {
-      const data = JSON.parse(event.data);
-      trackingStore.updateFromSSE(data);
-      consoleStore.addBackendLog('URL tracking started', 'info');
-    } catch (e) {
-      console.error('[SSE] Failed to parse tracking.started event:', e);
-    }
-  });
-
-  eventSource.addEventListener('tracking.stopped', (event) => {
-    try {
-      const data = JSON.parse(event.data);
-      trackingStore.updateFromSSE({ enabled: false });
-      consoleStore.addBackendLog('URL tracking stopped', 'info');
-    } catch (e) {
-      console.error('[SSE] Failed to parse tracking.stopped event:', e);
-    }
-  });
-
-  eventSource.addEventListener('tracking.run_completed', (event) => {
-    try {
-      const data = JSON.parse(event.data);
-      trackingStore.updateFromSSE(data);
-      consoleStore.addBackendLog('Tracking check completed', 'info');
-    } catch (e) {
-      console.error('[SSE] Failed to parse tracking.run_completed event:', e);
-    }
-  });
-
-  eventSource.addEventListener('tracking.changes_detected', (event) => {
-    try {
-      const data = JSON.parse(event.data);
-      const count = data.count || 0;
-      consoleStore.addBackendLog(`Detected ${count} status changes`, 'warning');
-    } catch (e) {
-      console.error('[SSE] Failed to parse tracking.changes_detected event:', e);
     }
   });
 }

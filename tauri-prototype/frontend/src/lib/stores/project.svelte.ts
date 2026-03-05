@@ -1,10 +1,26 @@
-import type { Project, CreateProjectRequest } from '../../types';
+import type { Project, Run, CreateProjectRequest } from '../../types';
 import { api } from '../api/client';
 
 function createProjectStore() {
   let project = $state<Project | null>(null);
   let error = $state<string | null>(null);
   let loading = $state(false);
+
+  const sortedRuns = $derived.by(() => {
+    if (!project?.runs) return [];
+    return [...project.runs]
+      .filter((r) => r.status === 'completed')
+      .sort((a, b) => new Date(a.startedAt).getTime() - new Date(b.startedAt).getTime());
+  });
+
+  const latestRun = $derived.by(() => {
+    const runs = sortedRuns;
+    return runs.length > 0 ? runs[runs.length - 1] : null;
+  });
+
+  const baselineRun = $derived.by(() => {
+    return sortedRuns.find((r) => r.isBaseline) ?? null;
+  });
 
   return {
     get project() {
@@ -18,6 +34,15 @@ function createProjectStore() {
     },
     get hasProject() {
       return project !== null;
+    },
+    get sortedRuns() {
+      return sortedRuns;
+    },
+    get latestRun() {
+      return latestRun;
+    },
+    get baselineRun() {
+      return baselineRun;
     },
 
     async create(data: CreateProjectRequest) {

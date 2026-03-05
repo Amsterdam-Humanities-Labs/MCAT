@@ -5,7 +5,6 @@ import type {
   StartProcessingRequest,
   CsvInfo,
   ImportPreview,
-  CombinedResults,
 } from '../../types';
 
 interface InterruptedRun {
@@ -125,26 +124,11 @@ export const api = {
   confirmImport: () =>
     callBackend<{ added: number }>('/project/import-confirm', 'POST'),
 
-  // Results
-  getCombinedResults: () =>
-    callBackend<CombinedResults>('/results/combined'),
-  getRunResults: (runId: string) =>
-    callBackend<{ results: any[] }>('/results/run', 'POST', { run_id: runId }),
-
   // Tracking
-  startTracking: (intervalMinutes: number) =>
-    callBackend<{ enabled: boolean; interval_minutes: number; next_check: string }>(
+  startTracking: (intervalValue: number, intervalUnit: string = 'minutes') =>
+    callBackend<{ enabled: boolean; intervalValue: number; intervalUnit: string; nextCheck: string }>(
       '/tracking/start',
       'POST',
-      { interval_minutes: intervalMinutes }
+      { interval_value: intervalValue, interval_unit: intervalUnit }
     ),
-  stopTracking: () =>
-    callBackend<{ enabled: boolean }>('/tracking/stop', 'POST'),
-  getTrackingStatus: () =>
-    callBackend<{
-      enabled: boolean;
-      interval_minutes: number;
-      last_check: string | null;
-      next_check: string | null;
-    }>('/tracking/status', 'POST'),
 };

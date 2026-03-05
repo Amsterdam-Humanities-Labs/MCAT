@@ -90,30 +90,30 @@
 </script>
 
 <div class={cn('max-w-lg mx-auto', className)}>
-  <div class="bg-mcat-card border border-mcat-border rounded-lg overflow-hidden">
+  <div class="bg-bg-controls border border-border-mid rounded-lg overflow-hidden">
     <!-- Header -->
-    <div class="px-6 py-4 border-b border-mcat-border">
-      <h2 class="text-lg font-semibold text-white m-0">
+    <div class="px-6 py-4 border-b border-border-mid">
+      <h2 class="text-lg font-semibold text-text-primary m-0">
         Create New Project
       </h2>
-      <p class="text-sm text-mcat-text-muted mt-1">
+      <p class="text-sm text-text-muted mt-1">
         Step {wizard.step} of 2
       </p>
     </div>
 
     <!-- Step indicator -->
-    <div class="px-6 py-3 bg-mcat-bg/50 border-b border-mcat-border">
+    <div class="px-6 py-3 bg-bg-primary/50 border-b border-border-mid">
       <div class="flex gap-2">
         <div
           class={cn(
             'flex-1 h-1 rounded-full transition-colors',
-            wizard.step >= 1 ? 'bg-mcat-orange' : 'bg-mcat-border'
+            wizard.step >= 1 ? 'bg-accent-brown' : 'bg-border-mid'
           )}
         ></div>
         <div
           class={cn(
             'flex-1 h-1 rounded-full transition-colors',
-            wizard.step >= 2 ? 'bg-mcat-orange' : 'bg-mcat-border'
+            wizard.step >= 2 ? 'bg-accent-brown' : 'bg-border-mid'
           )}
         ></div>
       </div>
@@ -122,7 +122,7 @@
     <!-- Content -->
     <div class="p-6">
       {#if wizard.error}
-        <div class="mb-4 p-3 bg-mcat-error-bg border border-mcat-error/30 rounded text-sm text-mcat-error">
+        <div class="mb-4 p-3 bg-status-removed/10 border border-status-removed/30 rounded text-sm text-status-removed">
           {wizard.error}
         </div>
       {/if}
@@ -197,7 +197,7 @@
               {#if availableColumns.length > 0}
                 <button
                   type="button"
-                  class="text-xs text-mcat-orange hover:text-mcat-orange/80 mb-2"
+                  class="text-xs text-accent-brown hover:text-accent-brown/80 mb-2"
                   onclick={() => {
                     if (allSelected) {
                       wizard.setPreserveColumns([]);
@@ -222,7 +222,7 @@
     </div>
 
     <!-- Footer -->
-    <div class="px-6 py-4 border-t border-mcat-border flex justify-between">
+    <div class="px-6 py-4 border-t border-border-mid flex justify-between">
       <Button variant="ghost" onclick={handleCancel}>
         Cancel
       </Button>

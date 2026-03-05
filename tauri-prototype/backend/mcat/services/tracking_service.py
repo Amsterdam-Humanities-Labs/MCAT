@@ -21,7 +21,6 @@ class TrackingService:
         self._timer: Optional[threading.Timer] = None
         self._stop_event = threading.Event()
         self._project_state: Optional[ProjectState] = None
-        self._interval_minutes: int = 60
         self._processing_service = None
         self._run_service = None
         self._log_callback = None
@@ -34,39 +33,43 @@ class TrackingService:
         self._log_callback = log_callback
         self._event_bus = event_bus
 
-    def start_tracking(self, project_state: ProjectState, interval_minutes: int) -> dict:
+    def start_tracking(self, project_state: ProjectState, interval_value: int, interval_unit: str = "minutes") -> dict:
         """
         Start periodic tracking scheduler.
 
         Args:
             project_state: Current project state
-            interval_minutes: Interval between checks in minutes
+            interval_value: Interval value
+            interval_unit: Interval unit ("minutes", "hours", "days")
 
         Returns:
             Dict with next_check timestamp and status
         """
         self._project_state = project_state
-        self._interval_minutes = interval_minutes
         self._stop_event.clear()
 
         # Update project configuration
-        project_state.config.tracking.enabled = True
-        project_state.config.tracking.interval_minutes = interval_minutes
-        project_state.config.tracking.next_check = datetime.now() + timedelta(minutes=interval_minutes)
+        tracking = project_state.config.tracking
+        tracking.enabled = True
+        tracking.interval_value = interval_value
+        tracking.interval_unit = interval_unit
+        interval_seconds = tracking.interval_seconds
+        tracking.next_check = datetime.now() + timedelta(seconds=interval_seconds)
         project_state.save()
 
         # Log and publish event
         if self._log_callback:
             self._log_callback(
-                f"URL tracking started (every {interval_minutes} minutes)",
+                f"URL tracking started (every {interval_value} {interval_unit})",
                 "info"
             )
 
         if self._event_bus:
             self._event_bus.publish({
                 "type": "tracking.started",
-                "interval_minutes": interval_minutes,
-                "next_check": project_state.config.tracking.next_check.isoformat(),
+                "interval_value": interval_value,
+                "interval_unit": interval_unit,
+                "next_check": tracking.next_check.isoformat(),
             })
 
         # Schedule first check
@@ -74,8 +77,9 @@ class TrackingService:
 
         return {
             "enabled": True,
-            "interval_minutes": interval_minutes,
-            "next_check": project_state.config.tracking.next_check.isoformat(),
+            "interval_value": interval_value,
+            "interval_unit": interval_unit,
+            "next_check": tracking.next_check.isoformat(),
         }
 
     def stop_tracking(self, project_state: ProjectState) -> dict:
@@ -122,7 +126,8 @@ class TrackingService:
         config = project_state.config.tracking
         return {
             "enabled": config.enabled,
-            "interval_minutes": config.interval_minutes,
+            "interval_value": config.interval_value,
+            "interval_unit": config.interval_unit,
             "last_check": config.last_check.isoformat() if config.last_check else None,
             "next_check": config.next_check.isoformat() if config.next_check else None,
         }
@@ -135,8 +140,11 @@ class TrackingService:
         if self._timer:
             self._timer.cancel()
 
-        interval_seconds = self._interval_minutes * 60
-        self._timer = threading.Timer(interval_seconds, self._execute_tracking_run)
+        if self._project_state:
+            interval_secs = self._project_state.config.tracking.interval_seconds
+        else:
+            interval_secs = 1800  # fallback 30 min
+        self._timer = threading.Timer(interval_secs, self._execute_tracking_run)
         self._timer.daemon = True
         self._timer.start()
 

@@ -57,11 +57,6 @@ class ProjectState:
         """Get path to runs directory."""
         return self.project_path / "runs"
 
-    @property
-    def combined_csv_path(self) -> Path:
-        """Get path to combined.csv."""
-        return self.project_path / "combined.csv"
-
     def get_run_path(self, run_id: str) -> Path:
         """Get path to a specific run directory."""
         return self.runs_path / run_id

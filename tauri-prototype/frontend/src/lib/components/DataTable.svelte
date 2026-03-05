@@ -32,7 +32,7 @@
     removed: 'text-status-removed',
     restricted: 'text-status-restricted',
     error: 'text-status-error',
-    pending: 'text-status-pending',
+    pending: 'text-text-muted',
   };
 
   function getCellValue(row: T, key: keyof T | string): unknown {
@@ -54,7 +54,7 @@
 
   function getStatusColor(status: string): string {
     const normalized = status.toLowerCase();
-    return statusColors[normalized] ?? 'text-mcat-text';
+    return statusColors[normalized] ?? 'text-text-body';
   }
 
   async function openLink(url: string) {
@@ -62,13 +62,13 @@
   }
 </script>
 
-<div class={cn('overflow-auto border border-mcat-border rounded-lg', className)}>
+<div class={cn('overflow-auto border border-border-mid rounded-lg', className)}>
   <table class="min-w-full text-sm whitespace-nowrap">
-    <thead class="bg-mcat-card sticky top-0">
+    <thead class="bg-bg-controls sticky top-0">
       <tr>
         {#each columns as col}
           <th
-            class="px-4 py-3 text-left font-medium text-mcat-text-label border-b border-mcat-border"
+            class="px-4 py-3 text-left font-medium text-text-primary border-b border-border-mid"
             style={col.width ? `width: ${col.width}` : undefined}
           >
             {col.header}
@@ -76,26 +76,26 @@
         {/each}
       </tr>
     </thead>
-    <tbody class="divide-y divide-mcat-border">
+    <tbody class="divide-y divide-border-mid">
       {#if displayedRows.length === 0}
         <tr>
           <td
             colspan={columns.length}
-            class="px-4 py-8 text-center text-mcat-text-muted"
+            class="px-4 py-8 text-center text-text-muted"
           >
             {emptyMessage}
           </td>
         </tr>
       {:else}
         {#each displayedRows as row}
-          <tr class="hover:bg-mcat-card/50 transition-colors">
+          <tr class="hover:bg-bg-controls/50 transition-colors">
             {#each columns as col}
               {@const value = getCellValue(row, col.key)}
-              <td class="px-4 py-3 text-mcat-text">
+              <td class="px-4 py-3 text-text-body">
                 {#if (col.type === 'link' || col.key === 'url') && isUrl(value)}
                   <button
                     type="button"
-                    class="text-mcat-orange text-left truncate max-w-[280px] block cursor-pointer"
+                    class="text-accent-brown text-left truncate max-w-[280px] block cursor-pointer"
                     onclick={() => openLink(String(value))}
                     title={String(value)}
                   >
@@ -117,7 +117,7 @@
   </table>
 
   {#if rows.length > maxRows}
-    <div class="px-4 py-2 text-xs text-mcat-text-muted bg-mcat-card border-t border-mcat-border">
+    <div class="px-4 py-2 text-xs text-text-muted bg-bg-controls border-t border-border-mid">
       Showing {maxRows} of {rows.length} rows
     </div>
   {/if}

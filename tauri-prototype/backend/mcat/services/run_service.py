@@ -30,16 +30,10 @@ class RunService:
         """
         Generate a unique run ID based on current timestamp.
 
-        Args:
-            run_type: Type of run ("manual" or "tracking")
-
         Returns:
-            Run ID in format "TRACK-YYYY-MM-DDTHH-MM" for tracking, "YYYY-MM-DDTHH-MM" for manual
+            Run ID in format "YYYY-MM-DDTHH-MM"
         """
-        timestamp = datetime.now().strftime("%Y-%m-%dT%H-%M")
-        if run_type == "tracking":
-            return f"TRACK-{timestamp}"
-        return timestamp
+        return datetime.now().strftime("%Y-%m-%dT%H-%M")
 
     def start_run(
         self,
@@ -125,23 +119,38 @@ class RunService:
         """
         Mark a run as completed.
 
-        Updates status and regenerates combined.csv.
-
-        Args:
-            project_state: Current project state
-            run: The RunConfig to complete
+        Computes enriched metadata, generates changes.csv, and saves.
         """
         run.status = RunStatus.COMPLETED
         run.completed_at = datetime.now()
+
+        # Compute duration
+        run.duration_seconds = (run.completed_at - run.started_at).total_seconds()
+
+        # Compute status summary from results.csv
+        run.status_summary = self._compute_status_summary(project_state, run)
+        run.total_checked = sum(run.status_summary.values())
+
+        # Determine if baseline (first completed run)
+        completed_runs = project_state.config.get_completed_runs()
+        run.is_baseline = len(completed_runs) == 0
+
+        # Compute changes against previous run
+        if not run.is_baseline:
+            previous_run = completed_runs[-1]
+            changes = self._compute_changes(project_state, previous_run, run)
+            run.changes_count = len(changes)
+            run.changes_summary = self._summarize_changes(changes)
+            self._write_changes_csv(project_state, run, changes)
+        else:
+            run.changes_count = 0
+            run.changes_summary = {}
 
         # Clear current run
         project_state.current_run = None
 
         # Save project
         project_state.save()
-
-        # Regenerate combined.csv
-        self.generate_combined_csv(project_state)
 
     def abandon_run(self, project_state: ProjectState, run: RunConfig) -> None:
         """
@@ -235,115 +244,110 @@ class RunService:
         # Return remaining
         return list(all_urls - processed_urls)
 
-    def generate_combined_csv(self, project_state: ProjectState) -> Path:
-        """
-        Generate combined.csv from all completed runs.
+    def _compute_status_summary(
+        self,
+        project_state: ProjectState,
+        run: RunConfig
+    ) -> dict:
+        """Compute status breakdown from a run's results.csv."""
+        results_path = project_state.get_run_results_path(run.id)
+        summary = {"live": 0, "removed": 0, "restricted": 0, "error": 0}
 
-        Only includes runs with status COMPLETED.
+        if not results_path.exists():
+            return summary
 
-        Args:
-            project_state: Current project state
+        try:
+            df = pl.read_csv(results_path)
+            if "status" in df.columns:
+                status_counts = df.group_by("status").len().to_dicts()
+                counts = {row["status"]: row["len"] for row in status_counts}
+                summary["live"] = counts.get("Live", 0)
+                summary["removed"] = counts.get("Removed", 0)
+                summary["restricted"] = (
+                    counts.get("Restricted", 0)
+                    + counts.get("Age-restricted", 0)
+                    + counts.get("Geo-blocked", 0)
+                    + counts.get("Private", 0)
+                )
+                summary["error"] = counts.get("Error", 0)
+        except Exception:
+            pass
 
-        Returns:
-            Path to generated combined.csv
-        """
-        completed_runs = project_state.config.get_completed_runs()
+        return summary
 
-        if not completed_runs:
-            # Create empty combined.csv with headers
-            combined_path = project_state.combined_csv_path
-            # Get columns from urls.csv with proper types
-            urls_df = pl.read_csv(project_state.urls_csv_path)
+    def _compute_changes(
+        self,
+        project_state: ProjectState,
+        previous_run: RunConfig,
+        current_run: RunConfig
+    ) -> list[dict]:
+        """Diff two runs and return list of changed URLs."""
+        prev_path = project_state.get_run_results_path(previous_run.id)
+        curr_path = project_state.get_run_results_path(current_run.id)
 
-            # Build schema: preserve original column types from urls.csv, add result columns as Utf8
-            schema = {}
-            for col in urls_df.columns:
-                schema[col] = urls_df.schema[col]
+        if not prev_path.exists() or not curr_path.exists():
+            return []
 
-            # Add result columns as String type
-            result_columns = ['status', 'info', 'screenshot_path', 'timestamp', 'error_message', 'run_id']
-            for col in result_columns:
-                schema[col] = pl.Utf8
+        try:
+            prev_df = pl.read_csv(prev_path)
+            curr_df = pl.read_csv(curr_path)
+            url_col = project_state.url_column
 
-            empty_df = pl.DataFrame(schema=schema)
-            empty_df.write_csv(combined_path)
-            return combined_path
+            if url_col not in prev_df.columns or url_col not in curr_df.columns:
+                return []
+            if "status" not in prev_df.columns or "status" not in curr_df.columns:
+                return []
 
-        # Get expected columns from urls.csv
-        urls_df = pl.read_csv(project_state.urls_csv_path)
-        base_columns = list(urls_df.columns)
-        result_columns = ['status', 'info', 'screenshot_path', 'timestamp', 'error_message', 'run_id']
+            # Build url -> status maps
+            prev_map = dict(zip(
+                prev_df[url_col].cast(pl.Utf8).to_list(),
+                prev_df["status"].cast(pl.Utf8).to_list()
+            ))
+            curr_map = dict(zip(
+                curr_df[url_col].cast(pl.Utf8).to_list(),
+                curr_df["status"].cast(pl.Utf8).to_list()
+            ))
 
-        # Collect all results with schema normalization
-        all_results = []
-        all_column_names = set()
+            changes = []
+            for url, new_status in curr_map.items():
+                old_status = prev_map.get(url)
+                if old_status and old_status != new_status:
+                    changes.append({
+                        "url": url,
+                        "previous_status": old_status,
+                        "new_status": new_status,
+                        "info": "",
+                        "timestamp": current_run.completed_at.isoformat() if current_run.completed_at else "",
+                    })
 
-        # First pass: collect all columns across all runs
-        for run in completed_runs:
-            results_path = project_state.get_run_results_path(run.id)
-            if results_path.exists():
-                try:
-                    df = pl.read_csv(results_path)
-                    all_column_names.update(df.columns)
-                except Exception as e:
-                    print(f"Warning: Could not read {results_path}: {e}")
+            return changes
+        except Exception:
+            return []
 
-        # Ensure run_id is in the list
-        all_column_names.add('run_id')
+    def _summarize_changes(self, changes: list[dict]) -> dict:
+        """Summarize changes into transition counts like {'live_to_removed': 3}."""
+        summary: dict[str, int] = {}
+        for ch in changes:
+            key = f"{ch['previous_status'].lower()}_to_{ch['new_status'].lower()}"
+            summary[key] = summary.get(key, 0) + 1
+        return summary
 
-        # Get schema from urls.csv to use for type consistency
-        urls_schema = urls_df.schema
-
-        # Second pass: normalize all DataFrames to have same columns
-        for run in completed_runs:
-            results_path = project_state.get_run_results_path(run.id)
-            if results_path.exists():
-                try:
-                    df = pl.read_csv(results_path)
-                    df = df.with_columns(pl.lit(run.id).alias('run_id'))
-
-                    # Add any missing columns with null values using proper types
-                    for col in all_column_names:
-                        if col not in df.columns:
-                            # Use original type from urls.csv if available, else String
-                            col_type = urls_schema.get(col, pl.Utf8)
-                            df = df.with_columns(pl.lit(None, dtype=col_type).alias(col))
-
-                    # Select columns in consistent order (base columns first, then results)
-                    available_cols = [c for c in (base_columns + result_columns) if c in all_column_names]
-                    # Add any extra columns not in our expected list
-                    for col in all_column_names:
-                        if col not in available_cols:
-                            available_cols.append(col)
-
-                    df = df.select(available_cols)
-                    all_results.append(df)
-                except Exception as e:
-                    print(f"Warning: Could not normalize {results_path}: {e}")
-
-        if all_results:
-            combined_df = pl.concat(all_results)
+    def _write_changes_csv(
+        self,
+        project_state: ProjectState,
+        run: RunConfig,
+        changes: list[dict]
+    ) -> None:
+        """Write changes.csv for a run."""
+        changes_path = project_state.get_run_path(run.id) / "changes.csv"
+        if changes:
+            df = pl.DataFrame(changes)
+            df.write_csv(changes_path)
         else:
-            # No results, create empty DataFrame with proper schema
-            urls_df = pl.read_csv(project_state.urls_csv_path)
-
-            # Build schema: preserve original column types from urls.csv
-            schema = {}
-            for col in urls_df.columns:
-                schema[col] = urls_df.schema[col]
-
-            # Add result columns as String type
-            result_columns = ['status', 'info', 'screenshot_path', 'timestamp', 'error_message', 'run_id']
-            for col in result_columns:
-                schema[col] = pl.Utf8
-
-            combined_df = pl.DataFrame(schema=schema)
-
-        # Save
-        combined_path = project_state.combined_csv_path
-        combined_df.write_csv(combined_path)
-
-        return combined_path
+            # Write headers only
+            pl.DataFrame(
+                schema={"url": pl.Utf8, "previous_status": pl.Utf8, "new_status": pl.Utf8, "info": pl.Utf8, "timestamp": pl.Utf8}
+            ).write_csv(changes_path)
 
     def get_run_stats(
         self,

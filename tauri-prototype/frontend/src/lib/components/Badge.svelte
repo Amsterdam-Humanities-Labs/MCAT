@@ -18,11 +18,11 @@
   const baseClasses = 'inline-flex items-center font-medium rounded-full';
 
   const variants = {
-    default: 'bg-mcat-border text-mcat-text',
-    success: 'bg-mcat-success-bg text-mcat-success',
-    error: 'bg-mcat-error-bg text-mcat-error',
-    warning: 'bg-amber-900/50 text-amber-400',
-    info: 'bg-blue-900/50 text-blue-400',
+    default: 'bg-border-mid text-text-body',
+    success: 'bg-status-live/10 text-status-live',
+    error: 'bg-status-removed/10 text-status-removed',
+    warning: 'bg-status-restricted/10 text-status-restricted',
+    info: 'bg-link-blue/10 text-link-blue',
   };
 
   const sizes = {

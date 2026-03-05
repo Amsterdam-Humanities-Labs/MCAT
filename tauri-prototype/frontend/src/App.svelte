@@ -6,7 +6,6 @@
   import { appStore } from '$lib/stores/app.svelte';
   import { projectStore } from '$lib/stores/project.svelte';
   import { wizardStore } from '$lib/stores/wizard.svelte';
-  import { resultsStore } from '$lib/stores/results.svelte';
   import { dialogsStore } from '$lib/stores/dialogs.svelte';
   import { consoleStore } from '$lib/stores/console.svelte';
   import { processingStore } from '$lib/stores/processing.svelte';
@@ -74,7 +73,6 @@
   async function handleCloseProject() {
     try {
       await projectStore.close();
-      resultsStore.clear();
       appStore.setView('start');
     } catch (e) {
       appStore.setGlobalError(String(e));
@@ -119,22 +117,7 @@
   onDestroy(() => pollingController.stop());
 </script>
 
-<main class={cn('max-w-4xl mx-auto p-4 min-h-screen bg-mcat-bg text-mcat-text font-sans', className)}>
-  <!-- Header -->
-  <header class="flex items-baseline gap-4 mb-6 pb-4 border-b border-mcat-border">
-    <h1 class="m-0 text-mcat-orange text-2xl font-bold">MCAT</h1>
-    <span class="text-mcat-text-muted text-sm">Moderation Content Analysis Tool</span>
-    <span
-      class={cn(
-        'ml-auto px-3 py-1 rounded text-sm',
-        appStore.backendConnected
-          ? 'bg-mcat-success-bg text-mcat-success'
-          : 'bg-mcat-border text-mcat-text-muted'
-      )}
-    >
-      Backend: {appStore.backendConnected ? 'Connected' : 'Connecting...'}
-    </span>
-  </header>
+<main class={cn('min-h-screen bg-bg-primary text-text-body', className)}>
 
   <!-- Error banner -->
   {#if appStore.globalError}
@@ -160,11 +143,9 @@
   {:else if appStore.view === 'project' && projectStore.project}
     <ProjectView
       project={projectStore.project}
-      results={resultsStore.results}
       processing={processingStore}
       messages={consoleStore.messages}
       onclose={handleCloseProject}
-      onaddurls={() => dialogsStore.openAddUrls()}
     />
   {/if}
 

@@ -56,7 +56,7 @@ def _on_processing_completed(sender, **kwargs):
     if ctx.current_project and ctx.current_project.current_run:
         run = ctx.current_project.current_run
         ctx.run_service.complete_run(ctx.current_project, run)
-        log_buffer.success(f"Results saved to {ctx.current_project.combined_csv_path}")
+        log_buffer.success(f"Run {run.id} completed")
     _publish_status()
 
 

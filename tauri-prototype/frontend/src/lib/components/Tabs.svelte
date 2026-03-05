@@ -36,7 +36,7 @@
 </script>
 
 <div class={cn('w-full', className)}>
-  <div {...tabs.triggerList} class="flex border-b border-mcat-border mb-4">
+  <div {...tabs.triggerList} class="flex border-b border-border-mid mb-4">
     {#each tabItems as tab}
       <button
         {...tabs.getTrigger(tab.value)}
@@ -44,10 +44,10 @@
         class={cn(
           'px-4 py-2 text-sm font-medium transition-colors',
           'border-b-2 -mb-px',
-          'focus:outline-none focus:ring-2 focus:ring-mcat-orange focus:ring-inset',
+          'focus:outline-none focus:ring-2 focus:ring-accent-brown focus:ring-inset',
           tabs.value === tab.value
-            ? 'border-mcat-orange text-mcat-orange'
-            : 'border-transparent text-mcat-text-muted hover:text-mcat-text hover:border-mcat-border-light',
+            ? 'border-accent-brown text-accent-brown'
+            : 'border-transparent text-text-muted hover:text-text-body hover:border-border-light',
           tab.disabled && 'opacity-50 cursor-not-allowed'
         )}
       >

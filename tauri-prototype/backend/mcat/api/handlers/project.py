@@ -15,9 +15,10 @@ def _build_project_dict() -> dict | None:
         "name": project.name,
         "platform": project.platform,
         "path": str(project.project_path),
-        "combinedCsvPath": str(project.combined_csv_path),
-        "urlCount": ctx.project_service.get_url_count(project),
-        "urlColumn": project.url_column,
+        "url_count": ctx.project_service.get_url_count(project),
+        "url_column": project.url_column,
+        "runs": [run.to_dict() for run in project.config.runs],
+        "tracking": project.config.tracking.to_dict(),
     }
 
 

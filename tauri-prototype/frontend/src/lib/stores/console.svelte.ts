@@ -1,13 +1,6 @@
-export type LogLevel = 'debug' | 'info' | 'warning' | 'error' | 'success';
-export type LogSource = 'app' | 'backend' | 'processing';
+import type { LogLevel, LogSource, LogMessage } from '../../types/console';
 
-export interface LogMessage {
-  id: number;
-  text: string;
-  level: LogLevel;
-  source: LogSource;
-  timestamp: Date;
-}
+export type { LogLevel, LogSource, LogMessage };
 
 const MAX_MESSAGES = 500;
 

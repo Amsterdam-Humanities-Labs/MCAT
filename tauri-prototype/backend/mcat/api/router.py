@@ -1,6 +1,6 @@
 """API route definitions."""
 
-from api.handlers import health, project, processing, run, csv, results, tracking
+from api.handlers import health, project, processing, run, csv, tracking
 
 
 def get_routes():
@@ -8,7 +8,6 @@ def get_routes():
     return {
         "/health": lambda _path: health.get_health(),
         "/run/interrupted": lambda _path: run.get_interrupted(),
-        "/results/combined": lambda _path: results.get_combined(),
     }
 
 
@@ -31,5 +30,4 @@ def post_routes():
         "/tracking/start": tracking.start_tracking,
         "/tracking/stop": tracking.stop_tracking,
         "/tracking/status": tracking.get_tracking_status,
-        "/results/run": results.get_run_results,
     }

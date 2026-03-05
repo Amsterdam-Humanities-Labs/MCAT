@@ -27,6 +27,12 @@ class RunConfig:
     status: RunStatus = RunStatus.IN_PROGRESS
     screenshots_enabled: bool = False
     run_type: str = "manual"  # "manual" or "tracking"
+    is_baseline: bool = False
+    duration_seconds: float = 0.0
+    total_checked: int = 0
+    changes_count: int = 0
+    changes_summary: dict = field(default_factory=dict)
+    status_summary: dict = field(default_factory=dict)
 
     def to_dict(self) -> dict:
         """Convert to dictionary for JSON serialization."""
@@ -36,7 +42,13 @@ class RunConfig:
             "completed_at": self.completed_at.isoformat() if self.completed_at else None,
             "status": self.status.value,
             "screenshots_enabled": self.screenshots_enabled,
-            "run_type": self.run_type
+            "run_type": self.run_type,
+            "is_baseline": self.is_baseline,
+            "duration_seconds": self.duration_seconds,
+            "total_checked": self.total_checked,
+            "changes_count": self.changes_count,
+            "changes_summary": self.changes_summary,
+            "status_summary": self.status_summary,
         }
 
     @classmethod
@@ -48,7 +60,13 @@ class RunConfig:
             completed_at=datetime.fromisoformat(data["completed_at"]) if data.get("completed_at") else None,
             status=RunStatus(data["status"]),
             screenshots_enabled=data.get("screenshots_enabled", False),
-            run_type=data.get("run_type", "manual")
+            run_type=data.get("run_type", "manual"),
+            is_baseline=data.get("is_baseline", False),
+            duration_seconds=data.get("duration_seconds", 0.0),
+            total_checked=data.get("total_checked", 0),
+            changes_count=data.get("changes_count", 0),
+            changes_summary=data.get("changes_summary", {}),
+            status_summary=data.get("status_summary", {}),
         )
 
     @property
@@ -71,15 +89,23 @@ class RunConfig:
 class TrackingConfig:
     """Configuration for URL tracking."""
     enabled: bool = False
-    interval_minutes: int = 60
+    interval_value: int = 30
+    interval_unit: str = "minutes"  # "minutes", "hours", "days"
     last_check: Optional[datetime] = None
     next_check: Optional[datetime] = None
+
+    @property
+    def interval_seconds(self) -> int:
+        """Get interval in seconds."""
+        multipliers = {"minutes": 60, "hours": 3600, "days": 86400}
+        return self.interval_value * multipliers.get(self.interval_unit, 60)
 
     def to_dict(self) -> dict:
         """Convert to dictionary for JSON serialization."""
         return {
             "enabled": self.enabled,
-            "interval_minutes": self.interval_minutes,
+            "interval_value": self.interval_value,
+            "interval_unit": self.interval_unit,
             "last_check": self.last_check.isoformat() if self.last_check else None,
             "next_check": self.next_check.isoformat() if self.next_check else None,
         }
@@ -87,9 +113,21 @@ class TrackingConfig:
     @classmethod
     def from_dict(cls, data: dict) -> "TrackingConfig":
         """Create TrackingConfig from dictionary."""
+        # Backward compat: migrate interval_minutes -> interval_value + interval_unit
+        if "interval_value" in data:
+            interval_value = data["interval_value"]
+            interval_unit = data.get("interval_unit", "minutes")
+        elif "interval_minutes" in data:
+            interval_value = data["interval_minutes"]
+            interval_unit = "minutes"
+        else:
+            interval_value = 30
+            interval_unit = "minutes"
+
         return cls(
             enabled=data.get("enabled", False),
-            interval_minutes=data.get("interval_minutes", 60),
+            interval_value=interval_value,
+            interval_unit=interval_unit,
             last_check=datetime.fromisoformat(data["last_check"]) if data.get("last_check") else None,
             next_check=datetime.fromisoformat(data["next_check"]) if data.get("next_check") else None,
         )

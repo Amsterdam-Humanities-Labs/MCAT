@@ -1,6 +1,6 @@
 <script lang="ts">
   import { cn } from '$lib/utils';
-  import type { ContentStatus } from '$types/results';
+  import type { ContentStatus } from '$types/processing';
 
   interface Props {
     status: ContentStatus;

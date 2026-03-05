@@ -71,40 +71,40 @@
     </FormField>
 
     {#if error}
-      <div class="p-3 bg-mcat-error-bg border border-mcat-error/30 rounded text-sm text-mcat-error">
+      <div class="p-3 bg-status-removed/10 border border-status-removed/30 rounded text-sm text-status-removed">
         {error}
       </div>
     {/if}
 
     {#if preview}
-      <div class="p-4 bg-mcat-bg rounded space-y-3">
-        <h4 class="text-sm font-medium text-mcat-text m-0">Import Preview</h4>
+      <div class="p-4 bg-bg-primary rounded space-y-3">
+        <h4 class="text-sm font-medium text-text-body m-0">Import Preview</h4>
 
         <div class="grid grid-cols-3 gap-4">
           <div>
-            <span class="block text-xs text-mcat-text-muted mb-1">Total in File</span>
+            <span class="block text-xs text-text-muted mb-1">Total in File</span>
             <span class="text-lg font-medium">{preview.totalInFile}</span>
           </div>
           <div>
-            <span class="block text-xs text-mcat-text-muted mb-1">New URLs</span>
-            <span class="text-lg font-medium text-mcat-success">{preview.newUrls}</span>
+            <span class="block text-xs text-text-muted mb-1">New URLs</span>
+            <span class="text-lg font-medium text-status-live">{preview.newUrls}</span>
           </div>
           <div>
-            <span class="block text-xs text-mcat-text-muted mb-1">Duplicates</span>
-            <span class="text-lg font-medium text-mcat-text-muted">{preview.duplicatesSkipped}</span>
+            <span class="block text-xs text-text-muted mb-1">Duplicates</span>
+            <span class="text-lg font-medium text-text-muted">{preview.duplicatesSkipped}</span>
           </div>
         </div>
 
         {#if preview.newUrls === 0}
-          <div class="p-2 bg-amber-900/20 border border-amber-600/30 rounded text-sm text-amber-200">
+          <div class="p-2 bg-status-restricted/10 border border-status-restricted/30 rounded text-sm text-status-restricted">
             All URLs in this file already exist in the project.
           </div>
         {:else if preview.sampleUrls.length > 0}
           <div>
-            <span class="block text-xs text-mcat-text-muted mb-2">Sample URLs to add:</span>
+            <span class="block text-xs text-text-muted mb-2">Sample URLs to add:</span>
             <div class="space-y-1 max-h-32 overflow-auto">
               {#each preview.sampleUrls.slice(0, 5) as url}
-                <div class="text-xs text-mcat-text-muted font-mono truncate" title={url}>
+                <div class="text-xs text-text-muted font-mono truncate" title={url}>
                   {url}
                 </div>
               {/each}

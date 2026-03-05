@@ -34,7 +34,7 @@
 
 <div
   {...dialog.overlay}
-  class="fixed inset-0 z-50 bg-black/60 opacity-0 transition-opacity duration-200 data-[open]:opacity-100"
+  class="fixed inset-0 z-50 bg-black/40 opacity-0 transition-opacity duration-200 data-[open]:opacity-100"
 ></div>
 
 <dialog
@@ -42,7 +42,7 @@
   class={cn(
     'fixed left-1/2 top-1/2 z-50 -translate-x-1/2 -translate-y-1/2',
     'w-full max-w-lg max-h-[85vh] overflow-auto',
-    'bg-mcat-card border border-mcat-border rounded-lg shadow-xl',
+    'bg-bg-controls border border-border-mid rounded-lg shadow-xl',
     'p-0 m-0 opacity-0 scale-95 transition-all duration-200',
     'data-[open]:opacity-100 data-[open]:scale-100',
     className
@@ -50,12 +50,12 @@
 >
   <div class="p-6">
     {#if title}
-      <h2 class="text-lg font-semibold text-mcat-text mb-4">
+      <h2 class="text-lg font-semibold text-text-body mb-4">
         {title}
       </h2>
     {/if}
 
-    <div class="text-mcat-text">
+    <div class="text-text-body">
       {@render children?.()}
     </div>
 
@@ -69,7 +69,7 @@
   <button
     type="button"
     onclick={() => (dialog.open = false)}
-    class="absolute top-4 right-4 p-1 text-mcat-text-muted hover:text-mcat-text transition-colors"
+    class="absolute top-4 right-4 p-1 text-text-muted hover:text-text-body transition-colors"
     aria-label="Close"
   >
     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

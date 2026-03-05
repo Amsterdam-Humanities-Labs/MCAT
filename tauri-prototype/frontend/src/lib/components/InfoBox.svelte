@@ -20,10 +20,10 @@
   let visible = $state(true);
 
   const variantClasses = {
-    info: 'bg-mcat-bg border-mcat-border text-mcat-text-muted',
-    warning: 'bg-amber-500/10 border-amber-500/30 text-amber-400',
+    info: 'bg-bg-primary border-border-mid text-text-muted',
+    warning: 'bg-status-restricted/10 border-status-restricted/30 text-status-restricted',
     success: 'bg-status-live/10 border-status-live/30 text-status-live',
-    error: 'bg-mcat-error-bg border-mcat-error/30 text-mcat-error',
+    error: 'bg-status-removed/10 border-status-removed/30 text-status-removed',
   };
 
   function handleDismiss() {

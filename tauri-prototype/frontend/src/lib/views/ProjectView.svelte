@@ -1,216 +1,121 @@
 <script lang="ts">
-  import { cn } from '$lib/utils';
-  import {
-    Button,
-    Badge,
-    SegmentedProgress,
-    ConsolePanel,
-    DataTable,
-    Select,
-    TrackingHistory,
-  } from '$lib/components';
-  import { trackingStore } from '$lib/stores/tracking.svelte';
+  import { invoke } from '@tauri-apps/api/core';
+  import { Toolbar, Controls, ProgressSection, ConsolePanel } from '$lib/components';
+  import Timeline from '$lib/components/Timeline.svelte';
+  import { projectStore } from '$lib/stores/project.svelte';
   import { api } from '$lib/api/client';
-  import type { Project } from '$types/project';
-  import type { ResultRow } from '$types/results';
-  import type { LogMessage } from '$lib/stores/console.svelte';
+  import type { Project, RunStatusSummary } from '$types/project';
+  import type { LogMessage } from '$types/console';
   import type { processingStore as ProcessingStoreType } from '$lib/stores/processing.svelte';
 
   interface Props {
     project: Project;
-    results?: ResultRow[];
     processing: typeof ProcessingStoreType;
     messages: LogMessage[];
-    class?: string;
     onclose?: () => void;
-    onaddurls?: () => void;
   }
 
-  let {
-    project,
-    results = [],
-    processing,
-    messages,
-    class: className,
-    onclose,
-    onaddurls,
-  }: Props = $props();
+  let { project, processing, messages, onclose }: Props = $props();
 
-  let selectedTrackingRunId = $state<string | null>(null);
-  let trackingRunResults = $state<ResultRow[]>([]);
-  let selectedInterval = $state<number>(0); // 0 = "Once", otherwise minutes
-  let isStartingTracking = $state(false);
+  let selectedRunId = $state<string | null>(null);
+  let intervalEnabled = $state(project.tracking?.enabled ?? false);
+  let intervalValue = $state(project.tracking?.intervalValue ?? 30);
+  let intervalUnit = $state<'minutes' | 'hours' | 'days'>(project.tracking?.intervalUnit ?? 'minutes');
 
-  const intervalOptions = [
-    { value: 0, label: 'Once' },
-    { value: 5, label: 'Every 5 minutes' },
-    { value: 30, label: 'Every 30 minutes' },
-    { value: 60, label: 'Every hour' },
-    { value: 360, label: 'Every 6 hours' },
-    { value: 1440, label: 'Daily' },
-  ];
+  // Derive run state from processing store
+  const runState = $derived.by((): 'idle' | 'running' | 'paused' => {
+    if (processing.isPaused) return 'paused';
+    if (processing.isProcessing) return 'running';
+    return 'idle';
+  });
+
+  // Status counts from processing (live SSE) or last run
+  const statusCounts = $derived.by((): RunStatusSummary => {
+    if (processing.statusCounts) {
+      return {
+        live: processing.statusCounts.live ?? 0,
+        removed: processing.statusCounts.removed ?? 0,
+        restricted: processing.statusCounts.restricted ?? 0,
+        error: processing.statusCounts.error ?? 0,
+      };
+    }
+    return { live: 0, removed: 0, restricted: 0, error: 0 };
+  });
+
+  const lastRunDuration = $derived.by(() => {
+    const latest = projectStore.latestRun;
+    return latest?.durationSeconds ?? null;
+  });
+
+  const currentRun = $derived.by(() => {
+    if (runState === 'idle') return null;
+    return {
+      timestamp: new Date().toISOString(),
+      progressPercent: processing.progress ? Math.round(processing.progress) : 0,
+    };
+  });
 
   async function handleStart() {
-    // If interval is "Once", just do normal start
-    // If interval > 0, also enable tracking
-    if (selectedInterval > 0) {
-      isStartingTracking = true;
+    if (intervalEnabled) {
       try {
-        await trackingStore.startTracking(selectedInterval);
-      } catch (error) {
-        console.error('Failed to start tracking:', error);
-      } finally {
-        isStartingTracking = false;
+        await api.startTracking(intervalValue, intervalUnit);
+      } catch (e) {
+        console.error('Failed to start tracking:', e);
       }
     }
-    // Normal start happens via processing.start() in button
+    processing.start();
   }
 
-  async function handleSelectTrackingRun(runId: string) {
-    selectedTrackingRunId = runId;
+  async function handleOpenFolder() {
     try {
-      const result = await api.getRunResults(runId);
-      trackingRunResults = result.results || [];
-    } catch (error) {
-      console.error('Failed to load tracking run results:', error);
-      trackingRunResults = [];
+      await invoke('plugin:shell|open', { path: project.path });
+    } catch {
+      // fallback: ignore
     }
   }
 
-  const tableColumns = $derived.by(() => {
-    const baseColumns: Array<{ key: string; header: string; width?: string; type?: string }> = [
-      { key: 'url', header: 'URL', width: '300px', type: 'link' },
-      { key: 'status', header: 'Status', width: '100px', type: 'status' },
-      { key: 'timestamp', header: 'Time', width: '150px' },
-    ];
-
-    if (results.length > 0) {
-      const firstRow = results[0];
-      const knownKeys = new Set([
-        'url', 'status', 'info', 'timestamp', 'errorMessage', 'error_message',
-        'screenshot_path', 'platform', 'run_id', project.urlColumn
-      ]);
-      for (const key of Object.keys(firstRow)) {
-        if (!knownKeys.has(key)) {
-          baseColumns.push({ key, header: key, width: '150px' });
-        }
-      }
-    }
-    return baseColumns;
-  });
+  function handleRunClick(id: string) {
+    selectedRunId = selectedRunId === id ? null : id;
+  }
 </script>
 
-<div class={cn('space-y-4', className)}>
-  <!-- Header -->
-  <div class="flex items-center justify-between">
-    <div class="flex items-center gap-3">
-      <h2 class="text-xl font-semibold text-white m-0">{project.name}</h2>
-      <Badge variant={project.platform === 'youtube' ? 'error' : 'info'} size="sm">
-        {project.platform.toUpperCase()}
-      </Badge>
-      <span class="text-sm text-mcat-text-muted">{project.urlCount} URLs</span>
-    </div>
-    <div class="flex items-center gap-2">
-      <Button variant="secondary" size="sm" onclick={onaddurls}>
-        Add URLs
-      </Button>
-      <Button variant="ghost" size="sm" onclick={onclose}>
-        Close
-      </Button>
-    </div>
-  </div>
+<div class="flex flex-col min-h-screen">
+  <Toolbar
+    projectName={project.name}
+    platform={project.platform}
+    urlCount={project.urlCount}
+    onOpenFolder={handleOpenFolder}
+    onClose={onclose}
+  />
 
-  <!-- Progress + Controls -->
-  <div class="bg-mcat-card border border-mcat-border rounded-lg p-4">
-    <div class="flex flex-col gap-4">
-      <div class="w-full">
-        <SegmentedProgress
-          counts={processing.statusCounts}
-          total={processing.total || project.urlCount}
-          processed={processing.processed}
-          currentUrl={processing.currentUrl ?? undefined}
-          showLegend={true}
-        />
-      </div>
-      <div class="flex gap-2 items-center">
-        {#if processing.isIdle}
-          <Button
-            variant="primary"
-            size="sm"
-            onclick={() => {
-              handleStart();
-              processing.start();
-            }}
-            disabled={isStartingTracking}
-          >
-            Start
-          </Button>
-          <Select
-            bind:value={selectedInterval}
-            options={intervalOptions}
-            disabled={isStartingTracking}
-          />
-        {:else if processing.isProcessing}
-          <Button variant="secondary" size="sm" onclick={() => processing.pause()}>
-            Pause
-          </Button>
-          <Button variant="danger" size="sm" onclick={() => processing.cancel()}>
-            Cancel
-          </Button>
-        {:else if processing.isPaused}
-          <Button variant="primary" size="sm" onclick={() => processing.resume()}>
-            Resume
-          </Button>
-          <Button variant="danger" size="sm" onclick={() => processing.cancel()}>
-            Cancel
-          </Button>
-        {/if}
-      </div>
-    </div>
-  </div>
+  <Controls
+    {runState}
+    {intervalEnabled}
+    {intervalValue}
+    {intervalUnit}
+    {lastRunDuration}
+    onStart={handleStart}
+    onPause={() => processing.pause()}
+    onResume={() => processing.resume()}
+    onCancel={() => processing.cancel()}
+    onIntervalToggle={(v) => (intervalEnabled = v)}
+    onIntervalChange={(v, u) => { intervalValue = v; intervalUnit = u; }}
+  />
 
-  <!-- Tracking History -->
-  <div class="bg-mcat-card border border-mcat-border rounded-lg p-4">
-    <h3 class="text-sm font-medium mb-3">Tracking History</h3>
-    <TrackingHistory onSelectRun={handleSelectTrackingRun} />
-  </div>
+  <ProgressSection
+    total={processing.total || project.urlCount}
+    checked={processing.processed}
+    {statusCounts}
+  />
 
-  <!-- Results Table -->
-  <div class="bg-mcat-card border border-mcat-border rounded-lg p-4">
-    <div class="flex items-center justify-between mb-3">
-      <h3 class="text-sm font-medium text-mcat-text m-0">
-        {#if selectedTrackingRunId}
-          Results ({selectedTrackingRunId}) ({trackingRunResults.length})
-        {:else}
-          Results ({results.length})
-        {/if}
-      </h3>
-      {#if !selectedTrackingRunId && results.length > 0}
-        <code class="text-xs text-mcat-text-muted font-mono">
-          {project.combinedCsvPath}
-        </code>
-      {/if}
-    </div>
-    <DataTable
-      columns={tableColumns}
-      rows={selectedTrackingRunId ? trackingRunResults : results}
-      maxRows={100}
-      emptyMessage="No results yet. Start processing to check URLs."
-      class="max-h-[300px]"
-    />
-  </div>
+  <Timeline
+    runs={project.runs ?? []}
+    {currentRun}
+    {selectedRunId}
+    onRunClick={handleRunClick}
+  />
 
-  <!-- Console -->
-  <div class="bg-mcat-card border border-mcat-border rounded-lg p-4">
-    <ConsolePanel
-      {messages}
-      maxHeight="200px"
-    />
+  <div class="mt-auto">
+    <ConsolePanel {messages} />
   </div>
 </div>
-
-<style>
-  :global(.tracking-history select) {
-    max-width: 300px;
-  }
-</style>

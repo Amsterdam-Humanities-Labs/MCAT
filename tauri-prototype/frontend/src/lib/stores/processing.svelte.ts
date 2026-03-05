@@ -1,5 +1,4 @@
-import { type ProcessingState, IDLE_STATES, ACTIVE_STATES, PAUSED_STATES } from '../../types';
-import type { StatusCounts } from '../../types/results';
+import { type ProcessingState, type StatusCounts, IDLE_STATES, ACTIVE_STATES, PAUSED_STATES } from '../../types';
 import { api } from '../api/client';
 
 interface ProcessingStatus {
