@@ -9,7 +9,7 @@
 
   let { run }: Props = $props();
 
-  const timestamp = $derived(formatTimestamp(run.startedAt));
+  const timestamp = $derived(formatTimestamp(run.started_at));
 
   // Parse changes_summary keys like "live_to_removed" into display format
   function parseTransitions(summary: Record<string, number>): Array<{ label: string; count: number; color: string }> {
@@ -51,30 +51,30 @@
     }
   }
 
-  const transitions = $derived(parseTransitions(run.changesSummary || {}));
+  const transitions = $derived(parseTransitions(run.changes_summary || {}));
 </script>
 
 <div class="flex flex-col items-center text-center gap-0.5 mt-3 min-w-[120px]">
   <span class="text-text-secondary text-[14px]">{timestamp}</span>
 
-  {#if run.isBaseline}
+  {#if run.is_baseline}
     <span class="font-semibold text-text-primary">Initial</span>
-    <span class="text-text-secondary">{run.totalChecked.toLocaleString()} URLs</span>
-    {#if run.statusSummary}
+    <span class="text-text-secondary">{run.total_checked.toLocaleString()} URLs</span>
+    {#if run.status_summary}
       <div class="flex flex-col gap-0 text-[14px]">
-        {#if run.statusSummary.live > 0}
-          <span style="color: {colors.status.live}">{run.statusSummary.live} Live</span>
+        {#if run.status_summary.live > 0}
+          <span style="color: {colors.status.live}">{run.status_summary.live} Live</span>
         {/if}
-        {#if run.statusSummary.removed > 0}
-          <span style="color: {colors.status.removed}">{run.statusSummary.removed} Removed</span>
+        {#if run.status_summary.removed > 0}
+          <span style="color: {colors.status.removed}">{run.status_summary.removed} Removed</span>
         {/if}
-        {#if run.statusSummary.restricted > 0}
-          <span style="color: {colors.status.restricted}">{run.statusSummary.restricted} Restricted</span>
+        {#if run.status_summary.restricted > 0}
+          <span style="color: {colors.status.restricted}">{run.status_summary.restricted} Restricted</span>
         {/if}
       </div>
     {/if}
-  {:else if run.changesCount > 0}
-    <span class="font-semibold text-text-primary">{run.changesCount} changes</span>
+  {:else if run.changes_count > 0}
+    <span class="font-semibold text-text-primary">{run.changes_count} changes</span>
     <div class="flex flex-col gap-0 text-[14px]">
       {#each transitions as t}
         <span style="color: {t.color}">{t.label}</span>

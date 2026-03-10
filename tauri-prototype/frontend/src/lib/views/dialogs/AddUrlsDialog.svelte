@@ -43,7 +43,7 @@
   }
 
   function handleImport() {
-    if (csvPath && preview && preview.newUrls > 0) {
+    if (csvPath && preview && preview.new_urls > 0) {
       onimport?.(csvPath);
     }
   }
@@ -55,7 +55,7 @@
     onclose?.();
   }
 
-  const canImport = $derived(preview && preview.newUrls > 0 && !loading);
+  const canImport = $derived(preview && preview.new_urls > 0 && !loading);
 </script>
 
 <Dialog bind:open title="Add URLs" onclose={handleClose} class={className}>
@@ -83,27 +83,27 @@
         <div class="grid grid-cols-3 gap-4">
           <div>
             <span class="block text-xs text-text-muted mb-1">Total in File</span>
-            <span class="text-lg font-medium">{preview.totalInFile}</span>
+            <span class="text-lg font-medium">{preview.total_in_file}</span>
           </div>
           <div>
             <span class="block text-xs text-text-muted mb-1">New URLs</span>
-            <span class="text-lg font-medium text-status-live">{preview.newUrls}</span>
+            <span class="text-lg font-medium text-status-live">{preview.new_urls}</span>
           </div>
           <div>
             <span class="block text-xs text-text-muted mb-1">Duplicates</span>
-            <span class="text-lg font-medium text-text-muted">{preview.duplicatesSkipped}</span>
+            <span class="text-lg font-medium text-text-muted">{preview.duplicates_skipped}</span>
           </div>
         </div>
 
-        {#if preview.newUrls === 0}
+        {#if preview.new_urls === 0}
           <div class="p-2 bg-status-restricted/10 border border-status-restricted/30 rounded text-sm text-status-restricted">
             All URLs in this file already exist in the project.
           </div>
-        {:else if preview.sampleUrls.length > 0}
+        {:else if preview.sample_urls.length > 0}
           <div>
             <span class="block text-xs text-text-muted mb-2">Sample URLs to add:</span>
             <div class="space-y-1 max-h-32 overflow-auto">
-              {#each preview.sampleUrls.slice(0, 5) as url}
+              {#each preview.sample_urls.slice(0, 5) as url}
                 <div class="text-xs text-text-muted font-mono truncate" title={url}>
                   {url}
                 </div>
@@ -125,7 +125,7 @@
       disabled={!canImport}
       {loading}
     >
-      Import {preview?.newUrls ?? 0} URLs
+      Import {preview?.new_urls ?? 0} URLs
     </Button>
   {/snippet}
 </Dialog>

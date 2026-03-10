@@ -1,5 +1,5 @@
 export interface InterruptedRun {
-  runId: string;
+  run_id: string;
   processed: number;
   total: number;
   remaining: number;

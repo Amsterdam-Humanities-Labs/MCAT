@@ -3,6 +3,8 @@ import { projectStore } from '../stores/project.svelte';
 import { consoleStore } from '../stores/console.svelte';
 import { appStore } from '../stores/app.svelte';
 
+let consecutiveErrors = 0;
+
 let eventSource: EventSource | null = null;
 let reconnectTimeout: ReturnType<typeof setTimeout> | null = null;
 let baseUrl = '';
@@ -31,13 +33,23 @@ function connect() {
   eventSource = new EventSource(`${baseUrl}/events`);
 
   eventSource.onopen = () => {
+    if (consecutiveErrors > 0) {
+      consoleStore.success('Backend connection restored');
+    }
+    consecutiveErrors = 0;
     console.log('[SSE] Connected');
   };
 
   eventSource.onerror = () => {
-    console.log('[SSE] Connection error, reconnecting...');
+    consecutiveErrors++;
     eventSource?.close();
     eventSource = null;
+
+    if (consecutiveErrors === 1) {
+      consoleStore.warning('Lost connection to backend, reconnecting...');
+    } else if (consecutiveErrors % 5 === 0) {
+      consoleStore.error(`Backend unreachable (${consecutiveErrors} failed attempts)`);
+    }
 
     if (!reconnectTimeout) {
       reconnectTimeout = setTimeout(() => {

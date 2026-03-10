@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { FolderOpen, X } from 'phosphor-svelte';
+  import { FolderOpen } from 'phosphor-svelte';
   import ToolbarBadge from './ToolbarBadge.svelte';
 
   interface Props {

@@ -10,7 +10,7 @@
 
   let { run, isSelected, onClick }: Props = $props();
 
-  const isNoChange = $derived(!run.isBaseline && run.changesCount === 0);
+  const isNoChange = $derived(!run.is_baseline && run.changes_count === 0);
   const radius = $derived(isNoChange ? 5 : 7);
   const fillColor = $derived(isNoChange ? '#C4AD8A' : '#6B4C2A');
 </script>

@@ -7,8 +7,8 @@ interface ProcessingStatus {
   processed: number;
   action: string;
   error: string | null;
-  currentUrl: string | null;
-  statusCounts: StatusCounts;
+  current_url: string | null;
+  status_counts: StatusCounts;
 }
 
 const defaultStatusCounts: StatusCounts = {
@@ -26,8 +26,8 @@ function createProcessingStore() {
     processed: 0,
     action: '',
     error: null,
-    currentUrl: null,
-    statusCounts: { ...defaultStatusCounts },
+    current_url: null,
+    status_counts: { ...defaultStatusCounts },
   });
 
   let storeError = $state<string | null>(null);
@@ -48,11 +48,11 @@ function createProcessingStore() {
     get error() {
       return status.error;
     },
-    get currentUrl() {
-      return status.currentUrl;
+    get current_url() {
+      return status.current_url;
     },
     get statusCounts() {
-      return status.statusCounts;
+      return status.status_counts;
     },
     get storeError() {
       return storeError;
@@ -120,19 +120,19 @@ function createProcessingStore() {
       state?: string;
       total?: number;
       processed?: number;
-      statusCounts?: StatusCounts;
+      status_counts?: StatusCounts;
       action?: string;
       error?: string | null;
-      currentUrl?: string | null;
+      current_url?: string | null;
     }) {
       if (data.state !== undefined) status.state = data.state as ProcessingState;
       if (data.total !== undefined) status.total = data.total;
       if (data.processed !== undefined) status.processed = data.processed;
       if (data.action !== undefined) status.action = data.action;
       if (data.error !== undefined) status.error = data.error;
-      if (data.currentUrl !== undefined) status.currentUrl = data.currentUrl;
-      if (data.statusCounts) {
-        status.statusCounts = data.statusCounts;
+      if (data.current_url !== undefined) status.current_url = data.current_url;
+      if (data.status_counts) {
+        status.status_counts = data.status_counts;
       }
     },
   };

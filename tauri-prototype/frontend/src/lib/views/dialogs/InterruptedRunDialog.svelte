@@ -2,7 +2,7 @@
   import { Dialog, Button } from '$lib/components';
 
   interface InterruptedRun {
-    runId: string;
+    run_id: string;
     processed: number;
     total: number;
     remaining: number;
@@ -51,7 +51,7 @@
       <div class="grid grid-cols-2 gap-3 p-4 bg-bg-primary rounded">
         <div>
           <span class="block text-xs text-text-muted mb-1">Run ID</span>
-          <span class="font-mono text-sm">{run.runId}</span>
+          <span class="font-mono text-sm">{run.run_id}</span>
         </div>
         <div>
           <span class="block text-xs text-text-muted mb-1">Progress</span>

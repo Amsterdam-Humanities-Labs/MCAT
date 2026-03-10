@@ -1,11 +1,11 @@
 export interface CsvInfo {
   columns: string[];
-  rowCount: number;
+  row_count: number;
 }
 
 export interface ImportPreview {
-  totalInFile: number;
-  newUrls: number;
-  duplicatesSkipped: number;
-  sampleUrls: string[];
+  total_in_file: number;
+  new_urls: number;
+  duplicates_skipped: number;
+  sample_urls: string[];
 }

@@ -12,7 +12,7 @@
   }
 
   let {
-    open = false,
+    open = $bindable(false),
     title,
     class: className,
     onclose,

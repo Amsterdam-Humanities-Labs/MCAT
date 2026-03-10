@@ -37,12 +37,12 @@
     name: { value: '', rules: [rules.required('Project name is required')] },
     platform: { value: '', rules: [rules.selected('Please select a platform')] },
     location: { value: '', rules: [rules.required('Project location is required')] },
-    csvPath: { value: '', rules: [rules.required('Source CSV is required')] },
+    csv_path: { value: '', rules: [rules.required('Source CSV is required')] },
   });
 
   // Step 2 form
   const step2Form = new FormState({
-    urlColumn: { value: '', rules: [rules.selected('Please select the URL column')] },
+    url_column: { value: '', rules: [rules.selected('Please select the URL column')] },
   });
 
   const columnOptions = $derived(
@@ -50,7 +50,7 @@
   );
 
   async function handleCsvChange(path: string) {
-    step1Form.setValue('csvPath', path);
+    step1Form.setValue('csv_path', path);
     if (path) {
       await wizard.loadCsvColumns(path);
     }
@@ -76,7 +76,7 @@
     step2Form.touchAll();
 
     if (step1Form.valid && step2Form.valid) {
-      wizard.setUrlColumn(step2Form.getValue('urlColumn'));
+      wizard.setUrlColumn(step2Form.getValue('url_column'));
       oncomplete?.(wizard.getCreateData());
     }
   }
@@ -158,13 +158,13 @@
             />
           </FormField>
 
-          <FormField label="Source CSV" required hint="CSV file containing URLs to analyze" error={step1Form.fields.csvPath.error}>
+          <FormField label="Source CSV" required hint="CSV file containing URLs to analyze" error={step1Form.fields.csv_path.error}>
             <FilePickerInput
-              value={step1Form.fields.csvPath.value}
+              value={step1Form.fields.csv_path.value}
               onchange={handleCsvChange}
               filters={[{ name: 'CSV', extensions: ['csv'] }]}
               placeholder="Select CSV file..."
-              error={step1Form.fields.csvPath.error}
+              error={step1Form.fields.csv_path.error}
             />
           </FormField>
         </div>
@@ -175,21 +175,21 @@
             label="URL Column"
             required
             hint="Column containing the URLs to analyze"
-            error={step2Form.fields.urlColumn.error}
+            error={step2Form.fields.url_column.error}
           >
             <Select
               options={columnOptions}
-              value={step2Form.fields.urlColumn.value}
-              onchange={(val) => step2Form.setValue('urlColumn', val)}
+              value={step2Form.fields.url_column.value}
+              onchange={(val) => step2Form.setValue('url_column', val)}
               placeholder="Select URL column..."
               disabled={wizard.columns.length === 0}
-              error={step2Form.fields.urlColumn.error}
+              error={step2Form.fields.url_column.error}
             />
           </FormField>
 
           {#if wizard.columns.length > 0}
-            {@const availableColumns = columnOptions.filter((o) => o.value !== step2Form.fields.urlColumn.value)}
-            {@const allSelected = availableColumns.length > 0 && wizard.preserveColumns.length === availableColumns.length}
+            {@const availableColumns = columnOptions.filter((o) => o.value !== step2Form.fields.url_column.value)}
+            {@const allSelected = availableColumns.length > 0 && wizard.preserve_columns.length === availableColumns.length}
             <FormField
               label="Preserve Columns"
               hint="Additional columns to keep in results (optional)"
@@ -211,7 +211,7 @@
               {/if}
               <CheckboxGroup
                 options={availableColumns}
-                selected={wizard.preserveColumns}
+                selected={wizard.preserve_columns}
                 onchange={(selected) => wizard.setPreserveColumns(selected)}
                 layout="vertical"
               />

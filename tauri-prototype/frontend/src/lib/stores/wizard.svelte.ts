@@ -6,10 +6,10 @@ export interface WizardState {
   name: string;
   platform: Platform;
   location: string;
-  csvPath: string;
+  csv_path: string;
   columns: string[];
-  urlColumn: string;
-  preserveColumns: string[];
+  url_column: string;
+  preserve_columns: string[];
   error: string | null;
   loading: boolean;
 }
@@ -20,10 +20,10 @@ function createWizardStore() {
     name: '',
     platform: 'youtube',
     location: '',
-    csvPath: '',
+    csv_path: '',
     columns: [],
-    urlColumn: '',
-    preserveColumns: [],
+    url_column: '',
+    preserve_columns: [],
     error: null,
     loading: false,
   };
@@ -43,17 +43,17 @@ function createWizardStore() {
     get location() {
       return state.location;
     },
-    get csvPath() {
-      return state.csvPath;
+    get csv_path() {
+      return state.csv_path;
     },
     get columns() {
       return state.columns;
     },
-    get urlColumn() {
-      return state.urlColumn;
+    get url_column() {
+      return state.url_column;
     },
-    get preserveColumns() {
-      return state.preserveColumns;
+    get preserve_columns() {
+      return state.preserve_columns;
     },
     get error() {
       return state.error;
@@ -78,16 +78,16 @@ function createWizardStore() {
       state.location = location;
     },
 
-    setCsvPath(csvPath: string) {
-      state.csvPath = csvPath;
+    setCsvPath(path: string) {
+      state.csv_path = path;
     },
 
     setUrlColumn(column: string) {
-      state.urlColumn = column;
+      state.url_column = column;
     },
 
     setPreserveColumns(columns: string[]) {
-      state.preserveColumns = columns;
+      state.preserve_columns = columns;
     },
 
     setError(error: string | null) {
@@ -101,14 +101,14 @@ function createWizardStore() {
       try {
         const info = await api.loadCsv(path);
         state.columns = info.columns;
-        state.csvPath = path;
+        state.csv_path = path;
 
         // Auto-detect URL column
         const detection = await api.detectUrlColumn(info.columns);
         if (detection.recommended) {
-          state.urlColumn = detection.recommended;
+          state.url_column = detection.recommended;
         } else if (detection.candidates.length > 0) {
-          state.urlColumn = detection.candidates[0];
+          state.url_column = detection.candidates[0];
         }
       } catch (e) {
         state.error = `Failed to load CSV: ${e}`;
@@ -122,14 +122,14 @@ function createWizardStore() {
         state.name.trim() !== '' &&
         state.platform !== null &&
         state.location.trim() !== '' &&
-        state.csvPath.trim() !== ''
+        state.csv_path.trim() !== ''
       );
     },
 
     canCreate() {
       return (
         this.canProceedToStep2() &&
-        state.urlColumn.trim() !== ''
+        state.url_column.trim() !== ''
       );
     },
 
@@ -142,9 +142,9 @@ function createWizardStore() {
         name: state.name,
         platform: state.platform,
         location: state.location,
-        csvPath: state.csvPath,
-        urlColumn: state.urlColumn,
-        preserveColumns: state.preserveColumns,
+        csv_path: state.csv_path,
+        url_column: state.url_column,
+        preserve_columns: state.preserve_columns,
       };
     },
   };

@@ -25,7 +25,7 @@
   const completedRuns = $derived(
     runs
       .filter((r) => r.status === 'completed')
-      .sort((a, b) => new Date(a.startedAt).getTime() - new Date(b.startedAt).getTime())
+      .sort((a, b) => new Date(a.started_at).getTime() - new Date(b.started_at).getTime())
   );
 
   const dotCount = $derived(completedRuns.length + (currentRun ? 1 : 0));
@@ -61,7 +61,7 @@
 
         <!-- Dots -->
         <div class="relative flex items-start gap-0 px-8" style="top: 12px;">
-          {#each completedRuns as run, i (run.id)}
+          {#each completedRuns as run (run.id)}
             <div style="min-width: {DOT_GAP}px; flex-shrink: 0;">
               <TimelineDot
                 {run}

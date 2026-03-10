@@ -1,4 +1,4 @@
-import type { Project, Run, CreateProjectRequest } from '../../types';
+import type { Project, CreateProjectRequest } from '../../types';
 import { api } from '../api/client';
 
 function createProjectStore() {
@@ -10,7 +10,7 @@ function createProjectStore() {
     if (!project?.runs) return [];
     return [...project.runs]
       .filter((r) => r.status === 'completed')
-      .sort((a, b) => new Date(a.startedAt).getTime() - new Date(b.startedAt).getTime());
+      .sort((a, b) => new Date(a.started_at).getTime() - new Date(b.started_at).getTime());
   });
 
   const latestRun = $derived.by(() => {
@@ -19,7 +19,7 @@ function createProjectStore() {
   });
 
   const baselineRun = $derived.by(() => {
-    return sortedRuns.find((r) => r.isBaseline) ?? null;
+    return sortedRuns.find((r) => r.is_baseline) ?? null;
   });
 
   return {

@@ -53,8 +53,8 @@
         name: data.name,
         platform: data.platform,
         location: data.location,
-        csvPath: data.csvPath,
-        urlColumn: data.urlColumn,
+        csv_path: data.csv_path,
+        url_column: data.url_column,
       });
       if (success) {
         consoleStore.success('Project created successfully');
@@ -83,8 +83,8 @@
     const run = dialogsStore.interruptedRun;
     if (!run) return;
     try {
-      await api.resumeRun(run.runId);
-      consoleStore.info(`Resuming run ${run.runId}`);
+      await api.resumeRun(run.run_id);
+      consoleStore.info(`Resuming run ${run.run_id}`);
       dialogsStore.closeInterruptedRun();
     } catch (e) {
       appStore.setGlobalError(String(e));
@@ -95,8 +95,8 @@
     const run = dialogsStore.interruptedRun;
     if (!run) return;
     try {
-      await api.abandonRun(run.runId);
-      consoleStore.warning(`Abandoned run ${run.runId}`);
+      await api.abandonRun(run.run_id);
+      consoleStore.warning(`Abandoned run ${run.run_id}`);
       dialogsStore.closeInterruptedRun();
     } catch (e) {
       appStore.setGlobalError(String(e));

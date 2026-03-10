@@ -18,9 +18,9 @@
   let { project, processing, messages, onclose }: Props = $props();
 
   let selectedRunId = $state<string | null>(null);
-  let intervalEnabled = $state(project.tracking?.enabled ?? false);
-  let intervalValue = $state(project.tracking?.intervalValue ?? 30);
-  let intervalUnit = $state<'minutes' | 'hours' | 'days'>(project.tracking?.intervalUnit ?? 'minutes');
+  let intervalEnabled = $derived(project.tracking?.enabled ?? false);
+  let intervalValue = $derived(project.tracking?.interval_value ?? 30);
+  let intervalUnit = $derived(project.tracking?.interval_unit ?? 'minutes') as 'minutes' | 'hours' | 'days';
 
   // Derive run state from processing store
   const runState = $derived.by((): 'idle' | 'running' | 'paused' => {
@@ -44,7 +44,7 @@
 
   const lastRunDuration = $derived.by(() => {
     const latest = projectStore.latestRun;
-    return latest?.durationSeconds ?? null;
+    return latest?.duration_seconds ?? null;
   });
 
   const currentRun = $derived.by(() => {
@@ -83,7 +83,7 @@
   <Toolbar
     projectName={project.name}
     platform={project.platform}
-    urlCount={project.urlCount}
+    urlCount={project.url_count}
     onOpenFolder={handleOpenFolder}
     onClose={onclose}
   />
@@ -103,7 +103,7 @@
   />
 
   <ProgressSection
-    total={processing.total || project.urlCount}
+    total={processing.total || project.url_count}
     checked={processing.processed}
     {statusCounts}
   />

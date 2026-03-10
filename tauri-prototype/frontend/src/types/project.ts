@@ -15,25 +15,25 @@ export interface RunChangesSummary {
 
 export interface Run {
   id: string;
-  startedAt: string;
-  completedAt: string | null;
+  started_at: string;
+  completed_at: string | null;
   status: RunStatus;
-  screenshotsEnabled: boolean;
-  runType: string;
-  isBaseline: boolean;
-  durationSeconds: number;
-  totalChecked: number;
-  changesCount: number;
-  changesSummary: RunChangesSummary;
-  statusSummary: RunStatusSummary;
+  screenshots_enabled: boolean;
+  run_type: string;
+  is_baseline: boolean;
+  duration_seconds: number;
+  total_checked: number;
+  changes_count: number;
+  changes_summary: RunChangesSummary;
+  status_summary: RunStatusSummary;
 }
 
 export interface TrackingConfig {
   enabled: boolean;
-  intervalValue: number;
-  intervalUnit: 'minutes' | 'hours' | 'days';
-  lastCheck: string | null;
-  nextCheck: string | null;
+  interval_value: number;
+  interval_unit: 'minutes' | 'hours' | 'days';
+  last_check: string | null;
+  next_check: string | null;
 }
 
 export interface Project {
@@ -41,8 +41,8 @@ export interface Project {
   platform: Platform;
   path: string;
   mtime?: number;
-  urlCount: number;
-  urlColumn: string;
+  url_count: number;
+  url_column: string;
   runs: Run[];
   tracking: TrackingConfig;
 }
@@ -51,7 +51,7 @@ export interface CreateProjectRequest {
   name: string;
   platform: Platform;
   location: string;
-  csvPath: string;
-  urlColumn: string;
-  preserveColumns?: string[];
+  csv_path: string;
+  url_column: string;
+  preserve_columns?: string[];
 }
