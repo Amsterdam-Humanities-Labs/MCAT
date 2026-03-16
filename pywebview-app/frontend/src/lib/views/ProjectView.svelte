@@ -1,0 +1,120 @@
+<script lang="ts">
+  import { Toolbar, Controls, ProgressSection, ConsolePanel } from '$lib/components';
+  import Timeline from '$lib/components/Timeline.svelte';
+  import { projectStore } from '$lib/stores/project.svelte';
+  import { api } from '$lib/api/client';
+  import type { Project, RunStatusSummary } from '$types/project';
+  import type { LogMessage } from '$types/console';
+  import type { processingStore as ProcessingStoreType } from '$lib/stores/processing.svelte';
+
+  interface Props {
+    project: Project;
+    processing: typeof ProcessingStoreType;
+    messages: LogMessage[];
+    onclose?: () => void;
+  }
+
+  let { project, processing, messages, onclose }: Props = $props();
+
+  let selectedRunId = $state<string | null>(null);
+  let intervalEnabled = $derived(project.tracking?.enabled ?? false);
+  let intervalValue = $derived(project.tracking?.interval_value ?? 30);
+  let intervalUnit = $derived(project.tracking?.interval_unit ?? 'minutes') as 'minutes' | 'hours' | 'days';
+
+  // Derive run state from processing store
+  const runState = $derived.by((): 'idle' | 'running' | 'paused' => {
+    if (processing.isPaused) return 'paused';
+    if (processing.isProcessing) return 'running';
+    return 'idle';
+  });
+
+  // Status counts from processing (live SSE) or last run
+  const statusCounts = $derived.by((): RunStatusSummary => {
+    if (processing.statusCounts) {
+      return {
+        live: processing.statusCounts.live ?? 0,
+        removed: processing.statusCounts.removed ?? 0,
+        restricted: processing.statusCounts.restricted ?? 0,
+        error: processing.statusCounts.error ?? 0,
+      };
+    }
+    return { live: 0, removed: 0, restricted: 0, error: 0 };
+  });
+
+  const lastRunDuration = $derived.by(() => {
+    const latest = projectStore.latestRun;
+    return latest?.duration_seconds ?? null;
+  });
+
+  const currentRun = $derived.by(() => {
+    if (runState === 'idle') return null;
+    return {
+      timestamp: new Date().toISOString(),
+      progressPercent: processing.progress ? Math.round(processing.progress) : 0,
+    };
+  });
+
+  async function handleStart() {
+    if (intervalEnabled) {
+      try {
+        await api.startTracking(intervalValue, intervalUnit);
+      } catch (e) {
+        console.error('Failed to start tracking:', e);
+      }
+    }
+    processing.start();
+  }
+
+  async function handleOpenFolder() {
+    try {
+      await api.openExternal(project.path);
+    } catch {
+      // fallback: ignore
+    }
+  }
+
+  function handleRunClick(id: string) {
+    selectedRunId = selectedRunId === id ? null : id;
+  }
+</script>
+
+<div class="flex flex-col min-h-screen">
+  <Toolbar
+    projectName={project.name}
+    platform={project.platform}
+    urlCount={project.url_count}
+    onOpenFolder={handleOpenFolder}
+    onClose={onclose}
+  />
+
+  <Controls
+    {runState}
+    {intervalEnabled}
+    {intervalValue}
+    {intervalUnit}
+    {lastRunDuration}
+    onStart={handleStart}
+    onPause={() => processing.pause()}
+    onResume={() => processing.resume()}
+    onCancel={() => processing.cancel()}
+    onIntervalToggle={(v) => (intervalEnabled = v)}
+    onIntervalChange={(v, u) => { intervalValue = v; intervalUnit = u; }}
+  />
+
+  <ProgressSection
+    total={processing.total || project.url_count}
+    checked={processing.processed}
+    {statusCounts}
+  />
+
+  <Timeline
+    runs={project.runs ?? []}
+    {currentRun}
+    {selectedRunId}
+    onRunClick={handleRunClick}
+  />
+
+  <div class="mt-auto">
+    <ConsolePanel {messages} />
+  </div>
+</div>

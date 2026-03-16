@@ -1,0 +1,11 @@
+{
+  "name": "mcat",
+  "private": true,
+  "scripts": {
+    "dev": "cd backend && venv/bin/python mcat/app.py",
+    "build": "pnpm --filter frontend build",
+    "check": "pnpm --filter frontend check",
+    "clean": "rm -rf frontend/dist backend/.port",
+    "start": "cd backend && venv/bin/python mcat/app.py"
+  }
+}

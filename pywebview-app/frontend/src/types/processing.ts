@@ -1,0 +1,44 @@
+export type ProcessingState =
+  | 'idle'
+  | 'processing'
+  | 'paused'
+  | 'completed'
+  | 'cancelled'
+  | 'error';
+
+// States where a new processing run can be started
+export const IDLE_STATES: ProcessingState[] = ['idle', 'completed', 'cancelled', 'error'];
+
+// States where processing is actively running
+export const ACTIVE_STATES: ProcessingState[] = ['processing'];
+
+// States where processing is paused
+export const PAUSED_STATES: ProcessingState[] = ['paused'];
+
+export type ContentStatus = 'live' | 'removed' | 'restricted' | 'error' | 'pending';
+
+export interface StatusCounts {
+  live: number;
+  removed: number;
+  restricted: number;
+  error: number;
+  pending: number;
+}
+
+export interface ProcessingStats {
+  [key: string]: number;
+}
+
+export interface ProcessingStatus {
+  state: ProcessingState;
+  total: number;
+  processed: number;
+  stats: ProcessingStats;
+  action: string;
+  error: string | null;
+}
+
+export interface StartProcessingRequest {
+  urls?: string[];
+  screenshots?: boolean;
+}
