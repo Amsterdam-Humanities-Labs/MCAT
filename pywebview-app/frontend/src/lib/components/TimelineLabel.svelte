@@ -57,8 +57,10 @@
 <div class="flex flex-col items-center text-center gap-0.5 mt-3 min-w-[120px]">
   <span class="text-text-secondary text-[14px]">{timestamp}</span>
 
-  {#if run.is_baseline}
-    <span class="font-semibold text-text-primary">Initial</span>
+  {#if run.status === 'abandoned'}
+    <span class="text-text-muted">Incomplete</span>
+  {:else if run.is_baseline}
+    <span class="font-semibold text-text-primary">Baseline</span>
     <span class="text-text-secondary">{run.total_checked.toLocaleString()} URLs</span>
     {#if run.status_summary}
       <div class="flex flex-col gap-0 text-[14px]">

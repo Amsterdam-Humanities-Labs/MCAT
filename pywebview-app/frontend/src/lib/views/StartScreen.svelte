@@ -1,7 +1,7 @@
 <script lang="ts">
   import { cn } from '$lib/utils';
   import { Button } from '$lib/components';
-  import { FilePlus, FolderOpen, FileText } from 'phosphor-svelte';
+  import { FileText } from 'phosphor-svelte';
 
   interface Props {
     class?: string;
@@ -31,11 +31,9 @@
 
     <div class="flex flex-col gap-3">
       <Button variant="primary" size="lg" class="w-full" onclick={onnewproject}>
-        <FilePlus size={20} class="mr-2" />
         New Project
       </Button>
       <Button variant="secondary" size="lg" class="w-full" onclick={onopenproject}>
-        <FolderOpen size={20} class="mr-2" />
         Open Project
       </Button>
     </div>

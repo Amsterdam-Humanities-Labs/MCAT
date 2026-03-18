@@ -12,7 +12,6 @@
     onStart?: () => void;
     onPause?: () => void;
     onResume?: () => void;
-    onCancel?: () => void;
     onIntervalToggle?: (enabled: boolean) => void;
     onIntervalChange?: (value: number, unit: 'minutes' | 'hours' | 'days') => void;
   }
@@ -26,14 +25,13 @@
     onStart,
     onPause,
     onResume,
-    onCancel,
     onIntervalToggle,
     onIntervalChange,
   }: Props = $props();
 </script>
 
 <div class="h-14 px-4 flex items-center gap-4 bg-bg-controls border-b border-border-mid">
-  <ControlsStartButton {runState} {onStart} {onPause} {onResume} {onCancel} />
+  <ControlsStartButton {runState} {onStart} {onPause} {onResume} />
   <ControlsInterval
     enabled={intervalEnabled}
     value={intervalValue}

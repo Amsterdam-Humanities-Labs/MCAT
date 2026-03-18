@@ -101,10 +101,6 @@ function createConsoleStore() {
       add('Processing resumed', 'info', 'processing');
     },
 
-    processingCancelled() {
-      add('Processing cancelled', 'info', 'processing');
-    },
-
     addBackendLog(log: { id: number; text: string; level: LogLevel; timestamp: string }) {
       if (log.id > lastBackendLogId) {
         add(log.text, log.level, 'backend');

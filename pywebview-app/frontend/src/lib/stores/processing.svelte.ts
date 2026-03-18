@@ -102,17 +102,18 @@ function createProcessingStore() {
       }
     },
 
-    async cancel() {
-      try {
-        const response = await api.cancelProcessing();
-        return response.success;
-      } catch (e) {
-        storeError = String(e);
-        return false;
-      }
+    clearError() {
+      storeError = null;
     },
 
-    clearError() {
+    reset() {
+      status.state = 'idle';
+      status.total = 0;
+      status.processed = 0;
+      status.action = '';
+      status.error = null;
+      status.current_url = null;
+      status.status_counts = { ...defaultStatusCounts };
       storeError = null;
     },
 

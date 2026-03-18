@@ -21,7 +21,6 @@ class RunService:
 
     Responsibilities:
     - Start new runs (create folder, update project.json)
-    - Resume interrupted runs (detect processed URLs, continue)
     - Complete/abandon run lifecycle
     - Generate combined.csv from completed runs
     """
@@ -83,38 +82,6 @@ class RunService:
 
         return run
 
-    def resume_run(
-        self,
-        project_state: ProjectState,
-        run: RunConfig
-    ) -> tuple[RunConfig, list[str]]:
-        """
-        Resume an interrupted run.
-
-        Detects which URLs were already processed and returns remaining URLs.
-
-        Args:
-            project_state: Current project state
-            run: The interrupted RunConfig to resume
-
-        Returns:
-            Tuple of (RunConfig, remaining_urls)
-        """
-        # Get processed URLs from partial results
-        processed_urls = self.get_processed_urls(project_state, run)
-
-        # Get all URLs from project
-        all_urls_df = pl.read_csv(project_state.urls_csv_path)
-        all_urls = set(all_urls_df.select(pl.col(project_state.url_column).drop_nulls().cast(pl.Utf8)).to_series().to_list())
-
-        # Calculate remaining
-        remaining_urls = list(all_urls - processed_urls)
-
-        # Set as current run
-        project_state.current_run = run
-
-        return run, remaining_urls
-
     def complete_run(self, project_state: ProjectState, run: RunConfig) -> None:
         """
         Mark a run as completed.
@@ -171,78 +138,6 @@ class RunService:
 
         # Save project
         project_state.save()
-
-    def get_processed_urls(
-        self,
-        project_state: ProjectState,
-        run: RunConfig
-    ) -> set[str]:
-        """
-        Get URLs that were already processed in a run.
-
-        Args:
-            project_state: Current project state
-            run: The RunConfig to check
-
-        Returns:
-            Set of processed URLs
-        """
-        results_path = project_state.get_run_results_path(run.id)
-
-        if not results_path.exists():
-            return set()
-
-        try:
-            df = pl.read_csv(results_path)
-            url_column = project_state.url_column
-            if url_column in df.columns:
-                return set(df.select(pl.col(url_column).drop_nulls().cast(pl.Utf8)).to_series().to_list())
-        except Exception:
-            pass
-
-        return set()
-
-    def get_processed_count(
-        self,
-        project_state: ProjectState,
-        run: RunConfig
-    ) -> int:
-        """
-        Get count of processed URLs in a run.
-
-        Args:
-            project_state: Current project state
-            run: The RunConfig to check
-
-        Returns:
-            Number of processed URLs
-        """
-        return len(self.get_processed_urls(project_state, run))
-
-    def get_remaining_urls(
-        self,
-        project_state: ProjectState,
-        run: RunConfig
-    ) -> list[str]:
-        """
-        Get URLs that still need to be processed in a run.
-
-        Args:
-            project_state: Current project state
-            run: The RunConfig to check
-
-        Returns:
-            List of remaining URLs
-        """
-        # Get all URLs
-        all_urls_df = pl.read_csv(project_state.urls_csv_path)
-        all_urls = set(all_urls_df.select(pl.col(project_state.url_column).drop_nulls().cast(pl.Utf8)).to_series().to_list())
-
-        # Get processed URLs
-        processed_urls = self.get_processed_urls(project_state, run)
-
-        # Return remaining
-        return list(all_urls - processed_urls)
 
     def _compute_status_summary(
         self,

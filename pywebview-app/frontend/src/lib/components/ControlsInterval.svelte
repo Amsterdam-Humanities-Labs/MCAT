@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { Checkbox, Select, TimeSelector } from '$lib/components';
+
   interface Props {
     enabled: boolean;
     value: number;
@@ -9,43 +11,45 @@
 
   let { enabled, value, unit, onToggle, onChange }: Props = $props();
 
-  function handleValueChange(e: Event) {
-    const v = parseInt((e.target as HTMLInputElement).value) || 1;
-    onChange?.(v, unit);
-  }
+  const unitOptions = [
+    { value: 'minutes', label: 'minutes' },
+    { value: 'hours', label: 'hours' },
+    { value: 'days', label: 'days' },
+  ];
 
-  function handleUnitChange(e: Event) {
-    const u = (e.target as HTMLSelectElement).value as 'minutes' | 'hours' | 'days';
-    onChange?.(value, u);
+  const minValues: Record<string, number> = {
+    minutes: 5,
+    hours: 1,
+    days: 1,
+  };
+
+  const currentMin = $derived(minValues[unit] ?? 1);
+
+  function handleUnitChange(newUnit: string) {
+    const typedUnit = newUnit as 'minutes' | 'hours' | 'days';
+    const newMin = minValues[typedUnit] ?? 1;
+    const clamped = Math.max(newMin, value);
+    onChange?.(clamped, typedUnit);
   }
 </script>
 
 <div class="flex items-center gap-2">
-  <label class="flex items-center gap-2 cursor-pointer select-none">
-    <input
-      type="checkbox"
-      checked={enabled}
-      onchange={() => onToggle?.(!enabled)}
-      class="w-4 h-4 accent-accent-brown cursor-pointer"
-    />
-    <span class="text-text-body">Repeat every</span>
-  </label>
-  <input
-    type="number"
-    min="1"
-    {value}
-    disabled={!enabled}
-    onchange={handleValueChange}
-    class="w-16 px-2 py-1 rounded border border-border-input bg-bg-primary text-text-body text-center disabled:opacity-50 disabled:cursor-not-allowed"
+  <Checkbox
+    checked={enabled}
+    label="Repeat every"
+    size="sm"
+    onchange={(checked) => onToggle?.(checked)}
   />
-  <select
+  <TimeSelector
+    {value}
+    min={currentMin}
+    disabled={!enabled}
+    onchange={(v) => onChange?.(v, unit)}
+  />
+  <Select
+    options={unitOptions}
     value={unit}
     disabled={!enabled}
     onchange={handleUnitChange}
-    class="px-2 py-1 rounded border border-border-input bg-bg-primary text-text-body disabled:opacity-50 disabled:cursor-not-allowed"
-  >
-    <option value="minutes">minutes</option>
-    <option value="hours">hours</option>
-    <option value="days">days</option>
-  </select>
+  />
 </div>

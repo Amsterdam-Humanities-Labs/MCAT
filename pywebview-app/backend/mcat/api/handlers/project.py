@@ -60,6 +60,12 @@ def open_project(body: dict) -> dict:
     if path.name == "project.json":
         path = path.parent
     project = ctx.project_service.open_project(path)
+
+    # Auto-abandon any interrupted runs
+    interrupted = project.config.get_interrupted_run()
+    if interrupted:
+        ctx.run_service.abandon_run(project, interrupted)
+
     ctx.set_project(project)
     _publish_project()
     return {"success": True, "name": project.name}

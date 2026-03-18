@@ -63,7 +63,7 @@
     <span class={selectedOption ? '' : 'text-text-muted'}>
       {selectedOption?.label ?? placeholder}
     </span>
-    <CaretDown size={16} class="text-text-muted transition-transform {select.trigger['aria-expanded'] ? 'rotate-180' : ''}" />
+    <CaretDown size={16} weight="bold" class="text-text-muted {select.trigger['aria-expanded'] ? 'rotate-180' : ''}" />
   </button>
 
   <div
@@ -74,10 +74,10 @@
       <div
         {...select.getOption(opt.value, opt.label)}
         class={cn(
-          'px-3 py-2 cursor-pointer text-text-body',
-          'hover:bg-border-light',
-          'data-[highlighted]:bg-bg-controls',
-          select.isSelected(opt.value) && 'bg-accent-brown text-white',
+          'px-3 py-2 cursor-pointer',
+          select.isSelected(opt.value)
+            ? 'bg-accent-brown text-white hover:bg-hover-active'
+            : 'text-text-body hover:bg-hover',
           opt.disabled && 'opacity-50 cursor-not-allowed pointer-events-none'
         )}
       >

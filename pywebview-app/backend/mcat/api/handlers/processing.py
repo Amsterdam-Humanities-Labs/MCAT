@@ -162,15 +162,3 @@ def resume(body: dict) -> dict:
     if success:
         log_buffer.info("Processing resumed")
     return {"success": success}
-
-
-def cancel(body: dict) -> dict:
-    """Cancel processing."""
-    ctx = app_context
-    if not ctx.processing_service:
-        raise ValueError("No processing service")
-
-    success = ctx.processing_service.cancel_processing()
-    if success:
-        log_buffer.info("Processing cancelled")
-    return {"success": success}

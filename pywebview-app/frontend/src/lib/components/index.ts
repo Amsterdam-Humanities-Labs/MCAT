@@ -8,10 +8,10 @@ export { default as Input } from './Input.svelte';
 export { default as Progress } from './Progress.svelte';
 export { default as Select } from './Select.svelte';
 export { default as Tabs } from './Tabs.svelte';
+export { default as TimeSelector } from './TimeSelector.svelte';
 export { default as Tooltip } from './Tooltip.svelte';
 
 // Form Components
-export { default as CheckboxGroup } from './CheckboxGroup.svelte';
 export { default as FilePickerInput } from './FilePickerInput.svelte';
 export { default as FolderPickerInput } from './FolderPickerInput.svelte';
 export { default as FormField } from './FormField.svelte';
@@ -26,7 +26,7 @@ export { default as StatusBadge } from './StatusBadge.svelte';
 
 // Layout Components
 export { default as Toolbar } from './Toolbar.svelte';
-export { default as ToolbarBadge } from './ToolbarBadge.svelte';
+
 export { default as Controls } from './Controls.svelte';
 export { default as ControlsStartButton } from './ControlsStartButton.svelte';
 export { default as ControlsInterval } from './ControlsInterval.svelte';

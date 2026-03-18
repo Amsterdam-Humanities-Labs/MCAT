@@ -2,7 +2,6 @@ import type { Platform } from '../../types';
 import { api } from '../api/client';
 
 export interface WizardState {
-  step: 1 | 2;
   name: string;
   platform: Platform;
   location: string;
@@ -15,7 +14,6 @@ export interface WizardState {
 
 function createWizardStore() {
   const defaultState: WizardState = {
-    step: 1,
     name: '',
     platform: 'youtube',
     location: '',
@@ -29,9 +27,6 @@ function createWizardStore() {
   let state = $state<WizardState>({ ...defaultState });
 
   return {
-    get step() {
-      return state.step;
-    },
     get name() {
       return state.name;
     },
@@ -55,10 +50,6 @@ function createWizardStore() {
     },
     get loading() {
       return state.loading;
-    },
-
-    setStep(step: 1 | 2) {
-      state.step = step;
     },
 
     setName(name: string) {
@@ -108,18 +99,12 @@ function createWizardStore() {
       }
     },
 
-    canProceedToStep2() {
+    canCreate() {
       return (
         state.name.trim() !== '' &&
         state.platform !== null &&
         state.location.trim() !== '' &&
-        state.csv_path.trim() !== ''
-      );
-    },
-
-    canCreate() {
-      return (
-        this.canProceedToStep2() &&
+        state.csv_path.trim() !== '' &&
         state.url_column.trim() !== ''
       );
     },

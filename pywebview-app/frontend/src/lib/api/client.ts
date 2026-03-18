@@ -6,13 +6,6 @@ import type {
   ImportPreview,
 } from '../../types';
 
-interface InterruptedRun {
-  run_id: string;
-  processed: number;
-  total: number;
-  remaining: number;
-}
-
 let backendUrl = '';
 
 export function setBackendUrl(url: string) {
@@ -73,17 +66,6 @@ export const api = {
     callBackend<{ success: boolean }>('/process/pause', 'POST'),
   resumeProcessing: () =>
     callBackend<{ success: boolean }>('/process/resume', 'POST'),
-  cancelProcessing: () =>
-    callBackend<{ success: boolean }>('/process/cancel', 'POST'),
-
-  // Runs
-  resumeRun: (run_id: string) =>
-    callBackend<{ success: boolean; remaining_urls: number }>('/run/resume', 'POST', { run_id }),
-  abandonRun: (run_id: string) =>
-    callBackend<{ success: boolean }>('/run/abandon', 'POST', { run_id }),
-  getInterruptedRun: () =>
-    callBackend<{ has_interrupted: boolean; run?: InterruptedRun }>('/run/interrupted'),
-
   // CSV Operations
   loadCsv: (path: string) =>
     callBackend<CsvInfo>('/csv/load', 'POST', { path }),

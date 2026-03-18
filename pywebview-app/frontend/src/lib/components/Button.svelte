@@ -31,15 +31,15 @@
     primary:
       'bg-accent-brown hover:bg-accent-brown/90 text-white focus:ring-accent-brown',
     secondary:
-      'bg-bg-controls hover:bg-border-light text-text-body border border-border-mid focus:ring-border-mid',
+      'bg-transparent hover:bg-accent-brown/10 text-accent-brown border border-accent-brown focus:ring-accent-brown',
     danger:
-      'bg-status-removed hover:bg-status-removed/90 text-white focus:ring-status-removed',
+      'bg-transparent hover:bg-status-removed/10 text-status-removed border border-status-removed focus:ring-status-removed',
     ghost:
       'bg-transparent hover:bg-bg-controls text-text-body focus:ring-border-mid',
   };
 
   const sizes = {
-    sm: 'px-2 py-1 text-sm',
+    sm: 'px-3 py-2 text-sm',
     md: 'px-4 py-2 text-sm',
     lg: 'px-6 py-3 text-base',
   };

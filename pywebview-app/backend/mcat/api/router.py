@@ -7,7 +7,6 @@ def get_routes():
     """Return GET route mappings."""
     return {
         "/health": lambda _path: health.get_health(),
-        "/run/interrupted": lambda _path: run.get_interrupted(),
     }
 
 
@@ -22,8 +21,6 @@ def post_routes():
         "/process/start": processing.start,
         "/process/pause": processing.pause,
         "/process/resume": processing.resume,
-        "/process/cancel": processing.cancel,
-        "/run/resume": run.resume_run,
         "/run/abandon": run.abandon,
         "/csv/load": csv.load,
         "/csv/detect-url-column": csv.detect_url_column,

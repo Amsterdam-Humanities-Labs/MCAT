@@ -249,7 +249,7 @@ class BatchProcessor:
 
                 # Log the result
                 short_url = url[:50] + '...' if len(url) > 50 else url
-                log_level = "success" if status == "live" else "warning" if status in ["removed", "restricted", "private"] else "error"
+                log_level = "success" if status == "live" else "info" if status in ["removed", "restricted", "private"] else "error"
                 self._log(f"[{current_processed}/{total}] {short_url} → {result.status}", log_level)
 
                 # Don't send progress updates after cancellation
@@ -294,7 +294,7 @@ class BatchProcessor:
             for future in as_completed(futures):
                 if self.cancel_flag.is_set() and not cancelled:
                     cancelled = True
-                    self._log("Cancellation requested - stopping workers...", "warning")
+                    self._log("Cancellation requested - stopping workers...", "info")
                     # Cancel all pending futures
                     for f in futures:
                         f.cancel()

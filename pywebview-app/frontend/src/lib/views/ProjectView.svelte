@@ -96,7 +96,6 @@
     onStart={handleStart}
     onPause={() => processing.pause()}
     onResume={() => processing.resume()}
-    onCancel={() => processing.cancel()}
     onIntervalToggle={(v) => (intervalEnabled = v)}
     onIntervalChange={(v, u) => { intervalValue = v; intervalUnit = u; }}
   />

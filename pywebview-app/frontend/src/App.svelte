@@ -13,7 +13,6 @@
   import StartScreen from '$lib/views/StartScreen.svelte';
   import ProjectWizard from '$lib/views/ProjectWizard.svelte';
   import ProjectView from '$lib/views/ProjectView.svelte';
-  import InterruptedRunDialog from '$lib/views/dialogs/InterruptedRunDialog.svelte';
   import AddUrlsDialog from '$lib/views/dialogs/AddUrlsDialog.svelte';
 
   interface Props {
@@ -33,10 +32,8 @@
       const result = await api.pickFile([{ name: 'Project', extensions: ['json'] }]);
       if (!result.path) return;
 
-      const success = await projectStore.open(result.path);
-      if (success) {
-        await pollingController.checkForInterruptedRun();
-      }
+      processingStore.reset();
+      await projectStore.open(result.path);
     } catch (e) {
       appStore.setGlobalError(String(e));
     }
@@ -69,30 +66,6 @@
     try {
       await projectStore.close();
       appStore.setView('start');
-    } catch (e) {
-      appStore.setGlobalError(String(e));
-    }
-  }
-
-  async function handleResumeRun() {
-    const run = dialogsStore.interruptedRun;
-    if (!run) return;
-    try {
-      await api.resumeRun(run.run_id);
-      consoleStore.info(`Resuming run ${run.run_id}`);
-      dialogsStore.closeInterruptedRun();
-    } catch (e) {
-      appStore.setGlobalError(String(e));
-    }
-  }
-
-  async function handleAbandonRun() {
-    const run = dialogsStore.interruptedRun;
-    if (!run) return;
-    try {
-      await api.abandonRun(run.run_id);
-      consoleStore.warning(`Abandoned run ${run.run_id}`);
-      dialogsStore.closeInterruptedRun();
     } catch (e) {
       appStore.setGlobalError(String(e));
     }
@@ -145,14 +118,6 @@
   {/if}
 
   <!-- Dialogs -->
-  <InterruptedRunDialog
-    open={dialogsStore.interruptedRunOpen}
-    run={dialogsStore.interruptedRun}
-    onresume={handleResumeRun}
-    onabandon={handleAbandonRun}
-    onclose={() => dialogsStore.closeInterruptedRun()}
-  />
-
   <AddUrlsDialog
     open={dialogsStore.addUrlsOpen}
     onclose={() => dialogsStore.closeAddUrls()}

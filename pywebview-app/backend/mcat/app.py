@@ -51,10 +51,8 @@ def start_vite():
     """Spawn the Vite dev server and return the process."""
     print(f"Starting Vite dev server on port {VITE_PORT}...", flush=True)
     proc = subprocess.Popen(
-        ["pnpm", "vite", "--port", str(VITE_PORT)],
+        ["pnpm", "vite", "--port", str(VITE_PORT), "--strictPort", "--host", "127.0.0.1"],
         cwd=str(FRONTEND_DIR),
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
     )
     if not wait_for_port(VITE_PORT, timeout=15.0):
         print("Warning: Vite dev server may not have started", flush=True)

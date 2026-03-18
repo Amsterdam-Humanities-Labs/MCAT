@@ -24,7 +24,7 @@
 
   const completedRuns = $derived(
     runs
-      .filter((r) => r.status === 'completed')
+      .filter((r) => r.status === 'completed' || r.status === 'abandoned')
       .sort((a, b) => new Date(a.started_at).getTime() - new Date(b.started_at).getTime())
   );
 

@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { LogLevel } from '$types/console';
+  import { Check, Warning, XCircle } from 'phosphor-svelte';
 
   interface Props {
     timestamp: Date;
@@ -17,14 +18,6 @@
     success: 'text-status-live',
   };
 
-  const levelGlyphs: Record<LogLevel, string> = {
-    debug: '',
-    info: '',
-    warning: '⚠',
-    error: '✗',
-    success: '✓',
-  };
-
   function formatTime(date: Date): string {
     return date.toLocaleTimeString('en-US', {
       hour12: false,
@@ -37,8 +30,12 @@
 
 <div class="flex gap-3 leading-7 {levelColors[level]}">
   <span class="text-console-timestamp shrink-0">{formatTime(timestamp)}</span>
-  {#if levelGlyphs[level]}
-    <span class="shrink-0">{levelGlyphs[level]}</span>
+  {#if level === 'success'}
+    <span class="shrink-0 flex items-center"><Check size={14} weight="bold" /></span>
+  {:else if level === 'warning'}
+    <span class="shrink-0 flex items-center"><Warning size={14} weight="bold" /></span>
+  {:else if level === 'error'}
+    <span class="shrink-0 flex items-center"><XCircle size={14} weight="bold" /></span>
   {/if}
   <span class="break-all">{message}</span>
 </div>

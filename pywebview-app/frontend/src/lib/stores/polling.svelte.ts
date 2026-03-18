@@ -2,8 +2,6 @@ import { api, getBackendUrl } from '../api/client';
 import { initSSE, closeSSE } from '../api/sse';
 import { appStore } from './app.svelte';
 import { consoleStore } from './console.svelte';
-import { dialogsStore } from './dialogs.svelte';
-
 const HEALTH_CHECK_INTERVAL = 10000;
 
 function createPollingController() {
@@ -42,19 +40,6 @@ function createPollingController() {
   }
 
   return {
-    async checkForInterruptedRun() {
-      try {
-        const interrupted = await api.getInterruptedRun();
-        if (interrupted.has_interrupted && interrupted.run) {
-          dialogsStore.showInterruptedRun(interrupted.run);
-          return true;
-        }
-      } catch {
-        // No interrupted run
-      }
-      return false;
-    },
-
     start() {
       healthCheck();
       interval = setInterval(healthCheck, HEALTH_CHECK_INTERVAL);

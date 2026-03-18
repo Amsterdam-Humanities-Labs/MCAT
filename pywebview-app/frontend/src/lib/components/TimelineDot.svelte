@@ -10,9 +10,10 @@
 
   let { run, isSelected, onClick }: Props = $props();
 
+  const isAbandoned = $derived(run.status === 'abandoned');
   const isNoChange = $derived(!run.is_baseline && run.changes_count === 0);
-  const dotSize = $derived(isNoChange ? 'text-[10px]' : 'text-[14px]');
-  const dotColor = $derived(isNoChange ? 'text-[#C4AD8A]' : 'text-[#6B4C2A]');
+  const dotSize = $derived(isAbandoned ? 'text-[10px]' : isNoChange ? 'text-[10px]' : 'text-[14px]');
+  const dotColor = $derived(isAbandoned ? 'text-[#D9CBAE] opacity-50' : isNoChange ? 'text-[#C4AD8A]' : 'text-[#6B4C2A]');
 </script>
 
 <button type="button" class="flex flex-col items-center cursor-pointer bg-transparent border-none p-0" onclick={onClick}>

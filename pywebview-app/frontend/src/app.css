@@ -36,6 +36,10 @@
   --color-console-timestamp: #9A8468;
   --color-console-warning-count: #A0522D;
 
+  /* Interactive */
+  --color-hover: #EDE5D8;
+  --color-hover-active: #5A3E20;
+
   /* Progress track */
   --color-progress-track: #E8DCC8;
 }
