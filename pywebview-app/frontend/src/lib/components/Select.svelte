@@ -54,7 +54,7 @@
       onblur?.();
     }}
     class={cn(
-      'w-full flex items-center justify-between px-3 py-2 bg-bg-controls border rounded text-text-body text-left',
+      'w-full flex items-center justify-between px-3 py-2 bg-bg-controls border rounded text-text-body text-sm text-left',
       'focus:outline-none focus:ring-2 focus:ring-accent-brown focus:border-transparent',
       'disabled:opacity-50 disabled:cursor-not-allowed',
       error ? 'border-status-removed' : 'border-border-mid'
@@ -74,7 +74,7 @@
       <div
         {...select.getOption(opt.value, opt.label)}
         class={cn(
-          'px-3 py-2 cursor-pointer',
+          'px-3 py-2 text-sm cursor-pointer',
           select.isSelected(opt.value)
             ? 'bg-accent-brown text-white hover:bg-hover-active'
             : 'text-text-body hover:bg-hover',

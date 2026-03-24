@@ -28,7 +28,7 @@
   }: Props = $props();
 
   const baseClasses =
-    'w-full px-3 py-2 bg-bg-controls border rounded text-text-body placeholder-text-muted focus:outline-none focus:ring-2 focus:ring-accent-brown focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed';
+    'w-full px-3 py-2 bg-bg-controls border rounded text-text-body text-sm placeholder-text-muted focus:outline-none focus:ring-2 focus:ring-accent-brown focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed';
 
   const errorClasses = 'border-status-removed focus:ring-status-removed';
   const normalClasses = 'border-border-mid';
