@@ -22,6 +22,8 @@ def post_routes():
         "/process/pause": processing.pause,
         "/process/resume": processing.resume,
         "/run/abandon": run.abandon,
+        "/run/changes": run.get_changes,
+        "/run/results": run.get_results,
         "/csv/load": csv.load,
         "/csv/detect-url-column": csv.detect_url_column,
         "/tracking/start": tracking.start_tracking,

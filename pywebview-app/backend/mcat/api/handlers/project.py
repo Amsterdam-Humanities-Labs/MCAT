@@ -66,6 +66,12 @@ def open_project(body: dict) -> dict:
     if interrupted:
         ctx.run_service.abandon_run(project, interrupted)
 
+    # Reset stale tracking state — user must explicitly re-start
+    if project.config.tracking.enabled:
+        project.config.tracking.enabled = False
+        project.config.tracking.next_check = None
+        project.save()
+
     ctx.set_project(project)
     _publish_project()
     return {"success": True, "name": project.name}

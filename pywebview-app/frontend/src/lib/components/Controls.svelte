@@ -2,6 +2,7 @@
   import ControlsStartButton from './ControlsStartButton.svelte';
   import ControlsInterval from './ControlsInterval.svelte';
   import ControlsHint from './ControlsHint.svelte';
+  import ControlsRepeatStatus from './ControlsRepeatStatus.svelte';
 
   interface Props {
     runState: 'idle' | 'running' | 'paused';
@@ -9,6 +10,7 @@
     intervalValue: number;
     intervalUnit: 'minutes' | 'hours' | 'days';
     lastRunDuration: number | null;
+    nextCheck: string | null;
     onStart?: () => void;
     onPause?: () => void;
     onResume?: () => void;
@@ -22,6 +24,7 @@
     intervalValue,
     intervalUnit,
     lastRunDuration,
+    nextCheck,
     onStart,
     onPause,
     onResume,
@@ -40,4 +43,11 @@
     onChange={onIntervalChange}
   />
   <ControlsHint durationSeconds={lastRunDuration} />
+  <div class="ml-auto">
+    <ControlsRepeatStatus
+      enabled={intervalEnabled}
+      {nextCheck}
+      isRunning={runState === 'running' || runState === 'paused'}
+    />
+  </div>
 </div>

@@ -10,12 +10,13 @@
   let { timestamp, progressPercent }: Props = $props();
 </script>
 
-<div class="flex flex-col items-center">
-  <span class="inline-flex items-center justify-center w-6 h-6">
-    <SpinnerGap size={18} class="animate-spin text-[#6B4C2A]" />
+<div class="flex items-center gap-3 px-4 py-2.5 text-sm">
+  <span class="inline-flex items-center justify-center w-5 h-5 shrink-0">
+    <SpinnerGap size={14} class="animate-spin text-[#6B4C2A]" />
   </span>
-  <div class="flex flex-col items-center text-center gap-0.5 mt-3">
-    <span class="text-text-secondary text-[14px]">{formatTimestamp(timestamp)}</span>
+  <span class="flex items-center gap-2">
+    <span class="text-text-secondary">{formatTimestamp(timestamp)}</span>
+    <span class="text-text-muted">·</span>
     <span class="text-text-hint">Running... {progressPercent}%</span>
-  </div>
+  </span>
 </div>

@@ -93,6 +93,7 @@
     {intervalValue}
     {intervalUnit}
     {lastRunDuration}
+    nextCheck={project.tracking?.next_check ?? null}
     onStart={handleStart}
     onPause={() => processing.pause()}
     onResume={() => processing.resume()}
@@ -110,10 +111,9 @@
     runs={project.runs ?? []}
     {currentRun}
     {selectedRunId}
+    projectPath={project.path}
     onRunClick={handleRunClick}
   />
 
-  <div class="mt-auto">
-    <ConsolePanel {messages} />
-  </div>
+  <ConsolePanel {messages} />
 </div>

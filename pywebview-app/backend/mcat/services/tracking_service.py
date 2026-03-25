@@ -154,11 +154,8 @@ class TrackingService:
             return
 
         try:
-            # Check if manual processing is active (skip if so)
+            # Skip if a run is already active, reschedule for later
             if self._project_state.is_running:
-                if self._log_callback:
-                    self._log_callback("Tracking skipped: manual processing in progress", "debug")
-                # Reschedule for later
                 self._schedule_next_check()
                 return
 

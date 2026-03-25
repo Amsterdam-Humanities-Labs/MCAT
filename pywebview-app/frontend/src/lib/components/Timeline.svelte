@@ -1,8 +1,9 @@
 <script lang="ts">
   import type { Run } from '$types/project';
   import TimelineAxis from './TimelineAxis.svelte';
-  import TimelineDot from './TimelineDot.svelte';
+  import TimelineRow from './TimelineRow.svelte';
   import TimelineRunning from './TimelineRunning.svelte';
+  import DetailPanel from './DetailPanel.svelte';
 
   interface ActiveRun {
     timestamp: string;
@@ -13,73 +14,74 @@
     runs: Run[];
     currentRun: ActiveRun | null;
     selectedRunId: string | null;
+    projectPath: string;
     onRunClick?: (id: string) => void;
   }
 
-  let { runs, currentRun, selectedRunId, onRunClick }: Props = $props();
+  let { runs, currentRun, selectedRunId, projectPath, onRunClick }: Props = $props();
 
   let scrollContainer: HTMLDivElement | undefined = $state();
 
-  const DOT_GAP = 200;
-
-  const completedRuns = $derived(
+  const sortedRuns = $derived(
     runs
       .filter((r) => r.status === 'completed' || r.status === 'abandoned')
       .sort((a, b) => new Date(a.started_at).getTime() - new Date(b.started_at).getTime())
   );
 
-  const dotCount = $derived(completedRuns.length + (currentRun ? 1 : 0));
-  const totalWidth = $derived(Math.max(800, dotCount * DOT_GAP + 100));
+  const runCount = $derived(sortedRuns.length + (currentRun ? 1 : 0));
 
-  // Auto-scroll to right end when runs change
+  // Auto-scroll to bottom when runs change
   $effect(() => {
-    if (scrollContainer && dotCount > 0) {
-      // Use setTimeout to ensure DOM is updated
+    if (scrollContainer && runCount > 0) {
       setTimeout(() => {
         if (scrollContainer) {
-          scrollContainer.scrollLeft = scrollContainer.scrollWidth;
+          scrollContainer.scrollTop = scrollContainer.scrollHeight;
         }
       }, 50);
     }
   });
+
+  function getRunNumber(index: number): number {
+    return index + 1;
+  }
 </script>
 
-{#if completedRuns.length > 0 || currentRun}
-  <div class="bg-bg-timeline border-b border-border-light">
+{#if sortedRuns.length > 0 || currentRun}
+  <div class="flex-1 flex flex-col overflow-hidden bg-bg-timeline">
     <div class="px-4 pt-3 pb-1">
-      <span class="text-text-secondary font-bold text-[14px] tracking-wider">RUNS</span>
+      <span class="text-text-secondary font-bold text-sm tracking-wider">RUNS</span>
     </div>
+
     <div
       bind:this={scrollContainer}
-      class="overflow-x-auto pb-4"
+      class="flex-1 overflow-y-auto relative"
     >
-      <div class="relative" style="width: {totalWidth}px; min-height: 160px;">
-        <!-- Axis line positioned at dot center height -->
-        <div class="absolute left-8 right-0" style="top: 26px;">
-          <TimelineAxis width={totalWidth - 40} />
-        </div>
+      <TimelineAxis />
 
-        <!-- Dots -->
-        <div class="relative flex items-start gap-0 px-8" style="top: 12px;">
-          {#each completedRuns as run (run.id)}
-            <div style="min-width: {DOT_GAP}px; flex-shrink: 0;">
-              <TimelineDot
-                {run}
-                isSelected={selectedRunId === run.id}
-                onClick={() => onRunClick?.(run.id)}
-              />
-            </div>
-          {/each}
+      <div class="flex flex-col">
+        {#each sortedRuns as run, i (run.id)}
+          <TimelineRow
+            {run}
+            index={i}
+            isSelected={selectedRunId === run.id}
+            onClick={() => onRunClick?.(run.id)}
+          />
 
-          {#if currentRun}
-            <div style="min-width: {DOT_GAP}px; flex-shrink: 0;">
-              <TimelineRunning
-                timestamp={currentRun.timestamp}
-                progressPercent={currentRun.progressPercent}
-              />
-            </div>
+          {#if selectedRunId === run.id}
+            <DetailPanel
+              {run}
+              runNumber={getRunNumber(i)}
+              {projectPath}
+            />
           {/if}
-        </div>
+        {/each}
+
+        {#if currentRun}
+          <TimelineRunning
+            timestamp={currentRun.timestamp}
+            progressPercent={currentRun.progressPercent}
+          />
+        {/if}
       </div>
     </div>
   </div>
