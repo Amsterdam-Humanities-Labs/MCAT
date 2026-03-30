@@ -55,8 +55,9 @@ class BatchProcessor:
         csv_writer = None
         output_csv_path = None
 
-        # Ensure driver pool is initialized
-        if self.driver_pool is None:
+        # Ensure driver pool is initialized (skip for mock mode)
+        import os
+        if self.driver_pool is None and not os.environ.get("MCAT_MOCK"):
             self.driver_pool = WebDriverPool(
                 pool_size=self.max_workers,
                 headless=config.scraper_settings['headless'],
@@ -156,6 +157,19 @@ class BatchProcessor:
 
     def _create_scraper(self, platform: str):
         """Create a scraper instance for the specified platform."""
+        import os
+        if os.environ.get("MCAT_MOCK"):
+            import sys
+            tests_dir = str(Path(__file__).parent.parent.parent.parent / "tests")
+            if tests_dir not in sys.path:
+                sys.path.insert(0, tests_dir)
+            from mock_scraper import MockScraper
+            scraper = MockScraper()
+            scraper.set_pause_event(self.resume_event)
+            scraper.set_cancel_event(self.cancel_flag)
+            self._log("Using mock scraper (MCAT_MOCK=1)", "info")
+            return scraper
+
         if platform == 'youtube':
             scraper = YouTubeScraper(self.driver_pool)
             scraper.set_pause_event(self.resume_event)

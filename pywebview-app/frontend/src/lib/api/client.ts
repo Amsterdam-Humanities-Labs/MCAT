@@ -58,6 +58,10 @@ export const api = {
     callBackend<{ success: boolean; name?: string }>('/project/open', 'POST', { path }),
   closeProject: () =>
     callBackend<{ success: boolean }>('/project/close', 'POST'),
+  setScreenshots: (enabled: boolean) =>
+    callBackend<{ success: boolean }>('/project/screenshots', 'POST', { enabled }),
+  setTrackingConfig: (config: { enabled?: boolean; interval_value?: number; interval_unit?: string }) =>
+    callBackend<{ success: boolean }>('/project/tracking-config', 'POST', config),
 
   // Processing
   startProcessing: (data?: StartProcessingRequest) =>

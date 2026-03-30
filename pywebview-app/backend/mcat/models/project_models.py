@@ -141,6 +141,7 @@ class ProjectConfig:
     platform: str
     created_at: datetime
     url_column: str
+    screenshots_enabled: bool = False
     runs: List[RunConfig] = field(default_factory=list)
     tracking: TrackingConfig = field(default_factory=TrackingConfig)
 
@@ -151,6 +152,7 @@ class ProjectConfig:
             "platform": self.platform,
             "created_at": self.created_at.isoformat(),
             "url_column": self.url_column,
+            "screenshots_enabled": self.screenshots_enabled,
             "runs": [run.to_dict() for run in self.runs],
             "tracking": self.tracking.to_dict()
         }
@@ -163,6 +165,7 @@ class ProjectConfig:
             platform=data["platform"],
             created_at=datetime.fromisoformat(data["created_at"]),
             url_column=data["url_column"],
+            screenshots_enabled=data.get("screenshots_enabled", False),
             runs=[RunConfig.from_dict(r) for r in data.get("runs", [])],
             tracking=TrackingConfig.from_dict(data.get("tracking", {}))
         )

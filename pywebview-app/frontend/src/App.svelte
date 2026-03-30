@@ -33,7 +33,10 @@
       if (!result.path) return;
 
       processingStore.reset();
-      await projectStore.open(result.path);
+      const success = await projectStore.open(result.path);
+      if (success) {
+        appStore.setView('project');
+      }
     } catch (e) {
       appStore.setGlobalError(String(e));
     }

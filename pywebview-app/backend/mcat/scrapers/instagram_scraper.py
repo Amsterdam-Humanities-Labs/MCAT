@@ -259,18 +259,24 @@ class InstagramScraper(BaseScraper):
             return result
 
         except Exception as e:
-            result.status = "Error"
-            result.error_message = str(e)
-            self._log(f"Error: {url}: {result.status} - {result.error_message}")
+            if self.is_cancelled():
+                result.status = "Cancelled"
+                result.info = "Processing was cancelled"
+            else:
+                result.status = "Error"
+                result.error_message = str(e)
+                self._log(f"Error: {url}: {result.status} - {result.error_message}")
             return result
         finally:
-            # Return driver to pool
             if driver:
-                try:
-                    driver.current_url  # Quick check that driver isn't crashed
-                    self.driver_pool.return_driver(driver)
-                except Exception as e:
-                    print(f"Warning: Driver unresponsive, discarding: {e}")
+                if self.is_cancelled():
+                    pass  # Driver will be cleaned up by pool shutdown
+                else:
+                    try:
+                        driver.current_url
+                        self.driver_pool.return_driver(driver)
+                    except Exception as e:
+                        print(f"Warning: Driver unresponsive, discarding: {e}")
 
     def _check_error_svg(self, driver, result: ScrapingResult) -> bool:
         """Check for Instagram error SVG icon."""

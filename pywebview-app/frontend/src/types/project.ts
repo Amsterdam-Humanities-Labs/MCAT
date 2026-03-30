@@ -43,6 +43,7 @@ export interface Project {
   mtime?: number;
   url_count: number;
   url_column: string;
+  screenshots_enabled: boolean;
   runs: Run[];
   tracking: TrackingConfig;
 }

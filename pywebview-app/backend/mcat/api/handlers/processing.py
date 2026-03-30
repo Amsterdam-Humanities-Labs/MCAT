@@ -102,11 +102,16 @@ def start(body: dict) -> dict:
 
     urls = body.get("urls")
     project = ctx.current_project
-    screenshots = body.get("screenshots", False)
+    screenshots = project.config.screenshots_enabled
 
     # Start a new run
     run = ctx.run_service.start_run(project, screenshots_enabled=screenshots)
     output_folder = str(project.get_run_path(run.id))
+
+    # Tell mock scraper which run number this is
+    import os
+    if os.environ.get("MCAT_MOCK"):
+        os.environ["MCAT_MOCK_RUN"] = str(len(project.config.runs))
 
     df = pl.read_csv(project.urls_csv_path)
 

@@ -1,8 +1,9 @@
 <script lang="ts">
+  import { cn } from '$lib/utils';
   import type { Run } from '$types/project';
   import { api } from '$lib/api/client';
   import DetailHeader from './DetailHeader.svelte';
-  import DetailTabs from './DetailTabs.svelte';
+  import Tabs from './Tabs.svelte';
   import DetailChanges from './DetailChanges.svelte';
   import DetailResults from './DetailResults.svelte';
 
@@ -17,11 +18,17 @@
     run: Run;
     runNumber: number;
     projectPath: string;
+    class?: string;
   }
 
-  let { run, runNumber, projectPath }: Props = $props();
+  let { run, runNumber, projectPath, class: className }: Props = $props();
 
-  let activeTab = $state<'changes' | 'results'>('changes');
+  let activeTab = $state('changes');
+
+  const tabItems = [
+    { value: 'changes', label: 'Changes' },
+    { value: 'results', label: 'All Results' },
+  ];
 
   // Changes data
   let changes = $state<Change[]>([]);
@@ -69,15 +76,21 @@
   }
 </script>
 
-<div class="bg-bg-primary border-t border-border-light ml-10 mr-4 overflow-auto max-h-[400px]">
-  <div class="px-4">
+<div class={cn("bg-bg-primary overflow-auto max-h-[400px] border-y border-border-mid", className)}>
+  <div class="flex gap-3 px-4">
+    <div class="w-5 shrink-0"></div>
+    <div class="flex-1 min-w-0">
     <DetailHeader {run} {runNumber} onOpenFolder={handleOpenFolder} />
-    <DetailTabs {activeTab} onchange={(tab) => (activeTab = tab)} />
 
-    {#if activeTab === 'changes'}
-      <DetailChanges {run} {changes} loading={changesLoading} error={changesError} />
-    {:else}
-      <DetailResults columns={resultsColumns} rows={resultsRows} loading={resultsLoading} error={resultsError} />
-    {/if}
+    <Tabs tabs={tabItems} bind:value={activeTab}>
+      {#snippet children(tab)}
+        {#if tab === 'changes'}
+          <DetailChanges {run} {changes} loading={changesLoading} error={changesError} />
+        {:else if tab === 'results'}
+          <DetailResults columns={resultsColumns} rows={resultsRows} loading={resultsLoading} error={resultsError} />
+        {/if}
+      {/snippet}
+    </Tabs>
+    </div>
   </div>
 </div>

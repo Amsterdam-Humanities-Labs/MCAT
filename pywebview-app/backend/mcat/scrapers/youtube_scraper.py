@@ -288,21 +288,24 @@ class YouTubeScraper(BaseScraper):
             return result
 
         except Exception as e:
-            result.status = "Error"
-            result.error_message = str(e)
-            self._log(f"Error: {url}: {result.status} - {result.error_message}")
+            if self.is_cancelled():
+                result.status = "Cancelled"
+                result.info = "Processing was cancelled"
+            else:
+                result.status = "Error"
+                result.error_message = str(e)
+                self._log(f"Error: {url}: {result.status} - {result.error_message}")
             return result
         finally:
-            # Return driver to pool instead of quitting
             if driver:
-                # Validate driver is still responsive before returning to pool
-                try:
-                    driver.current_url  # Quick check that driver isn't crashed
-                    self.driver_pool.return_driver(driver)
-                except Exception as e:
-                    # Driver is broken, don't return to pool
-                    print(f"Warning: Driver unresponsive, discarding: {e}")
-                    # Pool will create new driver when needed
+                if self.is_cancelled():
+                    pass  # Driver will be cleaned up by pool shutdown
+                else:
+                    try:
+                        driver.current_url
+                        self.driver_pool.return_driver(driver)
+                    except Exception as e:
+                        print(f"Warning: Driver unresponsive, discarding: {e}")
 
     def cleanup(self):
         """Clean up scraper resources."""

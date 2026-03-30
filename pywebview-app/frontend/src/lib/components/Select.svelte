@@ -54,8 +54,8 @@
       onblur?.();
     }}
     class={cn(
-      'w-full flex items-center justify-between px-3 py-2 bg-bg-controls border rounded text-text-body text-sm text-left',
-      'focus:outline-none focus:ring-2 focus:ring-accent-brown focus:border-transparent',
+      'w-full flex items-center justify-between px-3 py-2 bg-bg-controls border rounded text-text-body text-sm text-left cursor-pointer',
+      'hover:bg-interactive-input focus:outline-none focus:ring-2 focus:ring-accent-brown focus:border-transparent',
       'disabled:opacity-50 disabled:cursor-not-allowed',
       error ? 'border-status-removed' : 'border-border-mid'
     )}
@@ -76,8 +76,8 @@
         class={cn(
           'px-3 py-2 text-sm cursor-pointer',
           select.isSelected(opt.value)
-            ? 'bg-accent-brown text-white hover:bg-hover-active'
-            : 'text-text-body hover:bg-hover',
+            ? 'bg-accent-brown text-white hover:bg-interactive-active'
+            : 'text-text-body hover:bg-interactive-hover',
           opt.disabled && 'opacity-50 cursor-not-allowed pointer-events-none'
         )}
       >

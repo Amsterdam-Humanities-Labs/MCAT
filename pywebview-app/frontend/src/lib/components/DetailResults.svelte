@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { cn } from '$lib/utils';
   import DataTable from './DataTable.svelte';
 
   interface Props {
@@ -6,9 +7,10 @@
     rows: Record<string, unknown>[];
     loading: boolean;
     error: string | null;
+    class?: string;
   }
 
-  let { columns, rows, loading, error }: Props = $props();
+  let { columns, rows, loading, error, class: className }: Props = $props();
 
   const tableColumns = $derived(
     columns.map((col) => ({
@@ -19,6 +21,7 @@
   );
 </script>
 
+<div class={cn(className)}>
 {#if loading}
   <p class="text-text-muted text-sm py-4">Loading...</p>
 {:else if error}
@@ -28,3 +31,4 @@
     <DataTable columns={tableColumns} {rows} />
   </div>
 {/if}
+</div>

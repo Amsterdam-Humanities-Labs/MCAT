@@ -86,6 +86,7 @@ class MCATHandler(BaseHTTPRequestHandler):
                 result = handler(self.path)
                 self._send_json(result)
             except Exception as e:
+                print(f"[ERROR] GET {path}: {e}", flush=True)
                 self._send_error(str(e))
         else:
             self._send_error("Not found", 404)
@@ -137,9 +138,16 @@ class MCATHandler(BaseHTTPRequestHandler):
             try:
                 result = handler(body)
                 self._send_json(result)
+                # Log successful responses for key endpoints
+                if path.startswith("/project/") or path.startswith("/process/") or path.startswith("/run/") or path.startswith("/tracking/"):
+                    print(f"[OK] POST {path} → {json.dumps(result)[:200]}", flush=True)
             except ValueError as e:
+                print(f"[ERROR] POST {path}: {e}", flush=True)
                 self._send_error(str(e))
             except Exception as e:
+                import traceback
+                print(f"[ERROR] POST {path}: {e}", flush=True)
+                traceback.print_exc()
                 self._send_error(str(e), 500)
         else:
             self._send_error("Not found", 404)

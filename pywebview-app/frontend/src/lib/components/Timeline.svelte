@@ -1,6 +1,6 @@
 <script lang="ts">
+  import { cn } from '$lib/utils';
   import type { Run } from '$types/project';
-  import TimelineAxis from './TimelineAxis.svelte';
   import TimelineRow from './TimelineRow.svelte';
   import TimelineRunning from './TimelineRunning.svelte';
   import DetailPanel from './DetailPanel.svelte';
@@ -16,53 +16,38 @@
     selectedRunId: string | null;
     projectPath: string;
     onRunClick?: (id: string) => void;
+    class?: string;
   }
 
-  let { runs, currentRun, selectedRunId, projectPath, onRunClick }: Props = $props();
-
-  let scrollContainer: HTMLDivElement | undefined = $state();
+  let { runs, currentRun, selectedRunId, projectPath, onRunClick, class: className }: Props = $props();
 
   const sortedRuns = $derived(
     runs
       .filter((r) => r.status === 'completed' || r.status === 'abandoned')
-      .sort((a, b) => new Date(a.started_at).getTime() - new Date(b.started_at).getTime())
+      .sort((a, b) => new Date(b.started_at).getTime() - new Date(a.started_at).getTime())
   );
 
-  const runCount = $derived(sortedRuns.length + (currentRun ? 1 : 0));
-
-  // Auto-scroll to bottom when runs change
-  $effect(() => {
-    if (scrollContainer && runCount > 0) {
-      setTimeout(() => {
-        if (scrollContainer) {
-          scrollContainer.scrollTop = scrollContainer.scrollHeight;
-        }
-      }, 50);
-    }
-  });
-
-  function getRunNumber(index: number): number {
-    return index + 1;
-  }
 </script>
 
 {#if sortedRuns.length > 0 || currentRun}
-  <div class="flex-1 flex flex-col overflow-hidden bg-bg-timeline">
+  <div class={cn("flex-1 flex flex-col overflow-hidden bg-bg-timeline min-h-0", className)}>
     <div class="px-4 pt-3 pb-1">
       <span class="text-text-secondary font-bold text-sm tracking-wider">RUNS</span>
     </div>
 
-    <div
-      bind:this={scrollContainer}
-      class="flex-1 overflow-y-auto relative"
-    >
-      <TimelineAxis />
-
+    <div class="flex-1 overflow-y-auto">
       <div class="flex flex-col">
+        {#if currentRun}
+          <TimelineRunning
+            timestamp={currentRun.timestamp}
+            progressPercent={currentRun.progressPercent}
+          />
+        {/if}
+
         {#each sortedRuns as run, i (run.id)}
           <TimelineRow
             {run}
-            index={i}
+            index={sortedRuns.length - i}
             isSelected={selectedRunId === run.id}
             onClick={() => onRunClick?.(run.id)}
           />
@@ -70,18 +55,11 @@
           {#if selectedRunId === run.id}
             <DetailPanel
               {run}
-              runNumber={getRunNumber(i)}
+              runNumber={sortedRuns.length - i}
               {projectPath}
             />
           {/if}
         {/each}
-
-        {#if currentRun}
-          <TimelineRunning
-            timestamp={currentRun.timestamp}
-            progressPercent={currentRun.progressPercent}
-          />
-        {/if}
       </div>
     </div>
   </div>

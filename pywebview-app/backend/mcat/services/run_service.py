@@ -98,8 +98,8 @@ class RunService:
         run.status_summary = self._compute_status_summary(project_state, run)
         run.total_checked = sum(run.status_summary.values())
 
-        # Determine if baseline (first completed run)
-        completed_runs = project_state.config.get_completed_runs()
+        # Determine if baseline (first completed run, excluding this one)
+        completed_runs = [r for r in project_state.config.get_completed_runs() if r.id != run.id]
         run.is_baseline = len(completed_runs) == 0
 
         # Compute changes against previous run

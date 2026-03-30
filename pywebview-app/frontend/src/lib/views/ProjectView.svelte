@@ -78,7 +78,7 @@
   }
 </script>
 
-<div class="flex flex-col min-h-screen">
+<div class="flex flex-col h-screen overflow-hidden">
   <Toolbar
     projectName={project.name}
     platform={project.platform}
@@ -92,13 +92,16 @@
     {intervalEnabled}
     {intervalValue}
     {intervalUnit}
+    screenshotsEnabled={project.screenshots_enabled ?? false}
     {lastRunDuration}
     nextCheck={project.tracking?.next_check ?? null}
+    runNumber={project.runs?.length ?? 0}
     onStart={handleStart}
     onPause={() => processing.pause()}
     onResume={() => processing.resume()}
-    onIntervalToggle={(v) => (intervalEnabled = v)}
-    onIntervalChange={(v, u) => { intervalValue = v; intervalUnit = u; }}
+    onIntervalToggle={(v) => api.setTrackingConfig({ enabled: v })}
+    onIntervalChange={(v, u) => api.setTrackingConfig({ interval_value: v, interval_unit: u })}
+    onScreenshotsToggle={(v) => api.setScreenshots(v)}
   />
 
   <ProgressSection

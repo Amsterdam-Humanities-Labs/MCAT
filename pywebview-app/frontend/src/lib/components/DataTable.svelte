@@ -61,7 +61,7 @@
   }
 </script>
 
-<div class={cn('overflow-auto border border-border-mid rounded-lg', className)}>
+<div class={cn('overflow-auto border border-border-mid rounded', className)}>
   <table class="min-w-full text-sm whitespace-nowrap">
     <thead class="bg-bg-controls sticky top-0">
       <tr>
@@ -87,7 +87,7 @@
         </tr>
       {:else}
         {#each displayedRows as row}
-          <tr class="hover:bg-bg-controls/50 transition-colors">
+          <tr class="hover:bg-interactive-row transition-colors">
             {#each columns as col}
               {@const value = getCellValue(row, col.key)}
               <td class="px-4 py-3 text-text-body">

@@ -1,12 +1,14 @@
 <script lang="ts">
+  import { cn } from '$lib/utils';
   import type { LogMessage } from '$types/console';
   import ConsoleEntry from './ConsoleEntry.svelte';
 
   interface Props {
     entries: LogMessage[];
+    class?: string;
   }
 
-  let { entries }: Props = $props();
+  let { entries, class: className }: Props = $props();
 
   let containerEl: HTMLDivElement | undefined = $state();
   let autoScroll = $state(true);
@@ -27,7 +29,7 @@
 <div
   bind:this={containerEl}
   onscroll={handleScroll}
-  class="overflow-auto font-mono p-3 bg-bg-primary flex-1"
+  class={cn("overflow-auto font-mono p-3 bg-bg-primary flex-1", className)}
   style="max-height: 300px"
 >
   {#if entries.length === 0}

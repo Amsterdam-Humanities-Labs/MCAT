@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { cn } from '$lib/utils';
   import { Checkbox, Select, TimeSelector } from '$lib/components';
 
   interface Props {
@@ -7,9 +8,10 @@
     unit: 'minutes' | 'hours' | 'days';
     onToggle?: (enabled: boolean) => void;
     onChange?: (value: number, unit: 'minutes' | 'hours' | 'days') => void;
+    class?: string;
   }
 
-  let { enabled, value, unit, onToggle, onChange }: Props = $props();
+  let { enabled, value, unit, onToggle, onChange, class: className }: Props = $props();
 
   const unitOptions = [
     { value: 'minutes', label: 'minutes' },
@@ -18,7 +20,7 @@
   ];
 
   const minValues: Record<string, number> = {
-    minutes: 5,
+    minutes: 1,
     hours: 1,
     days: 1,
   };
@@ -33,7 +35,7 @@
   }
 </script>
 
-<div class="flex items-center gap-2">
+<div class={cn("flex items-center gap-2", className)}>
   <Checkbox
     checked={enabled}
     label="Repeat every"

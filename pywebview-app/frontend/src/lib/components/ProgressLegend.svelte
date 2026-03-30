@@ -1,11 +1,13 @@
 <script lang="ts">
+  import { cn } from '$lib/utils';
   import type { RunStatusSummary } from '$types/project';
 
   interface Props {
     statusCounts: RunStatusSummary;
+    class?: string;
   }
 
-  let { statusCounts }: Props = $props();
+  let { statusCounts, class: className }: Props = $props();
 
   const items = $derived([
     { label: 'Live', count: statusCounts.live, color: 'bg-status-live' },
@@ -15,7 +17,7 @@
   ]);
 </script>
 
-<div class="flex items-center gap-4">
+<div class={cn("flex items-center gap-4", className)}>
   {#each items as item (item.label)}
     <div class="flex items-center gap-1.5">
       <span class="w-2.5 h-2.5 rounded-full {item.color}"></span>

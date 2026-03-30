@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { cn } from '$lib/utils';
   import type { LogLevel } from '$types/console';
   import { Check, Warning, XCircle } from 'phosphor-svelte';
 
@@ -6,9 +7,10 @@
     timestamp: Date;
     message: string;
     level: LogLevel;
+    class?: string;
   }
 
-  let { timestamp, message, level }: Props = $props();
+  let { timestamp, message, level, class: className }: Props = $props();
 
   const levelColors: Record<LogLevel, string> = {
     debug: 'text-text-muted',
@@ -28,7 +30,7 @@
   }
 </script>
 
-<div class="flex gap-3 leading-7 {levelColors[level]}">
+<div class={cn("flex gap-3 leading-7", levelColors[level], className)}>
   <span class="text-console-timestamp shrink-0">{formatTime(timestamp)}</span>
   {#if level === 'success'}
     <span class="shrink-0 flex items-center"><Check size={14} weight="bold" /></span>

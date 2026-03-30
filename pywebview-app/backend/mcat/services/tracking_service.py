@@ -98,10 +98,6 @@ class TrackingService:
 
         self._stop_event.set()
 
-        # Update project configuration
-        project_state.config.tracking.enabled = False
-        project_state.save()
-
         # Log and publish event
         if self._log_callback:
             self._log_callback("URL tracking stopped", "info")
@@ -142,6 +138,12 @@ class TrackingService:
 
         if self._project_state:
             interval_secs = self._project_state.config.tracking.interval_seconds
+            # Update next_check so the frontend can show the countdown
+            self._project_state.config.tracking.next_check = datetime.now() + timedelta(seconds=interval_secs)
+            self._project_state.save()
+            if self._event_bus:
+                from api.handlers.project import _build_project_dict
+                self._event_bus.publish({"type": "project", "project": _build_project_dict()})
         else:
             interval_secs = 1800  # fallback 30 min
         self._timer = threading.Timer(interval_secs, self._execute_tracking_run)
@@ -161,11 +163,17 @@ class TrackingService:
 
             # Create tracking run
             if self._run_service:
+                screenshots = self._project_state.config.screenshots_enabled
                 run = self._run_service.start_run(
                     self._project_state,
-                    screenshots_enabled=False,
+                    screenshots_enabled=screenshots,
                     run_type="tracking"
                 )
+
+                # Tell mock scraper which run number this is
+                import os
+                if os.environ.get("MCAT_MOCK"):
+                    os.environ["MCAT_MOCK_RUN"] = str(len(self._project_state.config.runs))
 
                 if self._log_callback:
                     self._log_callback(f"Tracking check started: {run.id}", "info")
@@ -202,7 +210,7 @@ class TrackingService:
                         column_mapping=column_mapping,
                         platform=self._project_state.platform,
                         output_folder=str(self._project_state.get_run_path(run.id)),
-                        save_screenshots=False
+                        save_screenshots=screenshots
                     )
 
                     self._processing_service.start_processing(job, urls=urls)

@@ -36,9 +36,20 @@
   --color-console-timestamp: #9A8468;
   --color-console-warning-count: #A0522D;
 
-  /* Interactive */
-  --color-hover: #EDE5D8;
-  --color-hover-active: #5A3E20;
+  /* Timeline */
+  --color-timeline-dot: #6B4C2A;
+  --color-timeline-dot-muted: #C4AD8A;
+  --color-timeline-dot-abandoned: #D9CBAE;
+  --color-timeline-axis: #C4AD8A;
+  --color-timeline-selection: rgba(107, 76, 42, 0.35);
+
+  /* Interactive states */
+  --color-interactive-hover: #EDE5D8;
+  --color-interactive-active: #5A3E20;
+  --color-interactive-input: #F0E8DA;
+  --color-interactive-primary: #5F4325;
+  --color-interactive-danger: #F5E8E8;
+  --color-interactive-row: #F0EAE0;
 
   /* Progress track */
   --color-progress-track: #E8DCC8;

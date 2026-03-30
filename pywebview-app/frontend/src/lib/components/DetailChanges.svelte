@@ -1,7 +1,8 @@
 <script lang="ts">
+  import { cn } from '$lib/utils';
   import type { Run } from '$types/project';
   import { colors } from '$lib/theme';
-  import { PushPin, Image } from 'phosphor-svelte';
+  import { Image } from 'phosphor-svelte';
 
   interface Change {
     url: string;
@@ -23,9 +24,10 @@
     changes: Change[];
     loading: boolean;
     error: string | null;
+    class?: string;
   }
 
-  let { run, changes, loading, error }: Props = $props();
+  let { run, changes, loading, error, class: className }: Props = $props();
 
   function statusColor(status: string): string {
     switch (status.toLowerCase()) {
@@ -60,6 +62,7 @@
   });
 </script>
 
+<div class={cn(className)}>
 {#if loading}
   <p class="text-text-muted text-sm py-4">Loading...</p>
 {:else if error}
@@ -105,8 +108,7 @@
               >
                 {url}
               </a>
-              <span class="ml-auto flex items-center gap-2 shrink-0 opacity-30">
-                <PushPin size={14} />
+              <span class="ml-auto shrink-0 opacity-30">
                 <Image size={14} />
               </span>
             </div>
@@ -116,3 +118,4 @@
     {/each}
   </div>
 {/if}
+</div>

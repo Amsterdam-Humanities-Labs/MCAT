@@ -232,6 +232,11 @@ class ProcessingService:
         self._cancel_event.set()
         self._pause_event.set()
 
+        # Set batch processor cancel flag first so workers see it before drivers are killed
+        if self._batch_processor:
+            self._batch_processor.cancel_flag.set()
+            self._batch_processor.resume_event.set()
+
         if self._processing_thread and self._processing_thread.is_alive():
             self._processing_thread.join(timeout=10.0)
             if self._processing_thread.is_alive():

@@ -17,6 +17,7 @@ def _build_project_dict() -> dict | None:
         "path": str(project.project_path),
         "url_count": ctx.project_service.get_url_count(project),
         "url_column": project.url_column,
+        "screenshots_enabled": project.config.screenshots_enabled,
         "runs": [run.to_dict() for run in project.config.runs],
         "tracking": project.config.tracking.to_dict(),
     }
@@ -66,15 +67,45 @@ def open_project(body: dict) -> dict:
     if interrupted:
         ctx.run_service.abandon_run(project, interrupted)
 
-    # Reset stale tracking state — user must explicitly re-start
-    if project.config.tracking.enabled:
-        project.config.tracking.enabled = False
+    # Clear stale scheduler timestamp — user must click Start to resume
+    if project.config.tracking.next_check:
         project.config.tracking.next_check = None
         project.save()
 
     ctx.set_project(project)
     _publish_project()
     return {"success": True, "name": project.name}
+
+
+def set_screenshots(body: dict) -> dict:
+    """Toggle screenshots setting."""
+    ctx = app_context
+    if not ctx.current_project:
+        raise ValueError("No project open")
+
+    ctx.current_project.config.screenshots_enabled = body.get("enabled", False)
+    ctx.current_project.save()
+    _publish_project()
+    return {"success": True}
+
+
+def set_tracking_config(body: dict) -> dict:
+    """Save tracking settings (enabled, interval) without starting the scheduler."""
+    ctx = app_context
+    if not ctx.current_project:
+        raise ValueError("No project open")
+
+    tracking = ctx.current_project.config.tracking
+    if "enabled" in body:
+        tracking.enabled = body["enabled"]
+    if "interval_value" in body:
+        tracking.interval_value = body["interval_value"]
+    if "interval_unit" in body:
+        tracking.interval_unit = body["interval_unit"]
+
+    ctx.current_project.save()
+    _publish_project()
+    return {"success": True}
 
 
 def close() -> dict:

@@ -1,0 +1,43 @@
+{
+  "run_1": {
+    "_comment": "Baseline: all live except 2 removed, 1 restricted",
+    "TEST003": "Removed",
+    "TEST007": "Removed",
+    "TEST015": "Restricted",
+    "default": "Live"
+  },
+  "run_2": {
+    "_comment": "3 newly removed, 1 restored, 1 newly restricted",
+    "TEST001": "Removed",
+    "TEST003": "Removed",
+    "TEST005": "Removed",
+    "TEST007": "Live",
+    "TEST010": "Restricted",
+    "TEST015": "Restricted",
+    "default": "Live"
+  },
+  "run_3": {
+    "_comment": "More removals, one private",
+    "TEST001": "Removed",
+    "TEST003": "Removed",
+    "TEST005": "Removed",
+    "TEST008": "Removed",
+    "TEST010": "Restricted",
+    "TEST012": "Private",
+    "TEST015": "Restricted",
+    "default": "Live"
+  },
+  "run_4": {
+    "_comment": "Some restored, new removals",
+    "TEST001": "Live",
+    "TEST003": "Removed",
+    "TEST005": "Removed",
+    "TEST008": "Removed",
+    "TEST010": "Restricted",
+    "TEST012": "Private",
+    "TEST015": "Live",
+    "TEST020": "Removed",
+    "TEST025": "Restricted",
+    "default": "Live"
+  }
+}
