@@ -19,7 +19,7 @@
   const isNoChange = $derived(!run.is_baseline && run.changes_count === 0 && !isAbandoned);
   const dotSize = $derived(isAbandoned || isNoChange ? 'text-[7px]' : 'text-[10px]');
   const dotColor = $derived(
-    isAbandoned ? 'text-timeline-dot-abandoned opacity-50' : isNoChange ? 'text-timeline-dot-muted' : 'text-timeline-dot'
+    isAbandoned ? 'text-text-muted opacity-50' : isNoChange ? 'text-text-muted' : 'text-text-secondary'
   );
 
   const TRANSITION_COLUMNS = [
@@ -37,7 +37,7 @@
 
 <button
   type="button"
-  class={cn("w-full flex items-center gap-1.5 px-4 py-2.5 text-left cursor-ns-resize hover:bg-interactive-hover transition-colors text-sm", isSelected ? 'bg-bg-detail' : 'border-b border-solid border-border-light', className)}
+  class={cn("w-full flex items-center gap-1 px-4 py-2.5 text-left cursor-ns-resize hover:bg-interactive-hover transition-colors text-sm", isSelected ? 'bg-bg-detail' : 'border-b border-solid border-border-light', className)}
   onclick={onClick}
 >
   <!-- Dot -->
@@ -48,26 +48,29 @@
     <span class="{dotSize} {dotColor} leading-none">&#x25CF;</span>
   </span>
 
-  <!-- Date + status -->
+  <!-- Date -->
   <span class="text-text-secondary shrink-0 w-28">{timestamp}</span>
 
   {#if isAbandoned}
     <span class="text-text-muted">Abandoned</span>
   {:else if run.is_baseline}
-    <span class="text-text-primary shrink-0">Baseline</span>
-    {#if run.status_summary}
-      <span class="flex items-center gap-3 ml-2">
+    <span class="text-text-primary shrink-0 w-20">Baseline</span>
+
+    <span class="flex items-center flex-1">
+      {#if run.status_summary}
         {#if run.status_summary.live > 0}
-          <span style="color: {colors.status.live}">{run.status_summary.live} Live</span>
+          <span class="w-32 shrink-0 text-center" style="color: {colors.status.live}">{run.status_summary.live} Live</span>
+          <span class="text-border-mid shrink-0">|</span>
         {/if}
         {#if run.status_summary.removed > 0}
-          <span style="color: {colors.status.removed}">{run.status_summary.removed} Removed</span>
+          <span class="w-32 shrink-0 text-center" style="color: {colors.status.removed}">{run.status_summary.removed} Removed</span>
+          <span class="text-border-mid shrink-0">|</span>
         {/if}
         {#if run.status_summary.restricted > 0}
-          <span style="color: {colors.status.restricted}">{run.status_summary.restricted} Restricted</span>
+          <span class="w-32 shrink-0 text-center" style="color: {colors.status.restricted}">{run.status_summary.restricted} Restricted</span>
         {/if}
-      </span>
-    {/if}
+      {/if}
+    </span>
   {:else}
     <span class="text-text-primary shrink-0 w-20">{run.changes_count > 0 ? `${run.changes_count} changes` : 'No changes'}</span>
 
@@ -77,7 +80,7 @@
         {#if i > 0}
           <span class="text-border-mid shrink-0">|</span>
         {/if}
-        <span class="w-32 shrink-0 text-sm text-center" style="color: {summary[col.key] ? col.color : 'transparent'}">
+        <span class="w-32 shrink-0 text-center" style="color: {summary[col.key] ? col.color : 'transparent'}">
           {#if summary[col.key]}
             {summary[col.key]} {col.label}
           {:else}

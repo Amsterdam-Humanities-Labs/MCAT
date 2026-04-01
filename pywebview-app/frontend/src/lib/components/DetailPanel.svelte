@@ -79,7 +79,7 @@
 </script>
 
 <div class={cn("bg-bg-detail overflow-auto max-h-[400px] border-t border-border-mid", className)}>
-  <div class="flex gap-1.5 px-4">
+  <div class="flex gap-1 px-4">
     <div class="w-5 shrink-0"></div>
     <div class="flex-1 min-w-0">
       <DetailHeader onOpenFolder={handleOpenFolder} />
@@ -88,7 +88,7 @@
 
   <Tabs tabs={tabItems} bind:value={activeTab}>
     {#snippet children(tab)}
-      <div class="flex gap-1.5 px-4">
+      <div class="flex gap-1 px-4">
         <div class="w-5 shrink-0"></div>
         <div class="flex-1 min-w-0">
           {#if tab === 'changes'}

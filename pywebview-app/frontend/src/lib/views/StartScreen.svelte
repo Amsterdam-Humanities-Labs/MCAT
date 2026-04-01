@@ -1,7 +1,6 @@
 <script lang="ts">
   import { cn } from '$lib/utils';
   import { Button } from '$lib/components';
-  import { FileText } from 'phosphor-svelte';
 
   interface Props {
     class?: string;
@@ -16,12 +15,9 @@
   }: Props = $props();
 </script>
 
-<div class={cn('flex items-center justify-center min-h-[60vh]', className)}>
-  <div class="bg-bg-controls border border-border-mid rounded-lg p-8 max-w-md w-full text-center">
+<div class={cn('flex items-center justify-center h-screen bg-bg-timeline', className)}>
+  <div class="bg-bg-controls border border-border-mid rounded p-8 max-w-md w-full text-center">
     <div class="mb-6">
-      <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-accent-brown/10 flex items-center justify-center">
-        <FileText size={32} class="text-accent-brown" />
-      </div>
       <h2 class="text-xl font-semibold text-text-primary mb-2">Welcome to MCAT</h2>
       <p class="text-text-muted text-sm">
         Moderation Content Analysis Tool<br />
