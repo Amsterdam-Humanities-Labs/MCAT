@@ -108,6 +108,7 @@
     total={processing.total || project.url_count}
     checked={processing.processed}
     {statusCounts}
+    baselineCounts={projectStore.baselineRun?.status_summary ?? null}
   />
 
   <Timeline

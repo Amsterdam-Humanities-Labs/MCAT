@@ -1,0 +1,56 @@
+@theme {
+  /* Background colors */
+  --color-bg-primary: #FFFDF5;
+  --color-bg-timeline: #FDE7B3;
+  --color-bg-controls: #FAE0A0;
+  --color-bg-toolbar: #F5D888;
+  --color-bg-detail: #FDE7B3;
+
+  /* Border colors */
+  --color-border-light: #F0D48A;
+  --color-border-mid: #DABE6E;
+  --color-border-input: #BFA44C;
+
+  /* Text colors */
+  --color-text-primary: #3A3420;
+  --color-text-body: #5B532C;
+  --color-text-secondary: #746A3E;
+  --color-text-muted: #A09450;
+  --color-text-hint: #8A7E44;
+
+  /* Accent colors — golden yellow as primary */
+  --color-accent-brown: #5B532C;
+  --color-accent-gold: #FFC50F;
+  --color-accent-tab-active: #FFF2CC;
+
+  /* Status colors */
+  --color-status-live: #63A361;
+  --color-status-removed: #C44040;
+  --color-status-restricted: #D4940A;
+  --color-status-error: #8A7040;
+
+  /* Link */
+  --color-link-blue: #3A7A5C;
+
+  /* Console */
+  --color-console-timestamp: #A09450;
+  --color-console-warning-count: #C44040;
+
+  /* Timeline */
+  --color-timeline-dot: #5B532C;
+  --color-timeline-dot-muted: #BFA44C;
+  --color-timeline-dot-abandoned: #DABE6E;
+  --color-timeline-axis: #BFA44C;
+  --color-timeline-selection: rgba(91, 83, 44, 0.25);
+
+  /* Interactive states */
+  --color-interactive-hover: #FAE0A0;
+  --color-interactive-active: #4A4422;
+  --color-interactive-input: #FFF2CC;
+  --color-interactive-primary: #4A4422;
+  --color-interactive-danger: #F8E5E5;
+  --color-interactive-row: #FDF0C8;
+
+  /* Progress track */
+  --color-progress-track: #F0D48A;
+}

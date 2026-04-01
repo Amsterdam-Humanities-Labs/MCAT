@@ -37,7 +37,7 @@
   {disabled}
   oninput={handleInput}
   class={cn(
-    'w-16 px-3 py-2 bg-bg-controls border border-border-mid rounded text-text-body text-sm text-center cursor-pointer',
+    'w-16 px-3 py-2 bg-accent-secondary-bg border border-border-mid rounded text-text-body text-sm text-center cursor-pointer',
     'hover:bg-interactive-input focus:outline-none focus:ring-2 focus:ring-accent-brown focus:border-transparent',
     'disabled:opacity-50 disabled:cursor-not-allowed',
     className

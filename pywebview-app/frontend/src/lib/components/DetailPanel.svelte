@@ -78,7 +78,7 @@
   }
 </script>
 
-<div class={cn("bg-bg-primary overflow-auto max-h-[400px] border-t border-border-mid", className)}>
+<div class={cn("bg-bg-detail overflow-auto max-h-[400px] border-t border-border-mid", className)}>
   <div class="flex gap-1.5 px-4">
     <div class="w-5 shrink-0"></div>
     <div class="flex-1 min-w-0">

@@ -4,16 +4,24 @@
 
   interface Props {
     statusCounts: RunStatusSummary;
+    baselineCounts: RunStatusSummary | null;
     class?: string;
   }
 
-  let { statusCounts, class: className }: Props = $props();
+  let { statusCounts, baselineCounts, class: className }: Props = $props();
+
+  function formatDelta(current: number, baseline: number | undefined): string {
+    if (baseline === undefined) return '';
+    const diff = current - baseline;
+    if (diff === 0) return '';
+    return diff > 0 ? `+${diff}` : `${diff}`;
+  }
 
   const items = $derived([
-    { label: 'Live', count: statusCounts.live, color: 'bg-status-live' },
-    { label: 'Removed', count: statusCounts.removed, color: 'bg-status-removed' },
-    { label: 'Restricted', count: statusCounts.restricted, color: 'bg-status-restricted' },
-    { label: 'Error', count: statusCounts.error, color: 'bg-status-error' },
+    { label: 'Live', count: statusCounts.live, delta: formatDelta(statusCounts.live, baselineCounts?.live), color: 'bg-status-live', textColor: 'text-status-live' },
+    { label: 'Removed', count: statusCounts.removed, delta: formatDelta(statusCounts.removed, baselineCounts?.removed), color: 'bg-status-removed', textColor: 'text-status-removed' },
+    { label: 'Restricted', count: statusCounts.restricted, delta: formatDelta(statusCounts.restricted, baselineCounts?.restricted), color: 'bg-status-restricted', textColor: 'text-status-restricted' },
+    { label: 'Error', count: statusCounts.error, delta: formatDelta(statusCounts.error, baselineCounts?.error), color: 'bg-status-error', textColor: 'text-status-error' },
   ]);
 </script>
 
@@ -22,6 +30,9 @@
     <div class="flex items-center gap-1.5">
       <span class="w-2.5 h-2.5 rounded-full {item.color}"></span>
       <span class="text-text-secondary">{item.count.toLocaleString()} {item.label}</span>
+      {#if item.delta}
+        <span class="{item.textColor} text-sm">({item.delta})</span>
+      {/if}
     </div>
   {/each}
 </div>

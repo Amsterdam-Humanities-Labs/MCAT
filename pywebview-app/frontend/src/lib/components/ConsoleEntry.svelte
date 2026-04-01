@@ -30,7 +30,7 @@
   }
 </script>
 
-<div class={cn("flex gap-3 leading-7", levelColors[level], className)}>
+<div class={cn("flex gap-3 leading-7 text-sm", levelColors[level], className)}>
   <span class="text-console-timestamp shrink-0">{formatTime(timestamp)}</span>
   {#if level === 'success'}
     <span class="shrink-0 flex items-center"><Check size={14} weight="bold" /></span>

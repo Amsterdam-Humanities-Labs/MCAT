@@ -31,7 +31,7 @@
     primary:
       'bg-accent-brown hover:bg-interactive-primary text-white focus:ring-accent-brown',
     secondary:
-      'bg-transparent hover:bg-interactive-input text-accent-brown border border-accent-brown focus:ring-accent-brown',
+      'bg-accent-secondary-bg hover:bg-interactive-input text-accent-brown border border-accent-brown focus:ring-accent-brown',
     danger:
       'bg-transparent hover:bg-interactive-danger text-status-removed border border-status-removed focus:ring-status-removed',
     ghost:

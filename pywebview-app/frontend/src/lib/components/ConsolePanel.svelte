@@ -18,7 +18,7 @@
   );
 </script>
 
-<div class={cn("flex flex-col overflow-hidden", className)} class:h-[30vh]={expanded}>
+<div class={cn("flex flex-col overflow-hidden bg-bg-timeline", className)} class:h-[30vh]={expanded}>
   <ConsoleHeader
     {expanded}
     {warningCount}

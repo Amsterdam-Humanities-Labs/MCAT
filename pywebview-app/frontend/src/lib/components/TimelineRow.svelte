@@ -37,7 +37,7 @@
 
 <button
   type="button"
-  class={cn("w-full flex items-center gap-1.5 px-4 py-2.5 text-left cursor-ns-resize hover:bg-interactive-hover transition-colors text-sm", isSelected ? 'bg-bg-primary' : 'border-b border-solid border-border-light', className)}
+  class={cn("w-full flex items-center gap-1.5 px-4 py-2.5 text-left cursor-ns-resize hover:bg-interactive-hover transition-colors text-sm", isSelected ? 'bg-bg-detail' : 'border-b border-solid border-border-light', className)}
   onclick={onClick}
 >
   <!-- Dot -->
