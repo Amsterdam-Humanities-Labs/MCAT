@@ -18,7 +18,7 @@
   ]);
 </script>
 
-<div class={cn("h-1.5 rounded-full bg-progress-track overflow-hidden flex", className)}>
+<div class={cn("h-1.5 rounded bg-progress-track overflow-hidden flex", className)}>
   {#each segments as seg (seg.key)}
     {#if seg.count > 0 && total > 0}
       <div

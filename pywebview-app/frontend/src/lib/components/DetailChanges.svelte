@@ -92,9 +92,7 @@
     {#each groups as group}
       <div>
         <div class="flex items-center gap-2 mb-2">
-          <span class="w-3 h-3 rounded-sm shrink-0" style="background-color: {group.color}"></span>
-          <span class="font-semibold text-sm text-text-primary">{group.label}</span>
-          <span class="text-text-muted text-sm">({group.urls.length})</span>
+          <span class="text-sm" style="color: {group.color}">{group.urls.length} {group.label}</span>
         </div>
         <div class="flex flex-col gap-0.5 ml-5">
           {#each group.urls as url}

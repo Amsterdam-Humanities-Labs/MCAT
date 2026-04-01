@@ -43,6 +43,7 @@ export { default as DetailPanel } from './DetailPanel.svelte';
 export { default as DetailHeader } from './DetailHeader.svelte';
 export { default as DetailChanges } from './DetailChanges.svelte';
 export { default as DetailResults } from './DetailResults.svelte';
+export { default as DetailRun } from './DetailRun.svelte';
 export { default as ConsoleHeader } from './ConsoleHeader.svelte';
 export { default as ConsoleBody } from './ConsoleBody.svelte';
 export { default as ConsoleEntry } from './ConsoleEntry.svelte';

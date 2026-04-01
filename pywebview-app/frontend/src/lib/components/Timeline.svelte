@@ -31,12 +31,12 @@
 
 {#if sortedRuns.length > 0 || currentRun}
   <div class={cn("flex-1 flex flex-col overflow-hidden bg-bg-timeline min-h-0", className)}>
-    <div class="px-4 pt-3 pb-1">
-      <span class="text-text-secondary font-bold text-sm tracking-wider">RUNS</span>
-    </div>
-
     <div class="flex-1 overflow-y-auto">
-      <div class="flex flex-col">
+      <div class="px-4 py-2">
+        <span class="text-text-muted">Latest</span>
+      </div>
+
+      <div class="flex flex-col border-t border-border-light">
         {#if currentRun}
           <TimelineRunning
             timestamp={currentRun.timestamp}
@@ -60,6 +60,10 @@
             />
           {/if}
         {/each}
+      </div>
+
+      <div class="px-4 py-2">
+        <span class="text-text-muted">Earliest</span>
       </div>
     </div>
   </div>

@@ -36,18 +36,17 @@
 </script>
 
 <div class={cn('w-full', className)}>
-  <div {...tabs.triggerList} class="flex border-b border-border-mid mb-4">
+  <div {...tabs.triggerList} class="flex gap-1 border-b border-border-mid">
     {#each tabItems as tab}
       <button
         {...tabs.getTrigger(tab.value)}
         disabled={tab.disabled}
         class={cn(
-          'px-4 py-2 text-sm font-medium transition-colors',
-          'border-b-2 -mb-px',
-          'focus:outline-none focus:ring-2 focus:ring-accent-brown focus:ring-inset',
+          'px-3 py-2 text-sm font-medium transition-colors rounded-t cursor-pointer -mb-px',
+          'border border-border-mid focus:outline-none',
           tabs.value === tab.value
-            ? 'border-accent-brown text-accent-brown'
-            : 'border-transparent text-text-muted hover:text-text-body hover:border-border-light',
+            ? 'bg-accent-tab-active text-accent-brown border-b-transparent'
+            : 'text-accent-brown hover:bg-interactive-hover border-b-transparent',
           tab.disabled && 'opacity-50 cursor-not-allowed'
         )}
       >

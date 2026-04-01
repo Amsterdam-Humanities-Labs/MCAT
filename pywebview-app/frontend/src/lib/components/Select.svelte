@@ -68,7 +68,7 @@
 
   <div
     {...select.content}
-    class="absolute z-50 mt-1 w-full bg-bg-controls border border-border-mid rounded shadow-lg max-h-60 overflow-auto"
+    class="absolute z-50 mt-1 w-full bg-bg-controls border border-border-mid rounded shadow-lg max-h-60 overflow-auto divide-y divide-border-light"
   >
     {#each options as opt}
       <div
@@ -76,7 +76,7 @@
         class={cn(
           'px-3 py-2 text-sm cursor-pointer',
           select.isSelected(opt.value)
-            ? 'bg-accent-brown text-white hover:bg-interactive-active'
+            ? 'bg-accent-tab-active text-text-body'
             : 'text-text-body hover:bg-interactive-hover',
           opt.disabled && 'opacity-50 cursor-not-allowed pointer-events-none'
         )}

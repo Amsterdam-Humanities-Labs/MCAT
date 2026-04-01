@@ -6,6 +6,7 @@
   --color-bg-timeline: #F3EDE4;
   --color-bg-controls: #F5EDE0;
   --color-bg-toolbar: #EDE5D8;
+  --color-bg-detail: #EBE3D5;
 
   /* Border colors */
   --color-border-light: #E4DAC9;
@@ -22,6 +23,7 @@
   /* Accent colors */
   --color-accent-brown: #6B4C2A;
   --color-accent-gold: #C9A96E;
+  --color-accent-tab-active: #E8DCC8;
 
   /* Status colors */
   --color-status-live: #4E8A4E;

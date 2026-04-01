@@ -6,6 +6,7 @@
   import Tabs from './Tabs.svelte';
   import DetailChanges from './DetailChanges.svelte';
   import DetailResults from './DetailResults.svelte';
+  import DetailRun from './DetailRun.svelte';
 
   interface Change {
     url: string;
@@ -28,6 +29,7 @@
   const tabItems = [
     { value: 'changes', label: 'Changes' },
     { value: 'results', label: 'All Results' },
+    { value: 'run', label: 'Run' },
   ];
 
   // Changes data
@@ -76,21 +78,28 @@
   }
 </script>
 
-<div class={cn("bg-bg-primary overflow-auto max-h-[400px] border-y border-border-mid", className)}>
-  <div class="flex gap-3 px-4">
+<div class={cn("bg-bg-primary overflow-auto max-h-[400px] border-t border-border-mid", className)}>
+  <div class="flex gap-1.5 px-4">
     <div class="w-5 shrink-0"></div>
     <div class="flex-1 min-w-0">
-    <DetailHeader {run} {runNumber} onOpenFolder={handleOpenFolder} />
-
-    <Tabs tabs={tabItems} bind:value={activeTab}>
-      {#snippet children(tab)}
-        {#if tab === 'changes'}
-          <DetailChanges {run} {changes} loading={changesLoading} error={changesError} />
-        {:else if tab === 'results'}
-          <DetailResults columns={resultsColumns} rows={resultsRows} loading={resultsLoading} error={resultsError} />
-        {/if}
-      {/snippet}
-    </Tabs>
+      <DetailHeader onOpenFolder={handleOpenFolder} />
     </div>
   </div>
+
+  <Tabs tabs={tabItems} bind:value={activeTab}>
+    {#snippet children(tab)}
+      <div class="flex gap-1.5 px-4">
+        <div class="w-5 shrink-0"></div>
+        <div class="flex-1 min-w-0">
+          {#if tab === 'changes'}
+            <DetailChanges {run} {changes} loading={changesLoading} error={changesError} />
+          {:else if tab === 'results'}
+            <DetailResults columns={resultsColumns} rows={resultsRows} loading={resultsLoading} error={resultsError} />
+          {:else if tab === 'run'}
+            <DetailRun {run} {runNumber} />
+          {/if}
+        </div>
+      </div>
+    {/snippet}
+  </Tabs>
 </div>
