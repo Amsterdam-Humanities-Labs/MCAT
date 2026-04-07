@@ -116,6 +116,7 @@
     {currentRun}
     {selectedRunId}
     projectPath={project.path}
+    totalUrls={project.url_count}
     onRunClick={handleRunClick}
   />
 

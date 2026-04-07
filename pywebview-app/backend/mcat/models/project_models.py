@@ -172,8 +172,10 @@ class ProjectConfig:
 
     def save(self, path: Path) -> None:
         """Save configuration to JSON file."""
-        with open(path, "w", encoding="utf-8") as f:
+        tmp_path = path.with_suffix(".tmp")
+        with open(tmp_path, "w", encoding="utf-8") as f:
             json.dump(self.to_dict(), f, indent=2)
+        tmp_path.replace(path)
 
     @classmethod
     def load(cls, path: Path) -> "ProjectConfig":

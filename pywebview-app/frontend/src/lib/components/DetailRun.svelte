@@ -6,10 +6,11 @@
   interface Props {
     run: Run;
     runNumber: number;
+    totalUrls: number;
     class?: string;
   }
 
-  let { run, runNumber, class: className }: Props = $props();
+  let { run, runNumber, totalUrls, class: className }: Props = $props();
 
   const statusLabel = $derived.by(() => {
     if (run.status === 'abandoned') return 'Abandoned';
@@ -21,6 +22,9 @@
     const items: Array<{ label: string; value: string }> = [
       { label: 'Run', value: `#${runNumber}` },
       { label: 'Status', value: statusLabel },
+      ...(run.status === 'abandoned' && run.total_checked > 0
+        ? [{ label: 'Processed URLs', value: `${run.total_checked} / ${totalUrls}` }]
+        : []),
       { label: 'Started', value: formatTimestamp(run.started_at) },
     ];
     if (run.completed_at) {

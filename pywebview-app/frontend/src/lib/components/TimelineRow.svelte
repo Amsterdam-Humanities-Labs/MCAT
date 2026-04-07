@@ -49,38 +49,33 @@
   </span>
 
   <!-- Date -->
-  <span class="text-text-secondary shrink-0 w-28">{timestamp}</span>
+  <span class="text-text-secondary shrink-0">{timestamp}</span>
 
   {#if isAbandoned}
     <span class="text-text-muted">Abandoned</span>
   {:else if run.is_baseline}
-    <span class="text-text-primary shrink-0 w-20">Baseline</span>
-
-    <span class="flex items-center flex-1">
-      {#if run.status_summary}
-        {#if run.status_summary.live > 0}
-          <span class="w-32 shrink-0 text-center" style="color: {colors.status.live}">{run.status_summary.live} Live</span>
-          <span class="text-border-mid shrink-0">|</span>
-        {/if}
-        {#if run.status_summary.removed > 0}
-          <span class="w-32 shrink-0 text-center" style="color: {colors.status.removed}">{run.status_summary.removed} Removed</span>
-          <span class="text-border-mid shrink-0">|</span>
-        {/if}
-        {#if run.status_summary.restricted > 0}
-          <span class="w-32 shrink-0 text-center" style="color: {colors.status.restricted}">{run.status_summary.restricted} Restricted</span>
-        {/if}
+    <span class="text-text-primary shrink-0">Baseline</span>
+    {#if run.status_summary}
+      {#if run.status_summary.live > 0}
+        <span style="color: {colors.status.live}">{run.status_summary.live} Live</span>
       {/if}
-    </span>
+      {#if run.status_summary.removed > 0}
+        <span style="color: {colors.status.removed}">{run.status_summary.removed} Removed</span>
+      {/if}
+      {#if run.status_summary.restricted > 0}
+        <span style="color: {colors.status.restricted}">{run.status_summary.restricted} Restricted</span>
+      {/if}
+    {/if}
   {:else}
-    <span class="text-text-primary shrink-0 w-20">{run.changes_count > 0 ? `${run.changes_count} changes` : 'No changes'}</span>
+    <span class="text-text-primary shrink-0">{run.changes_count > 0 ? `${run.changes_count} changes` : 'No changes'}</span>
 
     <!-- Fixed transition columns -->
-    <span class="flex items-center flex-1">
+    <span class="flex items-center flex-1 min-w-0 overflow-hidden">
       {#each TRANSITION_COLUMNS as col, i}
         {#if i > 0}
           <span class="text-border-mid shrink-0">|</span>
         {/if}
-        <span class="w-32 shrink-0 text-center" style="color: {summary[col.key] ? col.color : 'transparent'}">
+        <span class="flex-1 text-center truncate" style="color: {summary[col.key] ? col.color : 'transparent'}">
           {#if summary[col.key]}
             {summary[col.key]} {col.label}
           {:else}

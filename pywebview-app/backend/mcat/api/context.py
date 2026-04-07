@@ -41,7 +41,7 @@ class EventBus:
             for queue in self._subscribers:
                 try:
                     queue.put_nowait(event)
-                except:
+                except Exception:
                     dead_queues.append(queue)
             # Clean up dead queues
             for q in dead_queues:
@@ -119,7 +119,7 @@ class AppContext:
             return
 
         self.project_service = ProjectService()
-        self.run_service = RunService()
+        self.run_service = RunService(log_callback=log_buffer.add)
         self.processing_service: Optional[ProcessingService] = None
         self.tracking_service = TrackingService()
         self.current_project: Optional[ProjectState] = None
@@ -133,13 +133,13 @@ class AppContext:
             self.processing_service.cleanup()
         self.processing_service = ProcessingService(
             platform=project.platform,
-            log_callback=lambda msg, level: log_buffer.add(msg, level)
+            log_callback=log_buffer.add
         )
         # Initialize tracking service with dependencies
         self.tracking_service.initialize(
             processing_service=self.processing_service,
             run_service=self.run_service,
-            log_callback=lambda msg, level: log_buffer.add(msg, level),
+            log_callback=log_buffer.add,
             event_bus=event_bus
         )
 

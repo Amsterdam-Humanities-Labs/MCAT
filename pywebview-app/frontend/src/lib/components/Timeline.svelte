@@ -15,11 +15,12 @@
     currentRun: ActiveRun | null;
     selectedRunId: string | null;
     projectPath: string;
+    totalUrls: number;
     onRunClick?: (id: string) => void;
     class?: string;
   }
 
-  let { runs, currentRun, selectedRunId, projectPath, onRunClick, class: className }: Props = $props();
+  let { runs, currentRun, selectedRunId, projectPath, totalUrls, onRunClick, class: className }: Props = $props();
 
   const sortedRuns = $derived(
     runs
@@ -32,11 +33,7 @@
 {#if sortedRuns.length > 0 || currentRun}
   <div class={cn("flex-1 flex flex-col overflow-hidden bg-bg-timeline min-h-0", className)}>
     <div class="flex-1 overflow-y-auto">
-      <div class="px-4 py-2">
-        <span class="text-text-muted">Latest</span>
-      </div>
-
-      <div class="flex flex-col border-t border-border-light">
+      <div class="flex flex-col">
         {#if currentRun}
           <TimelineRunning
             timestamp={currentRun.timestamp}
@@ -57,13 +54,10 @@
               {run}
               runNumber={sortedRuns.length - i}
               {projectPath}
+              {totalUrls}
             />
           {/if}
         {/each}
-      </div>
-
-      <div class="px-4 py-2">
-        <span class="text-text-muted">Earliest</span>
       </div>
     </div>
   </div>

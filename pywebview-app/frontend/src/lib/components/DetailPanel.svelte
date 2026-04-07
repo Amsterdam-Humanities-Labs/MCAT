@@ -19,10 +19,11 @@
     run: Run;
     runNumber: number;
     projectPath: string;
+    totalUrls: number;
     class?: string;
   }
 
-  let { run, runNumber, projectPath, class: className }: Props = $props();
+  let { run, runNumber, projectPath, totalUrls, class: className }: Props = $props();
 
   let activeTab = $state('changes');
 
@@ -96,7 +97,7 @@
           {:else if tab === 'results'}
             <DetailResults columns={resultsColumns} rows={resultsRows} loading={resultsLoading} error={resultsError} />
           {:else if tab === 'run'}
-            <DetailRun {run} {runNumber} />
+            <DetailRun {run} {runNumber} {totalUrls} />
           {/if}
         </div>
       </div>

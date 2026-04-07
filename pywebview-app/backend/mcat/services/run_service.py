@@ -25,6 +25,18 @@ class RunService:
     - Generate combined.csv from completed runs
     """
 
+    def __init__(self, log_callback=None):
+        self._log_callback = log_callback
+
+    def set_log_callback(self, callback):
+        """Set the log callback for sending messages."""
+        self._log_callback = callback
+
+    def _log(self, message: str, level: str = "info"):
+        """Log a message via callback if available."""
+        if self._log_callback:
+            self._log_callback(message, level)
+
     def generate_run_id(self, run_type: str = "manual") -> str:
         """
         Generate a unique run ID based on current timestamp.
@@ -132,6 +144,15 @@ class RunService:
         run.status = RunStatus.ABANDONED
         run.completed_at = datetime.now()
 
+        # Count processed URLs from partial results
+        results_path = project_state.get_run_results_path(run.id)
+        if results_path.exists():
+            try:
+                df = pl.read_csv(results_path)
+                run.total_checked = len(df)
+            except Exception as e:
+                self._log(f"Failed to read results for run {run.id}: {e}", "warning")
+
         # Clear current run if it's this one
         if project_state.current_run and project_state.current_run.id == run.id:
             project_state.current_run = None
@@ -165,8 +186,8 @@ class RunService:
                     + counts.get("Private", 0)
                 )
                 summary["error"] = counts.get("Error", 0)
-        except Exception:
-            pass
+        except Exception as e:
+            self._log(f"Failed to compute status summary for run {run.id}: {e}", "warning")
 
         return summary
 
@@ -216,7 +237,8 @@ class RunService:
                     })
 
             return changes
-        except Exception:
+        except Exception as e:
+            self._log(f"Failed to compute changes for run {current_run.id}: {e}", "warning")
             return []
 
     def _summarize_changes(self, changes: list[dict]) -> dict:
@@ -279,7 +301,7 @@ class RunService:
                     counts_dict.get('Private', 0)
                 )
                 stats['errors'] = counts_dict.get('Error', 0)
-        except Exception:
-            pass
+        except Exception as e:
+            self._log(f"Failed to read run stats for {run.id}: {e}", "warning")
 
         return stats

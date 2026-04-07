@@ -5,6 +5,7 @@ import polars as pl
 from api.context import app_context, log_buffer, event_bus
 from api.handlers.project import _publish_project
 from models.processing_models import ProcessingJob
+from models.project_models import RunStatus
 from models.file_models import FileInfo, ColumnMapping
 from events import dispatcher, ProcessingEvents
 
@@ -67,7 +68,7 @@ def _on_processing_error(sender, **kwargs):
     ctx = app_context
     if ctx.current_project and ctx.current_project.current_run:
         run = ctx.current_project.current_run
-        run.status = "failed"
+        run.status = RunStatus.ABANDONED
         ctx.current_project.current_run = None
         ctx.current_project.save()
     _publish_status()
