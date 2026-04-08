@@ -26,13 +26,9 @@
       label: 'Error',
       classes: 'bg-status-error/20 text-status-error border-status-error/30',
     },
-    pending: {
-      label: 'Pending',
-      classes: 'bg-status-pending/20 text-status-pending border-status-pending/30',
-    },
   };
 
-  const config = $derived(statusConfig[status] ?? statusConfig.pending);
+  const config = $derived(statusConfig[status] ?? statusConfig.error);
 </script>
 
 <span

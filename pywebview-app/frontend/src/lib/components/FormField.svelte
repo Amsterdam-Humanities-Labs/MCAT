@@ -25,7 +25,7 @@
     <label class={cn('block text-sm font-medium mb-1.5', error ? 'text-status-removed' : 'text-text-primary')}>
       {label}
       {#if required}
-        <span class="text-accent-brown">*</span>
+        <span class="text-accent-primary">*</span>
       {/if}
     </label>
   {/if}

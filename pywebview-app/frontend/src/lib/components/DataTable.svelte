@@ -31,7 +31,6 @@
     removed: 'text-status-removed',
     restricted: 'text-status-restricted',
     error: 'text-status-error',
-    pending: 'text-text-muted',
   };
 
   function getCellValue(row: T, key: keyof T | string): unknown {
@@ -94,7 +93,7 @@
                 {#if (col.type === 'link' || col.key === 'url') && isUrl(value)}
                   <button
                     type="button"
-                    class="text-accent-brown text-left truncate max-w-[280px] block cursor-pointer"
+                    class="text-accent-primary text-left truncate max-w-[280px] block cursor-pointer"
                     onclick={() => openLink(String(value))}
                     title={String(value)}
                   >

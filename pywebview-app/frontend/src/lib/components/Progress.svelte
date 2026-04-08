@@ -26,7 +26,7 @@
 >
   <div
     {...progress.progress}
-    class="h-full bg-accent-brown transition-all duration-300 ease-out"
+    class="h-full bg-accent-primary transition-all duration-300 ease-out"
     style="width: {max > 0 ? (value / max) * 100 : 0}%"
   ></div>
 </div>

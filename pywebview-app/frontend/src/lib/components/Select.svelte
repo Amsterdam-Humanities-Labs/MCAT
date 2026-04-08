@@ -55,7 +55,7 @@
     }}
     class={cn(
       'w-full flex items-center justify-between px-3 py-2 bg-accent-secondary-bg border rounded text-text-body text-sm text-left cursor-pointer',
-      'hover:bg-interactive-input focus:outline-none focus:ring-2 focus:ring-accent-brown focus:border-transparent',
+      'hover:bg-interactive-input focus:outline-none focus:ring-2 focus:ring-accent-primary focus:border-transparent',
       'disabled:opacity-50 disabled:cursor-not-allowed',
       error ? 'border-status-removed' : 'border-border-mid'
     )}

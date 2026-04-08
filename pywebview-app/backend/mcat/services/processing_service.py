@@ -237,10 +237,8 @@ class ProcessingService:
             self._batch_processor.cancel_flag.set()
             self._batch_processor.resume_event.set()
 
-        if self._processing_thread and self._processing_thread.is_alive():
-            self._processing_thread.join(timeout=10.0)
-            if self._processing_thread.is_alive():
-                logging.warning("Processing thread did not terminate within 10s")
+        # Don't join — the thread will exit on its own after cancel flag is set
+        # and drivers are killed. Stale signals are guarded in the handlers.
 
         if self._batch_processor:
             self._batch_processor.cleanup()

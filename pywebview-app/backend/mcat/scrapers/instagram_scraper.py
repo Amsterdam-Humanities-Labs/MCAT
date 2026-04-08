@@ -296,9 +296,9 @@ class InstagramScraper(BaseScraper):
             return False
 
     def _check_error_text(self, driver, result: ScrapingResult) -> bool:
-        """Check for specific error text patterns in page source."""
+        """Check for specific error text patterns in visible page text."""
         try:
-            page_text = driver.page_source.lower()
+            page_text = driver.find_element(By.TAG_NAME, "body").text.lower()
 
             # Check for post unavailable messages
             if "post isn't available" in page_text or "post isn't available" in page_text:

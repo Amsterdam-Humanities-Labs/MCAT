@@ -30,35 +30,33 @@
 
 </script>
 
-{#if sortedRuns.length > 0 || currentRun}
-  <div class={cn("flex-1 flex flex-col overflow-hidden bg-bg-timeline min-h-0", className)}>
-    <div class="flex-1 overflow-y-auto">
-      <div class="flex flex-col">
-        {#if currentRun}
-          <TimelineRunning
-            timestamp={currentRun.timestamp}
-            progressPercent={currentRun.progressPercent}
+<div class={cn("flex-1 flex flex-col overflow-hidden bg-bg-timeline min-h-0", className)}>
+  <div class="flex-1 overflow-y-auto">
+    <div class="flex flex-col">
+      {#if currentRun}
+        <TimelineRunning
+          timestamp={currentRun.timestamp}
+          progressPercent={currentRun.progressPercent}
+        />
+      {/if}
+
+      {#each sortedRuns as run, i (run.id)}
+        <TimelineRow
+          {run}
+          index={sortedRuns.length - i}
+          isSelected={selectedRunId === run.id}
+          onClick={() => onRunClick?.(run.id)}
+        />
+
+        {#if selectedRunId === run.id}
+          <DetailPanel
+            {run}
+            runNumber={sortedRuns.length - i}
+            {projectPath}
+            {totalUrls}
           />
         {/if}
-
-        {#each sortedRuns as run, i (run.id)}
-          <TimelineRow
-            {run}
-            index={sortedRuns.length - i}
-            isSelected={selectedRunId === run.id}
-            onClick={() => onRunClick?.(run.id)}
-          />
-
-          {#if selectedRunId === run.id}
-            <DetailPanel
-              {run}
-              runNumber={sortedRuns.length - i}
-              {projectPath}
-              {totalUrls}
-            />
-          {/if}
-        {/each}
-      </div>
+      {/each}
     </div>
   </div>
-{/if}
+</div>

@@ -3,7 +3,7 @@
   import Timeline from '$lib/components/Timeline.svelte';
   import { projectStore } from '$lib/stores/project.svelte';
   import { api } from '$lib/api/client';
-  import type { Project, RunStatusSummary } from '$types/project';
+  import type { Project } from '$types/project';
   import type { LogMessage } from '$types/console';
   import type { processingStore as ProcessingStoreType } from '$lib/stores/processing.svelte';
 
@@ -26,19 +26,6 @@
     if (processing.isPaused) return 'paused';
     if (processing.isProcessing) return 'running';
     return 'idle';
-  });
-
-  // Status counts from processing (live SSE) or last run
-  const statusCounts = $derived.by((): RunStatusSummary => {
-    if (processing.statusCounts) {
-      return {
-        live: processing.statusCounts.live ?? 0,
-        removed: processing.statusCounts.removed ?? 0,
-        restricted: processing.statusCounts.restricted ?? 0,
-        error: processing.statusCounts.error ?? 0,
-      };
-    }
-    return { live: 0, removed: 0, restricted: 0, error: 0 };
   });
 
   const lastRunDuration = $derived.by(() => {
@@ -104,12 +91,14 @@
     onScreenshotsToggle={(v) => api.setScreenshots(v)}
   />
 
-  <ProgressSection
-    total={processing.total || project.url_count}
-    checked={processing.processed}
-    {statusCounts}
-    baselineCounts={projectStore.baselineRun?.status_summary ?? null}
-  />
+  {#if !processing.isIdle}
+    <ProgressSection
+      total={processing.total}
+      checked={processing.processed}
+      statusCounts={processing.statusCounts}
+      baselineCounts={projectStore.baselineRun?.status_summary ?? null}
+    />
+  {/if}
 
   <Timeline
     runs={project.runs ?? []}

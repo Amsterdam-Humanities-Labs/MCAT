@@ -29,6 +29,8 @@
   const platformOptions = [
     { value: 'youtube', label: 'YouTube' },
     { value: 'instagram', label: 'Instagram' },
+    { value: 'facebook', label: 'Facebook' },
+    { value: 'twitter', label: 'Twitter / X' },
   ];
 
   const form = new FormState({
@@ -69,7 +71,8 @@
   }
 </script>
 
-<div class={cn('max-w-lg mx-auto', className)}>
+<div class={cn('h-screen flex items-center justify-center bg-bg-timeline', className)}>
+<div class="max-w-lg w-full">
   <div class="bg-bg-controls border border-border-mid rounded-lg overflow-hidden">
     <!-- Header -->
     <div class="px-6 py-4 border-b border-border-mid">
@@ -146,7 +149,7 @@
 
     <!-- Footer -->
     <div class="px-6 py-4 border-t border-border-mid flex justify-between">
-      <Button variant="ghost" onclick={handleCancel}>
+      <Button variant="secondary" onclick={handleCancel}>
         Cancel
       </Button>
 
@@ -160,4 +163,5 @@
       </Button>
     </div>
   </div>
+</div>
 </div>

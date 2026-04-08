@@ -147,6 +147,8 @@ class AppContext:
         """Close current project and cleanup."""
         if self.current_project and self.tracking_service:
             self.tracking_service.stop_tracking(self.current_project)
+        if self.current_project and self.current_project.current_run:
+            self.run_service.abandon_run(self.current_project, self.current_project.current_run)
         if self.processing_service:
             self.processing_service.cleanup()
         self.current_project = None

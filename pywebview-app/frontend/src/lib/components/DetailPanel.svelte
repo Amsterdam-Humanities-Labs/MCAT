@@ -13,6 +13,7 @@
     previous_status: string;
     new_status: string;
     timestamp: string;
+    screenshot_path: string;
   }
 
   interface Props {
@@ -77,6 +78,14 @@
       // ignore
     }
   }
+
+  async function handleOpenScreenshot(path: string) {
+    try {
+      await api.openExternal(path);
+    } catch {
+      // ignore
+    }
+  }
 </script>
 
 <div class={cn("bg-bg-detail overflow-auto max-h-[400px] border-t border-border-mid", className)}>
@@ -93,7 +102,7 @@
         <div class="w-5 shrink-0"></div>
         <div class="flex-1 min-w-0">
           {#if tab === 'changes'}
-            <DetailChanges {run} {changes} loading={changesLoading} error={changesError} />
+            <DetailChanges {run} {changes} loading={changesLoading} error={changesError} onOpenScreenshot={handleOpenScreenshot} />
           {:else if tab === 'results'}
             <DetailResults columns={resultsColumns} rows={resultsRows} loading={resultsLoading} error={resultsError} />
           {:else if tab === 'run'}

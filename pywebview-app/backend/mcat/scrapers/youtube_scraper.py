@@ -223,11 +223,14 @@ class YouTubeScraper(BaseScraper):
                 result.info = "Processing was cancelled"
                 return result
 
-            # Check for various YouTube error/restriction indicators
-            page_source = driver.page_source.lower()
+            # Get visible text only (not raw HTML which contains JS templates)
+            try:
+                page_text = driver.find_element(By.TAG_NAME, "body").text.lower()
+            except Exception:
+                page_text = ""
 
             # Video removed/unavailable
-            if any(phrase in page_source for phrase in [
+            if any(phrase in page_text for phrase in [
                 'video unavailable', 'this video is not available',
                 'removed by the user', 'account has been terminated'
             ]):
@@ -239,7 +242,7 @@ class YouTubeScraper(BaseScraper):
                 return result
 
             # Age restricted
-            if 'age-restricted' in page_source or 'sign in to confirm your age' in page_source:
+            if 'age-restricted' in page_text or 'sign in to confirm your age' in page_text:
                 result.status = "Age-restricted"
                 result.info = "Age verification required"
                 self._log(f"OK: {url}: {result.status} - {result.info}")
@@ -248,7 +251,7 @@ class YouTubeScraper(BaseScraper):
                 return result
 
             # Geo-blocked
-            if 'not available in your country' in page_source:
+            if 'not available in your country' in page_text:
                 result.status = "Geo-blocked"
                 result.info = "Not available in your region"
                 self._log(f"OK: {url}: {result.status} - {result.info}")
@@ -257,7 +260,7 @@ class YouTubeScraper(BaseScraper):
                 return result
 
             # Private video
-            if 'private video' in page_source:
+            if 'private video' in page_text:
                 result.status = "Private"
                 result.info = "Video is private"
                 self._log(f"OK: {url}: {result.status} - {result.info}")
@@ -268,16 +271,17 @@ class YouTubeScraper(BaseScraper):
             # Check for content warning panels
             try:
                 warning_elements = driver.find_elements(By.CSS_SELECTOR, '[class*="warning"], [class*="restricted"]')
-                if warning_elements:
-                    warning_text = warning_elements[0].text
-                    result.status = "Restricted"
-                    result.info = f"Warning: {warning_text[:100]}"
-                    self._log(f"OK: {url}: {result.status} - {result.info}")
-                    if self.save_screenshots:
-                        result.screenshot_path = self._save_screenshot(driver, url, result.status)
-                    return result
+                for el in warning_elements:
+                    text = el.text.strip()
+                    if text:
+                        result.status = "Restricted"
+                        result.info = f"Warning: {text[:100]}"
+                        self._log(f"OK: {url}: {result.status} - {result.info}")
+                        if self.save_screenshots:
+                            result.screenshot_path = self._save_screenshot(driver, url, result.status)
+                        return result
             except Exception:
-                pass  # Ignore failures in warning element detection
+                pass
 
             # If no restrictions found, assume live
             result.status = "Live"

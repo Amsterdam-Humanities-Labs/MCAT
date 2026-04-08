@@ -18,11 +18,11 @@
   --color-text-muted: #A08050;
   --color-text-hint: #886838;
 
-  /* Accent colors — burnt orange as primary */
-  --color-accent-brown: #E87015;
-  --color-accent-gold: #FFA060;
-  --color-accent-tab-active: #FFECD8;
-  --color-accent-secondary-bg: #FFF0E0;
+  /* Accent colors — warm brown as primary */
+  --color-accent-primary: #8B5E3C;
+  --color-accent-secondary: #B07840;
+  --color-accent-tab-active: #F4E8D0;
+  --color-accent-secondary-bg: #F7EDDA;
 
   /* Status colors */
   --color-status-live: #4A8C3A;
@@ -31,7 +31,7 @@
   --color-status-error: #8C6240;
 
   /* Link */
-  --color-link-blue: #3A7A4A;
+  --color-link: #3A7A4A;
 
   /* Console */
   --color-console-timestamp: #A08050;
@@ -46,9 +46,9 @@
 
   /* Interactive states */
   --color-interactive-hover: #F2E0BA;
-  --color-interactive-active: #C45E10;
+  --color-interactive-active: #6B4226;
   --color-interactive-input: #F8EBCC;
-  --color-interactive-primary: #D06212;
+  --color-interactive-primary: #7A4F30;
   --color-interactive-danger: #F8E5E5;
   --color-interactive-row: #F5E7C6;
 

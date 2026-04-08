@@ -292,6 +292,64 @@ sequenceDiagram
     TS->>Bus: publish tracking.stopped
 ```
 
+## Scraper Detection Strategies
+
+All scrapers use headless Chrome via Selenium with a shared driver pool. No login required. Each scraper returns a `ScrapingResult` with a status (`Live`, `Removed`, `Restricted`, `Error`) and an `info` field with details.
+
+### YouTube (`YouTubeScraper`)
+
+Checks video availability by loading the page and scanning `page_source` for known text patterns.
+
+| Order | Strategy | Detects | Status |
+|-------|----------|---------|--------|
+| 1 | Wait for page title to change from "YouTube" | SPA render complete | — |
+| 2 | Text match: `video unavailable`, `removed by the user`, `account has been terminated` | Removed/terminated videos | Removed |
+| 3 | Text match: `age-restricted`, `sign in to confirm your age` | Age-gated content | Age-restricted |
+| 4 | Text match: `not available in your country` | Geo-blocked content | Geo-blocked |
+| 5 | Text match: `private video` | Private videos | Private |
+| 6 | CSS selector: `[class*="warning"], [class*="restricted"]` | Content warning panels | Restricted |
+| 7 | No restrictions found | Normal video | Live |
+
+Also dismisses YouTube cookie consent modal via `youtube_cookie_handler`.
+
+### Instagram (`InstagramScraper`)
+
+Checks post availability using 4 layered strategies against Instagram's React SPA.
+
+| Order | Strategy | Detects | Status |
+|-------|----------|---------|--------|
+| 1 | CSS selector: `svg[aria-label="error"]` + extract `span[dir="auto"]` text | Error icon with message | Removed |
+| 2 | Text match: `post isn't available`, `sorry, this page isn't available`, `page not found` | Unavailable pages | Removed |
+| 3 | CSS selector: `div.x9f619.xjbqb8w.x78zum5` + keyword match in container text | Error container divs | Removed |
+| 4 | CSS selector: `article[role="presentation"]` exists | Normal post loaded | Live |
+| — | None of the above triggered | Defensive default | Live |
+
+### Facebook (`FacebookScraper`)
+
+Checks post moderation status. The primary detection is the moderation overlay div that Facebook renders over moderated content.
+
+| Order | Strategy | Detects | Status |
+|-------|----------|---------|--------|
+| 1 | CSS selector: `.xzueoph.x1k70j0n` — extract text from overlay elements | Moderation labels (text visible on moderated posts) | Restricted |
+| 2 | Text match: `this content isn't available`, `this page isn't available`, `content has been removed`, etc. | Removed/unavailable content | Removed |
+| — | None of the above triggered | Normal post | Live |
+
+Strategy 1 comes from the original notebook. Strategy 2 is an addition based on common Facebook behaviors, following the same defensive layering pattern as the Instagram and YouTube scrapers.
+
+### Twitter / X (`TwitterScraper`)
+
+Uses a fundamentally different approach from the other scrapers: **full page text scanning** against a curated dictionary of ~60 known moderation notices. This is more resilient than CSS selectors because Twitter/X changes DOM structure frequently but notice text stays stable.
+
+| Order | Strategy | Detects | Status |
+|-------|----------|---------|--------|
+| 1 | Scroll page 3 times (2s pause each) | Trigger lazy-loaded content | — |
+| 2 | Get all visible body text, match against `REMOVED_NOTICES` list | Suspended accounts, deleted posts, unavailable pages, rule violations (content removed) | Removed |
+| 3 | Match against `RESTRICTED_NOTICES` list | Age-restricted, sensitive content, withheld, manipulated media, community notes, disputed content, rule violations (content kept accessible), muted/blocked accounts | Restricted |
+| 4 | Match against `ERROR_NOTICES` list | "Something went wrong" | Error |
+| 5 | No notice matched | Normal tweet | Live |
+
+The matched notice text is stored in `result.info` so the researcher sees the exact moderation label Twitter displayed. Notices are pre-lowercased at init time for efficient matching.
+
 ## Frontend Component Tree
 
 ```mermaid

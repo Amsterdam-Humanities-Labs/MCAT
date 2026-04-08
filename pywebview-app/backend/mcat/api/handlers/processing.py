@@ -25,7 +25,6 @@ def _build_status_dict() -> dict:
         "removed": stats.get("removed", 0),
         "restricted": stats.get("restricted", 0),
         "error": stats.get("errors", 0),
-        "pending": max(0, status.total_count - status.processed_count),
     }
 
     return {
@@ -47,13 +46,20 @@ def _publish_status():
     })
 
 
+def _is_stale(sender) -> bool:
+    """Check if signal came from an orphaned processing service."""
+    return sender is not app_context.processing_service
+
+
 def _on_processing_progress(sender, **kwargs):
-    """Handle processing progress - publish SSE event."""
+    if _is_stale(sender):
+        return
     _publish_status()
 
 
 def _on_processing_completed(sender, **kwargs):
-    """Handle processing completion - complete the run and generate combined.csv."""
+    if _is_stale(sender):
+        return
     ctx = app_context
     if ctx.current_project and ctx.current_project.current_run:
         run = ctx.current_project.current_run
@@ -64,7 +70,8 @@ def _on_processing_completed(sender, **kwargs):
 
 
 def _on_processing_error(sender, **kwargs):
-    """Handle processing error - mark run as failed."""
+    if _is_stale(sender):
+        return
     ctx = app_context
     if ctx.current_project and ctx.current_project.current_run:
         run = ctx.current_project.current_run
@@ -75,12 +82,14 @@ def _on_processing_error(sender, **kwargs):
 
 
 def _on_processing_paused(sender, **kwargs):
-    """Handle processing paused."""
+    if _is_stale(sender):
+        return
     _publish_status()
 
 
 def _on_processing_resumed(sender, **kwargs):
-    """Handle processing resumed."""
+    if _is_stale(sender):
+        return
     _publish_status()
 
 

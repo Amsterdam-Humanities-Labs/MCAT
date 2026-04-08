@@ -45,8 +45,8 @@
           'px-3 py-2 text-sm font-medium transition-colors rounded-t cursor-pointer -mb-px',
           'border border-border-mid focus:outline-none',
           tabs.value === tab.value
-            ? 'bg-accent-tab-active text-accent-brown border-b-transparent'
-            : 'text-accent-brown hover:bg-interactive-hover border-b-transparent',
+            ? 'bg-accent-tab-active text-accent-primary border-b-transparent'
+            : 'text-accent-primary hover:bg-interactive-hover border-b-transparent',
           tab.disabled && 'opacity-50 cursor-not-allowed'
         )}
       >

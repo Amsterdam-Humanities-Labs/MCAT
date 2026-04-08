@@ -19,8 +19,8 @@
   --color-text-hint: #7A6548;
 
   /* Accent colors */
-  --color-accent-brown: #6B4C2A;
-  --color-accent-gold: #C9A96E;
+  --color-accent-primary: #6B4C2A;
+  --color-accent-secondary: #C9A96E;
   --color-accent-tab-active: #E8DCC8;
   --color-accent-secondary-bg: #EDE5D8;
 
@@ -31,7 +31,7 @@
   --color-status-error: #7A6548;
 
   /* Link */
-  --color-link-blue: #2B5C8A;
+  --color-link: #2B5C8A;
 
   /* Console */
   --color-console-timestamp: #9A8468;

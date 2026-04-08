@@ -11,6 +11,8 @@ from utils.csv_handler import CSVHandler, IncrementalCSVWriter
 from core.driver_manager import WebDriverPool
 from scrapers.youtube_scraper import YouTubeScraper
 from scrapers.instagram_scraper import InstagramScraper
+from scrapers.facebook_scraper import FacebookScraper
+from scrapers.twitter_scraper import TwitterScraper
 
 
 class ProcessingResult:
@@ -177,6 +179,16 @@ class BatchProcessor:
             return scraper
         elif platform == 'instagram':
             scraper = InstagramScraper(self.driver_pool)
+            scraper.set_pause_event(self.resume_event)
+            scraper.set_cancel_event(self.cancel_flag)
+            return scraper
+        elif platform == 'facebook':
+            scraper = FacebookScraper(self.driver_pool)
+            scraper.set_pause_event(self.resume_event)
+            scraper.set_cancel_event(self.cancel_flag)
+            return scraper
+        elif platform == 'twitter':
+            scraper = TwitterScraper(self.driver_pool)
             scraper.set_pause_event(self.resume_event)
             scraper.set_cancel_event(self.cancel_flag)
             return scraper

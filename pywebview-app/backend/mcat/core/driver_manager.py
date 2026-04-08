@@ -43,7 +43,7 @@ class WebDriverPool:
         """Install and setup ChromeDriver automatically."""
         try:
             self.chromedriver_path = chromedriver_autoinstaller.install()
-            self._log(f"ChromeDriver installed at: {self.chromedriver_path}", "debug")
+            self._log(f"ChromeDriver ready: {self.chromedriver_path}", "debug")
         except Exception as e:
             raise Exception(f"Failed to install ChromeDriver: {e}")
 

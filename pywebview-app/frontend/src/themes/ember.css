@@ -19,8 +19,8 @@
   --color-text-hint: #8C6240;
 
   /* Accent colors — amber orange as primary */
-  --color-accent-brown: #FF9A00;
-  --color-accent-gold: #FFD93D;
+  --color-accent-primary: #FF9A00;
+  --color-accent-secondary: #FFD93D;
   --color-accent-tab-active: #FFF0CC;
 
   /* Status colors */
@@ -30,7 +30,7 @@
   --color-status-error: #8C6240;
 
   /* Link */
-  --color-link-blue: #2E7D5E;
+  --color-link: #2E7D5E;
 
   /* Console */
   --color-console-timestamp: #A68060;

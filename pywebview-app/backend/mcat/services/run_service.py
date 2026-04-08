@@ -224,6 +224,14 @@ class RunService:
                 curr_df["status"].cast(pl.Utf8).to_list()
             ))
 
+            # Build url -> screenshot_path map from current run
+            screenshot_map: dict[str, str] = {}
+            if "screenshot_path" in curr_df.columns:
+                screenshot_map = dict(zip(
+                    curr_df[url_col].cast(pl.Utf8).to_list(),
+                    curr_df["screenshot_path"].cast(pl.Utf8).to_list()
+                ))
+
             changes = []
             for url, new_status in curr_map.items():
                 old_status = prev_map.get(url)
@@ -234,6 +242,7 @@ class RunService:
                         "new_status": new_status,
                         "info": "",
                         "timestamp": current_run.completed_at.isoformat() if current_run.completed_at else "",
+                        "screenshot_path": screenshot_map.get(url, ""),
                     })
 
             return changes
@@ -263,7 +272,7 @@ class RunService:
         else:
             # Write headers only
             pl.DataFrame(
-                schema={"url": pl.Utf8, "previous_status": pl.Utf8, "new_status": pl.Utf8, "info": pl.Utf8, "timestamp": pl.Utf8}
+                schema={"url": pl.Utf8, "previous_status": pl.Utf8, "new_status": pl.Utf8, "info": pl.Utf8, "timestamp": pl.Utf8, "screenshot_path": pl.Utf8}
             ).write_csv(changes_path)
 
     def get_run_stats(

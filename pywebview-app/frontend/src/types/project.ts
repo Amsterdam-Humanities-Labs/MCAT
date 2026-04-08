@@ -1,4 +1,4 @@
-export type Platform = 'youtube' | 'instagram';
+export type Platform = 'youtube' | 'instagram' | 'facebook' | 'twitter';
 
 export type RunStatus = 'in_progress' | 'completed' | 'abandoned';
 

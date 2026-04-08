@@ -68,6 +68,8 @@
   async function handleCloseProject() {
     try {
       await projectStore.close();
+      processingStore.reset();
+      consoleStore.clear();
       appStore.setView('start');
     } catch (e) {
       appStore.setGlobalError(String(e));

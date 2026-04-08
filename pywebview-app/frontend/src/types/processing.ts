@@ -15,28 +15,7 @@ export const ACTIVE_STATES: ProcessingState[] = ['processing'];
 // States where processing is paused
 export const PAUSED_STATES: ProcessingState[] = ['paused'];
 
-export type ContentStatus = 'live' | 'removed' | 'restricted' | 'error' | 'pending';
-
-export interface StatusCounts {
-  live: number;
-  removed: number;
-  restricted: number;
-  error: number;
-  pending: number;
-}
-
-export interface ProcessingStats {
-  [key: string]: number;
-}
-
-export interface ProcessingStatus {
-  state: ProcessingState;
-  total: number;
-  processed: number;
-  stats: ProcessingStats;
-  action: string;
-  error: string | null;
-}
+export type ContentStatus = 'live' | 'removed' | 'restricted' | 'error';
 
 export interface StartProcessingRequest {
   urls?: string[];

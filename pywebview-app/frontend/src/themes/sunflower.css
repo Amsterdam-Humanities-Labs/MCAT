@@ -19,8 +19,8 @@
   --color-text-hint: #8A7E44;
 
   /* Accent colors — golden yellow as primary */
-  --color-accent-brown: #5B532C;
-  --color-accent-gold: #FFC50F;
+  --color-accent-primary: #5B532C;
+  --color-accent-secondary: #FFC50F;
   --color-accent-tab-active: #FFF2CC;
 
   /* Status colors */
@@ -30,7 +30,7 @@
   --color-status-error: #8A7040;
 
   /* Link */
-  --color-link-blue: #3A7A5C;
+  --color-link: #3A7A5C;
 
   /* Console */
   --color-console-timestamp: #A09450;

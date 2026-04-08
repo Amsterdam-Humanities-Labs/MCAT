@@ -9,6 +9,7 @@
     previous_status: string;
     new_status: string;
     timestamp: string;
+    screenshot_path: string;
   }
 
   interface TransitionGroup {
@@ -16,7 +17,7 @@
     to: string;
     label: string;
     color: string;
-    urls: string[];
+    items: { url: string; screenshot_path: string }[];
   }
 
   interface Props {
@@ -24,10 +25,11 @@
     changes: Change[];
     loading: boolean;
     error: string | null;
+    onOpenScreenshot?: (path: string) => void;
     class?: string;
   }
 
-  let { run, changes, loading, error, class: className }: Props = $props();
+  let { run, changes, loading, error, onOpenScreenshot, class: className }: Props = $props();
 
   function statusColor(status: string): string {
     switch (status.toLowerCase()) {
@@ -53,12 +55,12 @@
           to: c.new_status,
           label: `${statusLabel(c.previous_status)} \u2192 ${statusLabel(c.new_status)}`,
           color: statusColor(c.new_status),
-          urls: [],
+          items: [],
         });
       }
-      map.get(key)!.urls.push(c.url);
+      map.get(key)!.items.push({ url: c.url, screenshot_path: c.screenshot_path });
     }
-    return [...map.values()].sort((a, b) => b.urls.length - a.urls.length);
+    return [...map.values()].sort((a, b) => b.items.length - a.items.length);
   });
 </script>
 
@@ -92,23 +94,29 @@
     {#each groups as group}
       <div>
         <div class="flex items-center gap-2 mb-2">
-          <span class="text-sm" style="color: {group.color}">{group.urls.length} {group.label}</span>
+          <span class="text-sm" style="color: {group.color}">{group.items.length} {group.label}</span>
         </div>
         <div class="flex flex-col gap-0.5 ml-5">
-          {#each group.urls as url}
+          {#each group.items as item}
             <div class="flex items-center gap-2 py-0.5">
               <a
-                href={url}
+                href={item.url}
                 target="_blank"
                 rel="noopener"
                 class="text-sm truncate"
                 style="color: {colors.link}"
               >
-                {url}
+                {item.url}
               </a>
-              <span class="ml-auto shrink-0 opacity-30">
-                <Image size={14} />
-              </span>
+              {#if item.screenshot_path}
+                <button
+                  class="ml-auto shrink-0 cursor-pointer opacity-60 hover:opacity-100"
+                  onclick={() => onOpenScreenshot?.(item.screenshot_path)}
+                  title="Open screenshot"
+                >
+                  <Image size={14} />
+                </button>
+              {/if}
             </div>
           {/each}
         </div>

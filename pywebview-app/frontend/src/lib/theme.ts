@@ -18,8 +18,8 @@ export const colors = {
     hint: '#7A6240',
   },
   accent: {
-    brown: '#E87015',
-    gold: '#FFA060',
+    primary: '#8B5E3C',
+    secondary: '#B07840',
   },
   status: {
     live: '#4A8C3A',

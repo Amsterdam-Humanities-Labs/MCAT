@@ -1,4 +1,5 @@
-import { type ProcessingState, type StatusCounts, IDLE_STATES, ACTIVE_STATES, PAUSED_STATES } from '../../types';
+import { type ProcessingState, IDLE_STATES, ACTIVE_STATES, PAUSED_STATES } from '../../types';
+import type { RunStatusSummary } from '../../types/project';
 import { api } from '../api/client';
 
 interface ProcessingStatus {
@@ -8,15 +9,14 @@ interface ProcessingStatus {
   action: string;
   error: string | null;
   current_url: string | null;
-  status_counts: StatusCounts;
+  status_counts: RunStatusSummary;
 }
 
-const defaultStatusCounts: StatusCounts = {
+const defaultStatusCounts: RunStatusSummary = {
   live: 0,
   removed: 0,
   restricted: 0,
   error: 0,
-  pending: 0,
 };
 
 function createProcessingStore() {
@@ -121,12 +121,23 @@ function createProcessingStore() {
       state?: string;
       total?: number;
       processed?: number;
-      status_counts?: StatusCounts;
+      status_counts?: RunStatusSummary;
       action?: string;
       error?: string | null;
       current_url?: string | null;
     }) {
-      if (data.state !== undefined) status.state = data.state as ProcessingState;
+      if (data.state !== undefined) {
+        status.state = data.state as ProcessingState;
+        if (IDLE_STATES.includes(status.state)) {
+          status.total = 0;
+          status.processed = 0;
+          status.action = '';
+          status.error = null;
+          status.current_url = null;
+          status.status_counts = { ...defaultStatusCounts };
+          return;
+        }
+      }
       if (data.total !== undefined) status.total = data.total;
       if (data.processed !== undefined) status.processed = data.processed;
       if (data.action !== undefined) status.action = data.action;

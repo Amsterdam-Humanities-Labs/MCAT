@@ -19,8 +19,8 @@
   --color-text-hint: #6E5F4E;
 
   /* Accent colors — lime green as primary accent */
-  --color-accent-brown: #6B8C1F;
-  --color-accent-gold: #CBE86B;
+  --color-accent-primary: #6B8C1F;
+  --color-accent-secondary: #CBE86B;
   --color-accent-tab-active: #EEF5D4;
 
   /* Status colors */
@@ -30,7 +30,7 @@
   --color-status-error: #8C6840;
 
   /* Link */
-  --color-link-blue: #2B6E5A;
+  --color-link: #2B6E5A;
 
   /* Console */
   --color-console-timestamp: #8A7C6A;

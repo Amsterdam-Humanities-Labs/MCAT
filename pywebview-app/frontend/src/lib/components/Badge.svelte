@@ -22,7 +22,7 @@
     success: 'bg-status-live/10 text-status-live',
     error: 'bg-status-removed/10 text-status-removed',
     warning: 'bg-status-restricted/10 text-status-restricted',
-    info: 'bg-link-blue/10 text-link-blue',
+    info: 'bg-link/10 text-link',
   };
 
   const sizes = {

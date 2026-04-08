@@ -29,9 +29,9 @@
 
   const variants = {
     primary:
-      'bg-accent-brown hover:bg-interactive-primary text-white focus:ring-accent-brown',
+      'bg-accent-primary hover:bg-interactive-primary text-white focus:ring-accent-primary',
     secondary:
-      'bg-accent-secondary-bg hover:bg-interactive-input text-accent-brown border border-accent-brown focus:ring-accent-brown',
+      'bg-accent-secondary-bg hover:bg-interactive-input text-accent-primary border border-accent-primary focus:ring-accent-primary',
     danger:
       'bg-transparent hover:bg-interactive-danger text-status-removed border border-status-removed focus:ring-status-removed',
     ghost:
