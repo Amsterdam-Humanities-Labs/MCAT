@@ -50,6 +50,9 @@ function createProjectStore() {
       error = null;
       try {
         const response = await api.createProject(data);
+        if (response.project) {
+          project = response.project;
+        }
         return response.success;
       } catch (e) {
         error = String(e);
@@ -64,6 +67,9 @@ function createProjectStore() {
       error = null;
       try {
         const response = await api.openProject(path);
+        if (response.project) {
+          project = response.project;
+        }
         return response.success;
       } catch (e) {
         error = String(e);
@@ -78,6 +84,7 @@ function createProjectStore() {
       error = null;
       try {
         await api.closeProject();
+        project = null;
       } catch (e) {
         error = String(e);
       } finally {

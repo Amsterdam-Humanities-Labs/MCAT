@@ -1,7 +1,6 @@
 import { processingStore } from '../stores/processing.svelte';
 import { projectStore } from '../stores/project.svelte';
 import { consoleStore } from '../stores/console.svelte';
-import { appStore } from '../stores/app.svelte';
 
 let consecutiveErrors = 0;
 
@@ -62,11 +61,8 @@ function connect() {
   eventSource.addEventListener('project', (event) => {
     try {
       const data = JSON.parse(event.data);
-      projectStore.setProject(data.project);
       if (data.project) {
-        appStore.setView('project');
-      } else if (appStore.view === 'project') {
-        appStore.setView('start');
+        projectStore.setProject(data.project);
       }
     } catch (e) {
       console.error('[SSE] Failed to parse project event:', e);

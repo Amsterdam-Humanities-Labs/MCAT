@@ -64,14 +64,6 @@ class TrackingService:
                 "info"
             )
 
-        if self._event_bus:
-            self._event_bus.publish({
-                "type": "tracking.started",
-                "interval_value": interval_value,
-                "interval_unit": interval_unit,
-                "next_check": tracking.next_check.isoformat(),
-            })
-
         # Schedule first check
         self._schedule_next_check()
 
@@ -102,10 +94,6 @@ class TrackingService:
         if self._log_callback:
             self._log_callback("URL tracking stopped", "info")
 
-        if self._event_bus:
-            self._event_bus.publish({
-                "type": "tracking.stopped",
-            })
 
         return {"enabled": False}
 
@@ -177,13 +165,6 @@ class TrackingService:
 
                 if self._log_callback:
                     self._log_callback(f"Tracking check started: {run.id}", "info")
-
-                # Publish event
-                if self._event_bus:
-                    self._event_bus.publish({
-                        "type": "tracking.run_started",
-                        "run_id": run.id,
-                    })
 
                 # Read URLs from urls.csv
                 all_urls_df = pl.read_csv(self._project_state.urls_csv_path)

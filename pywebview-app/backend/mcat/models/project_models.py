@@ -113,21 +113,10 @@ class TrackingConfig:
     @classmethod
     def from_dict(cls, data: dict) -> "TrackingConfig":
         """Create TrackingConfig from dictionary."""
-        # Backward compat: migrate interval_minutes -> interval_value + interval_unit
-        if "interval_value" in data:
-            interval_value = data["interval_value"]
-            interval_unit = data.get("interval_unit", "minutes")
-        elif "interval_minutes" in data:
-            interval_value = data["interval_minutes"]
-            interval_unit = "minutes"
-        else:
-            interval_value = 30
-            interval_unit = "minutes"
-
         return cls(
             enabled=data.get("enabled", False),
-            interval_value=interval_value,
-            interval_unit=interval_unit,
+            interval_value=data.get("interval_value", 30),
+            interval_unit=data.get("interval_unit", "minutes"),
             last_check=datetime.fromisoformat(data["last_check"]) if data.get("last_check") else None,
             next_check=datetime.fromisoformat(data["next_check"]) if data.get("next_check") else None,
         )

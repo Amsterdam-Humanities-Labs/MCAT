@@ -5,6 +5,7 @@ import type {
   CsvInfo,
   ImportPreview,
 } from '../../types';
+import type { Project } from '../../types/project';
 
 let backendUrl = '';
 
@@ -53,9 +54,9 @@ export const api = {
 
   // Project
   createProject: (data: CreateProjectRequest) =>
-    callBackend<{ success: boolean; project_path?: string }>('/project/create', 'POST', data),
+    callBackend<{ success: boolean; project: Project }>('/project/create', 'POST', data),
   openProject: (path: string) =>
-    callBackend<{ success: boolean; name?: string }>('/project/open', 'POST', { path }),
+    callBackend<{ success: boolean; project: Project }>('/project/open', 'POST', { path }),
   closeProject: () =>
     callBackend<{ success: boolean }>('/project/close', 'POST'),
   setScreenshots: (enabled: boolean) =>
@@ -90,7 +91,7 @@ export const api = {
   previewImport: (csv_path: string) =>
     callBackend<ImportPreview>('/project/import-preview', 'POST', { csv_path }),
   confirmImport: () =>
-    callBackend<{ added: number }>('/project/import-confirm', 'POST'),
+    callBackend<{ added: number; url_count: number }>('/project/import-confirm', 'POST'),
 
   // Tracking
   startTracking: (interval_value: number, interval_unit: string = 'minutes') =>

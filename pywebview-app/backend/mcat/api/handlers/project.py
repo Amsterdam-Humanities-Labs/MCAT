@@ -24,7 +24,7 @@ def _build_project_dict() -> dict | None:
 
 
 def _publish_project():
-    """Publish project status via SSE."""
+    """Publish project status via SSE (for background events only)."""
     event_bus.publish({
         "type": "project",
         "project": _build_project_dict(),
@@ -47,8 +47,7 @@ def create(body: dict) -> dict:
         url_column=body["url_column"],
     )
     ctx.set_project(project)
-    _publish_project()
-    return {"success": True, "project_path": str(project.project_path)}
+    return {"success": True, "project": _build_project_dict()}
 
 
 def open_project(body: dict) -> dict:
@@ -73,8 +72,7 @@ def open_project(body: dict) -> dict:
         project.save()
 
     ctx.set_project(project)
-    _publish_project()
-    return {"success": True, "name": project.name}
+    return {"success": True, "project": _build_project_dict()}
 
 
 def set_screenshots(body: dict) -> dict:
@@ -85,7 +83,6 @@ def set_screenshots(body: dict) -> dict:
 
     ctx.current_project.config.screenshots_enabled = body.get("enabled", False)
     ctx.current_project.save()
-    _publish_project()
     return {"success": True}
 
 
@@ -106,14 +103,12 @@ def set_tracking_config(body: dict) -> dict:
         tracking.interval_unit = body["interval_unit"]
 
     ctx.current_project.save()
-    _publish_project()
     return {"success": True}
 
 
 def close() -> dict:
     """Close current project."""
     app_context.close_project()
-    _publish_project()
     return {"success": True}
 
 
@@ -162,5 +157,5 @@ def confirm_import(body: dict) -> dict:
         ctx._pending_import
     )
     ctx._pending_import = None
-    _publish_project()
-    return {"added": added}
+    url_count = ctx.project_service.get_url_count(ctx.current_project)
+    return {"added": added, "url_count": url_count}

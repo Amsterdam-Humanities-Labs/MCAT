@@ -148,10 +148,7 @@ def start(body: dict) -> dict:
     success = ctx.processing_service.start_processing(job, urls=urls)
     if not success:
         log_buffer.error("Failed to start processing")
-        # Abandon the run if start failed
         ctx.run_service.abandon_run(project, run)
-    else:
-        _publish_status()
     return {"success": success, "run_id": run.id}
 
 
