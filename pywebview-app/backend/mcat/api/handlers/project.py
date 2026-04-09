@@ -98,6 +98,8 @@ def set_tracking_config(body: dict) -> dict:
     tracking = ctx.current_project.config.tracking
     if "enabled" in body:
         tracking.enabled = body["enabled"]
+        if not body["enabled"]:
+            tracking.next_check = None
     if "interval_value" in body:
         tracking.interval_value = body["interval_value"]
     if "interval_unit" in body:

@@ -7,28 +7,37 @@
     rows: Record<string, unknown>[];
     loading: boolean;
     error: string | null;
+    onOpenScreenshot?: (path: string) => void;
     class?: string;
   }
 
-  let { columns, rows, loading, error, class: className }: Props = $props();
+  let { columns, rows, loading, error, onOpenScreenshot, class: className }: Props = $props();
 
-  const tableColumns = $derived(
-    columns.map((col) => ({
+  const INTERNAL_COLUMNS = ['screenshot_path'];
+
+  const tableColumns = $derived.by(() => {
+    const urlCol = columns.find(c => !INTERNAL_COLUMNS.includes(c) && c !== 'status');
+    if (!urlCol) return columns.filter(c => !INTERNAL_COLUMNS.includes(c)).map(c => ({
+      key: c, header: c, type: 'text' as const,
+    }));
+
+    const rest = columns.filter(c => c !== urlCol && c !== 'status' && !INTERNAL_COLUMNS.includes(c));
+    const ordered = [urlCol, 'status', ...rest];
+
+    return ordered.map((col) => ({
       key: col,
       header: col,
-      type: col === 'status' ? 'status' as const : col.toLowerCase().includes('url') ? 'link' as const : 'text' as const,
-    }))
-  );
+      type: col === 'status' ? 'status' as const : col === urlCol ? 'link' as const : 'text' as const,
+    }));
+  });
 </script>
 
 <div class={cn(className)}>
 {#if loading}
-  <p class="text-text-muted text-sm py-4">Loading...</p>
+  <p class="text-text-muted text-base py-4">Loading...</p>
 {:else if error}
-  <p class="text-status-removed text-sm py-4">{error}</p>
+  <p class="text-status-removed text-base py-4">{error}</p>
 {:else}
-  <div class="py-3">
-    <DataTable columns={tableColumns} {rows} />
-  </div>
+  <DataTable columns={tableColumns} {rows} onScreenshotClick={onOpenScreenshot} />
 {/if}
 </div>

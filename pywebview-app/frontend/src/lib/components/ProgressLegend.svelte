@@ -31,7 +31,7 @@
       <span class="w-2.5 h-2.5 rounded-full {item.color}"></span>
       <span class="text-text-secondary">{item.count.toLocaleString()} {item.label}</span>
       {#if item.delta}
-        <span class="{item.textColor} text-sm">({item.delta})</span>
+        <span class="{item.textColor} text-base">({item.delta})</span>
       {/if}
     </div>
   {/each}

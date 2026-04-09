@@ -2,19 +2,11 @@
   import { cn } from '$lib/utils';
   import type { Run } from '$types/project';
   import { api } from '$lib/api/client';
-  import DetailHeader from './DetailHeader.svelte';
+  import { Button } from '$lib/components';
   import Tabs from './Tabs.svelte';
   import DetailChanges from './DetailChanges.svelte';
   import DetailResults from './DetailResults.svelte';
   import DetailRun from './DetailRun.svelte';
-
-  interface Change {
-    url: string;
-    previous_status: string;
-    new_status: string;
-    timestamp: string;
-    screenshot_path: string;
-  }
 
   interface Props {
     run: Run;
@@ -26,41 +18,49 @@
 
   let { run, runNumber, projectPath, totalUrls, class: className }: Props = $props();
 
-  let activeTab = $state('changes');
+  let activeTab = $state(run.is_baseline ? 'results' : 'changes');
 
-  const tabItems = [
-    { value: 'changes', label: 'Changes' },
-    { value: 'results', label: 'All Results' },
-    { value: 'run', label: 'Run' },
-  ];
+  // Changed results data (eager — small payload)
+  let changedColumns = $state<string[]>([]);
+  let changedRows = $state<Record<string, unknown>[]>([]);
+  let changedLoading = $state(true);
+  let changedError = $state<string | null>(null);
 
-  // Changes data
-  let changes = $state<Change[]>([]);
-  let changesLoading = $state(true);
-  let changesError = $state<string | null>(null);
-
-  // Results data
+  // All results data (lazy — could be 1k+ rows)
   let resultsColumns = $state<string[]>([]);
   let resultsRows = $state<Record<string, unknown>[]>([]);
   let resultsLoading = $state(true);
   let resultsError = $state<string | null>(null);
   let resultsLoaded = $state(false);
 
-  // Load changes on mount
+  const tabItems = $derived(
+    run.is_baseline
+      ? [
+          { value: 'results', label: run.total_checked > 0 ? `All Results (${run.total_checked})` : 'All Results' },
+          { value: 'run', label: 'Run Info' },
+        ]
+      : [
+          { value: 'changes', label: changedRows.length > 0 ? `Changes (${changedRows.length})` : 'Changes' },
+          { value: 'results', label: run.total_checked > 0 ? `All Results (${run.total_checked})` : 'All Results' },
+          { value: 'run', label: 'Run Info' },
+        ]
+  );
+
+  // Load changed results eagerly
   $effect(() => {
     if (run.is_baseline) {
-      changesLoading = false;
+      changedLoading = false;
       return;
     }
-    changesLoading = true;
-    changesError = null;
-    api.getRunChanges(run.id)
-      .then((res) => { changes = res.changes; })
-      .catch((e) => { changesError = String(e); })
-      .finally(() => { changesLoading = false; });
+    changedLoading = true;
+    changedError = null;
+    api.getRunChangedResults(run.id)
+      .then((res) => { changedColumns = res.columns; changedRows = res.rows; })
+      .catch((e) => { changedError = String(e); })
+      .finally(() => { changedLoading = false; });
   });
 
-  // Load results lazily on tab switch
+  // Load all results lazily
   $effect(() => {
     if (activeTab !== 'results' || resultsLoaded) return;
     resultsLoading = true;
@@ -88,28 +88,28 @@
   }
 </script>
 
-<div class={cn("bg-bg-detail overflow-auto max-h-[400px] border-t border-border-mid", className)}>
-  <div class="flex gap-1 px-4">
-    <div class="w-5 shrink-0"></div>
-    <div class="flex-1 min-w-0">
-      <DetailHeader onOpenFolder={handleOpenFolder} />
+<div class={cn("bg-bg-detail overflow-auto max-h-[800px] shadow-[0_4px_8px_-2px_rgba(0,0,0,0.1)]", className)}>
+  <!-- Header: Run #N | Tabs | Run Folder -->
+  <div class="flex items-center gap-3 px-4 py-2">
+    <span class="text-base text-text-primary shrink-0">Run #{runNumber}</span>
+
+    <Tabs tabs={tabItems} bind:value={activeTab} />
+
+    <div class="ml-auto shrink-0">
+      <Button variant="secondary" onclick={handleOpenFolder}>
+        Run Folder
+      </Button>
     </div>
   </div>
 
-  <Tabs tabs={tabItems} bind:value={activeTab}>
-    {#snippet children(tab)}
-      <div class="flex gap-1 px-4">
-        <div class="w-5 shrink-0"></div>
-        <div class="flex-1 min-w-0">
-          {#if tab === 'changes'}
-            <DetailChanges {run} {changes} loading={changesLoading} error={changesError} onOpenScreenshot={handleOpenScreenshot} />
-          {:else if tab === 'results'}
-            <DetailResults columns={resultsColumns} rows={resultsRows} loading={resultsLoading} error={resultsError} />
-          {:else if tab === 'run'}
-            <DetailRun {run} {runNumber} {totalUrls} />
-          {/if}
-        </div>
-      </div>
-    {/snippet}
-  </Tabs>
+  <!-- Tab content -->
+  <div class="px-4 pb-2">
+    {#if activeTab === 'changes'}
+      <DetailChanges {run} columns={changedColumns} rows={changedRows} loading={changedLoading} error={changedError} onOpenScreenshot={handleOpenScreenshot} />
+    {:else if activeTab === 'results'}
+      <DetailResults columns={resultsColumns} rows={resultsRows} loading={resultsLoading} error={resultsError} onOpenScreenshot={handleOpenScreenshot} />
+    {:else if activeTab === 'run'}
+      <DetailRun {run} {runNumber} {totalUrls} />
+    {/if}
+  </div>
 </div>

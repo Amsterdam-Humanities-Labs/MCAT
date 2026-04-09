@@ -78,21 +78,18 @@ class ProcessingService:
     def start_processing(self, job: ProcessingJob, urls: list = None) -> bool:
         """Start a processing job with proper threading."""
         if ProcessingService.is_any_processing():
-            dispatcher.send(ProcessingEvents.ERROR, sender=self,
-                          error_message="Another platform is already processing. Please wait or cancel it first.")
+            self._log_error("Cannot start: another processing instance is still running")
             return False
 
         if urls is None:
             validation = self.validate_processing_request(job)
             if not validation.valid:
-                dispatcher.send(ProcessingEvents.ERROR, sender=self,
-                              error_message=f"Cannot start processing: {validation.error_summary}")
+                self._log_error(f"Cannot start: {validation.error_summary}")
                 return False
 
         with self._state_lock:
             if self._processing_state != ProcessingState.IDLE:
-                dispatcher.send(ProcessingEvents.ERROR, sender=self,
-                              error_message="Processing already in progress")
+                self._log_error(f"Cannot start: processing state is {self._processing_state.value}, expected idle")
                 return False
 
         try:
@@ -119,9 +116,8 @@ class ProcessingService:
             return True
 
         except Exception as e:
+            self._log_error(f"Failed to start: {e}")
             self._set_error_state(str(e))
-            dispatcher.send(ProcessingEvents.ERROR, sender=self,
-                          error_message=f"Failed to start processing: {e}")
             return False
 
     def pause_processing(self) -> bool:
@@ -253,6 +249,11 @@ class ProcessingService:
             ProcessingService._all_instances.discard(self)
 
     # Internal methods
+
+    def _log_error(self, message: str):
+        """Log error via callback so it surfaces in the activity log."""
+        if self._log_callback:
+            self._log_callback(message, "error")
 
     def _set_error_state(self, message: str):
         """Set error state with message."""

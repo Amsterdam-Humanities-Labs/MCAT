@@ -4,7 +4,7 @@
   --color-bg-timeline: #F2E4CC;
   --color-bg-controls: #F4E8D0;
   --color-bg-toolbar: #EEE0C2;
-  --color-bg-detail: #FBF6EC;
+  --color-bg-detail: #F7F0E2;
 
   /* Border colors */
   --color-border-light: #E4CA9A;
@@ -29,6 +29,16 @@
   --color-status-removed: #C43838;
   --color-status-restricted: #E0820A;
   --color-status-error: #8C6240;
+
+  /* Status badge backgrounds (solid) */
+  --color-badge-live-bg: #E5F2E0;
+  --color-badge-live-border: #B8D8AD;
+  --color-badge-removed-bg: #F8E5E5;
+  --color-badge-removed-border: #E8B8B8;
+  --color-badge-restricted-bg: #FDF0DD;
+  --color-badge-restricted-border: #F0D4A0;
+  --color-badge-error-bg: #F2EAE4;
+  --color-badge-error-border: #DCC8B4;
 
   /* Link */
   --color-link: #3A7A4A;

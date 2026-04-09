@@ -27,7 +27,7 @@
 <div
   {...tooltip.content}
   class={cn(
-    'z-50 px-2 py-1 text-sm',
+    'z-50 px-2 py-1 text-base',
     'bg-bg-controls border border-border-mid rounded shadow-lg text-text-body'
   )}
 >

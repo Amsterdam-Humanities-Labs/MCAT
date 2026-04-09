@@ -54,7 +54,7 @@
       'focus:outline-none focus:ring-2 focus:ring-accent-primary focus:ring-offset-2 focus:ring-offset-bg-primary',
       checked
         ? 'bg-accent-primary border-accent-primary hover:bg-interactive-primary'
-        : 'bg-bg-controls border-border-mid hover:border-border-light'
+        : 'bg-bg-detail border-border-mid hover:border-border-light'
     )}
   >
     {#if checked}
@@ -62,6 +62,6 @@
     {/if}
   </button>
   {#if label}
-    <span class="text-text-body text-sm">{label}</span>
+    <span class="text-text-body text-base">{label}</span>
   {/if}
 </label>

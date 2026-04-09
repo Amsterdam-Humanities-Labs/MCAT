@@ -71,40 +71,40 @@
     </FormField>
 
     {#if error}
-      <div class="p-3 bg-status-removed/10 border border-status-removed/30 rounded text-sm text-status-removed">
+      <div class="p-3 bg-status-removed/10 border border-status-removed/30 rounded text-base text-status-removed">
         {error}
       </div>
     {/if}
 
     {#if preview}
       <div class="p-4 bg-bg-primary rounded space-y-3">
-        <h4 class="text-sm font-medium text-text-body m-0">Import Preview</h4>
+        <h4 class="text-base font-medium text-text-body m-0">Import Preview</h4>
 
         <div class="grid grid-cols-3 gap-4">
           <div>
-            <span class="block text-xs text-text-muted mb-1">Total in File</span>
+            <span class="block text-base text-text-muted mb-1">Total in File</span>
             <span class="text-lg font-medium">{preview.total_in_file}</span>
           </div>
           <div>
-            <span class="block text-xs text-text-muted mb-1">New URLs</span>
+            <span class="block text-base text-text-muted mb-1">New URLs</span>
             <span class="text-lg font-medium text-status-live">{preview.new_urls}</span>
           </div>
           <div>
-            <span class="block text-xs text-text-muted mb-1">Duplicates</span>
+            <span class="block text-base text-text-muted mb-1">Duplicates</span>
             <span class="text-lg font-medium text-text-muted">{preview.duplicates_skipped}</span>
           </div>
         </div>
 
         {#if preview.new_urls === 0}
-          <div class="p-2 bg-status-restricted/10 border border-status-restricted/30 rounded text-sm text-status-restricted">
+          <div class="p-2 bg-status-restricted/10 border border-status-restricted/30 rounded text-base text-status-restricted">
             All URLs in this file already exist in the project.
           </div>
         {:else if preview.sample_urls.length > 0}
           <div>
-            <span class="block text-xs text-text-muted mb-2">Sample URLs to add:</span>
+            <span class="block text-base text-text-muted mb-2">Sample URLs to add:</span>
             <div class="space-y-1 max-h-32 overflow-auto">
               {#each preview.sample_urls.slice(0, 5) as url}
-                <div class="text-xs text-text-muted font-mono truncate" title={url}>
+                <div class="text-base text-text-muted font-mono truncate" title={url}>
                   {url}
                 </div>
               {/each}

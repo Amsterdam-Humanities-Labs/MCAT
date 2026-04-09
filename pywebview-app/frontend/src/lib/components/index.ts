@@ -22,7 +22,9 @@ export { default as ConsolePanel } from './ConsolePanel.svelte';
 export { default as DataTable } from './DataTable.svelte';
 export { default as ErrorBanner } from './ErrorBanner.svelte';
 export { default as InfoBox } from './InfoBox.svelte';
+export { default as Link } from './Link.svelte';
 export { default as StatusBadge } from './StatusBadge.svelte';
+export { default as TransitionBadge } from './TransitionBadge.svelte';
 
 // Layout Components
 export { default as Toolbar } from './Toolbar.svelte';
@@ -40,7 +42,6 @@ export { default as Timeline } from './Timeline.svelte';
 export { default as TimelineRow } from './TimelineRow.svelte';
 export { default as TimelineRunning } from './TimelineRunning.svelte';
 export { default as DetailPanel } from './DetailPanel.svelte';
-export { default as DetailHeader } from './DetailHeader.svelte';
 export { default as DetailChanges } from './DetailChanges.svelte';
 export { default as DetailResults } from './DetailResults.svelte';
 export { default as DetailRun } from './DetailRun.svelte';

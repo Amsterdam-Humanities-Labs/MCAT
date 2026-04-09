@@ -26,8 +26,8 @@
   };
 
   const sizes = {
-    sm: 'px-2 py-0.5 text-xs',
-    md: 'px-2.5 py-1 text-sm',
+    sm: 'px-2 py-0.5 text-base',
+    md: 'px-2.5 py-1 text-base',
   };
 </script>
 

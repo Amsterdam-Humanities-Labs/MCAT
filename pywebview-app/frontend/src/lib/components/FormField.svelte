@@ -22,7 +22,7 @@
 
 <div class={cn('w-full', className)}>
   {#if label}
-    <label class={cn('block text-sm font-medium mb-1.5', error ? 'text-status-removed' : 'text-text-primary')}>
+    <label class={cn('block text-base font-medium mb-1.5', error ? 'text-status-removed' : 'text-text-primary')}>
       {label}
       {#if required}
         <span class="text-accent-primary">*</span>
@@ -33,6 +33,6 @@
   {@render children?.()}
 
   {#if hint && !error}
-    <p class="mt-1 text-xs text-text-muted">{hint}</p>
+    <p class="mt-1 text-base text-text-muted">{hint}</p>
   {/if}
 </div>

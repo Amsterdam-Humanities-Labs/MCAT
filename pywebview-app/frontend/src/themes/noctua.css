@@ -1,10 +1,10 @@
 @theme {
   /* Background colors */
   --color-bg-primary: #FAF6F0;
-  --color-bg-timeline: #F3EDE4;
+  --color-bg-timeline: #EDE5D8;
   --color-bg-controls: #F5EDE0;
   --color-bg-toolbar: #EDE5D8;
-  --color-bg-detail: #EBE3D5;
+  --color-bg-detail: #F3EDE4;
 
   /* Border colors */
   --color-border-light: #E4DAC9;
@@ -25,10 +25,20 @@
   --color-accent-secondary-bg: #EDE5D8;
 
   /* Status colors */
-  --color-status-live: #4E8A4E;
-  --color-status-removed: #B54040;
-  --color-status-restricted: #B8832F;
-  --color-status-error: #7A6548;
+  --color-status-live: #4A8C3A;
+  --color-status-removed: #C43838;
+  --color-status-restricted: #E0820A;
+  --color-status-error: #8C6240;
+
+  /* Status badge backgrounds (solid) */
+  --color-badge-live-bg: #E5F2E0;
+  --color-badge-live-border: #B8D8AD;
+  --color-badge-removed-bg: #F8E5E5;
+  --color-badge-removed-border: #E8B8B8;
+  --color-badge-restricted-bg: #FDF0DD;
+  --color-badge-restricted-border: #F0D4A0;
+  --color-badge-error-bg: #F2EAE4;
+  --color-badge-error-border: #DCC8B4;
 
   /* Link */
   --color-link: #2B5C8A;

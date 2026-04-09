@@ -19,7 +19,7 @@
   <div class="bg-bg-controls border border-border-mid rounded p-8 max-w-md w-full text-center">
     <div class="mb-6">
       <h2 class="text-xl font-semibold text-text-primary mb-2">Welcome to MCAT</h2>
-      <p class="text-text-muted text-sm">
+      <p class="text-text-muted text-base">
         Moderation Content Analysis Tool<br />
         Create a new project or open an existing one to get started.
       </p>

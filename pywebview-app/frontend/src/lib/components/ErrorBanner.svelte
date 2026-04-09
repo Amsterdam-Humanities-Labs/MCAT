@@ -27,7 +27,7 @@
   >
     <div class="flex items-center gap-3">
       <WarningCircle size={20} class="text-status-removed flex-shrink-0" />
-      <p class="text-sm text-status-removed">{message}</p>
+      <p class="text-base text-status-removed">{message}</p>
     </div>
 
     {#if dismissible && ondismiss}

@@ -84,7 +84,7 @@
     <!-- Content -->
     <div class="p-6">
       {#if wizard.error}
-        <div class="mb-4 p-3 bg-status-removed/10 border border-status-removed/30 rounded text-sm text-status-removed">
+        <div class="mb-4 p-3 bg-status-removed/10 border border-status-removed/30 rounded text-base text-status-removed">
           {wizard.error}
         </div>
       {/if}

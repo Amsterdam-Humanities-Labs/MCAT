@@ -46,11 +46,11 @@
   });
 </script>
 
-<div class={cn("py-3 text-sm", className)}>
+<div class={cn("py-3 text-base", className)}>
   <div class="flex flex-col gap-1.5">
     {#each rows as row}
       <div class="flex gap-4">
-        <span class="text-text-muted w-24 shrink-0">{row.label}</span>
+        <span class="text-text-muted whitespace-nowrap shrink-0">{row.label}</span>
         <span class="text-text-body">{row.value}</span>
       </div>
     {/each}

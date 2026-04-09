@@ -2,8 +2,9 @@
   import { cn } from '$lib/utils';
   import type { Run } from '$types/project';
   import { formatTimestamp } from '$lib/utils/format';
-  import { colors } from '$lib/theme';
   import { CaretUp, CaretDown } from 'phosphor-svelte';
+  import TransitionBadge from './TransitionBadge.svelte';
+  import StatusBadge from './StatusBadge.svelte';
 
   interface Props {
     run: Run;
@@ -22,13 +23,13 @@
     isAbandoned ? 'text-text-muted opacity-50' : isNoChange ? 'text-text-muted' : 'text-text-secondary'
   );
 
-  const TRANSITION_COLUMNS = [
-    { key: 'removed_to_live', label: 'Removed → Live', color: colors.status.live },
-    { key: 'restricted_to_live', label: 'Restricted → Live', color: colors.status.live },
-    { key: 'live_to_restricted', label: 'Live → Restricted', color: colors.status.restricted },
-    { key: 'live_to_private', label: 'Live → Private', color: colors.status.restricted },
-    { key: 'restricted_to_removed', label: 'Restricted → Removed', color: colors.status.removed },
-    { key: 'live_to_removed', label: 'Live → Removed', color: colors.status.removed },
+  const TRANSITIONS = [
+    { key: 'removed_to_live', from: 'removed', to: 'live' },
+    { key: 'restricted_to_live', from: 'restricted', to: 'live' },
+    { key: 'live_to_restricted', from: 'live', to: 'restricted' },
+    { key: 'live_to_private', from: 'live', to: 'private' },
+    { key: 'restricted_to_removed', from: 'restricted', to: 'removed' },
+    { key: 'live_to_removed', from: 'live', to: 'removed' },
   ];
 
   const summary = $derived(run.changes_summary || {});
@@ -37,7 +38,7 @@
 
 <button
   type="button"
-  class={cn("w-full flex items-center gap-1 px-4 py-2.5 text-left cursor-ns-resize hover:bg-interactive-hover transition-colors text-sm", isSelected ? 'bg-bg-detail' : 'border-b border-solid border-border-light', className)}
+  class={cn("w-full flex items-center gap-3 px-4 py-2.5 text-left cursor-ns-resize hover:bg-interactive-hover transition-colors text-base", isSelected ? 'bg-bg-detail shadow-[0_-4px_8px_-2px_rgba(0,0,0,0.1)]' : 'border-b border-solid border-border-light', className)}
   onclick={onClick}
 >
   <!-- Dot -->
@@ -56,23 +57,29 @@
   {:else if run.is_baseline}
     <span class="text-text-primary shrink-0">Baseline</span>
     {#if run.status_summary}
-      {#if run.status_summary.live > 0}
-        <span style="color: {colors.status.live}">{run.status_summary.live} Live</span>
-      {/if}
-      {#if run.status_summary.restricted > 0}
-        <span style="color: {colors.status.restricted}">{run.status_summary.restricted} Restricted</span>
-      {/if}
-      {#if run.status_summary.removed > 0}
-        <span style="color: {colors.status.removed}">{run.status_summary.removed} Removed</span>
-      {/if}
+      <span class="flex items-center gap-1.5">
+        {#if run.status_summary.live > 0}
+          <StatusBadge status="live" />
+        {/if}
+        {#if run.status_summary.restricted > 0}
+          <StatusBadge status="restricted" />
+        {/if}
+        {#if run.status_summary.removed > 0}
+          <StatusBadge status="removed" />
+        {/if}
+      </span>
     {/if}
   {:else}
-    <span class="text-text-primary shrink-0">{run.changes_count > 0 ? `${run.changes_count} changes` : 'No changes'}</span>
+    {#if run.changes_count > 0}
+      <span class="text-text-primary font-bold shrink-0">{run.changes_count} changes</span>
+    {:else}
+      <span class="text-text-primary shrink-0">No changes</span>
+    {/if}
 
-    <span class="flex items-center gap-3">
-      {#each TRANSITION_COLUMNS as col}
-        {#if summary[col.key]}
-          <span style="color: {col.color}">{summary[col.key]} {col.label}</span>
+    <span class="flex items-center gap-1.5">
+      {#each TRANSITIONS as t}
+        {#if summary[t.key]}
+          <TransitionBadge from={t.from} to={t.to} count={summary[t.key]} />
         {/if}
       {/each}
     </span>

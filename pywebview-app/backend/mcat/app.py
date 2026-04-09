@@ -47,18 +47,31 @@ def wait_for_port(port: int, timeout: float = 5.0):
     return False
 
 
+def find_available_vite_port(start: int, attempts: int = 10) -> int:
+    """Find an available port for Vite starting from the given port."""
+    for i in range(attempts):
+        port = start + i
+        try:
+            with socket.create_connection(("127.0.0.1", port), timeout=0.1):
+                continue  # port in use
+        except OSError:
+            return port
+    return start + attempts
+
+
 def start_vite():
-    """Spawn the Vite dev server and return the process."""
-    print(f"Starting Vite dev server on port {VITE_PORT}...", flush=True)
+    """Spawn the Vite dev server and return (process, port)."""
+    vite_port = find_available_vite_port(VITE_PORT)
+    print(f"Starting Vite dev server on port {vite_port}...", flush=True)
     proc = subprocess.Popen(
-        ["pnpm", "vite", "--port", str(VITE_PORT), "--strictPort", "--host", "127.0.0.1"],
+        ["pnpm", "vite", "--port", str(vite_port), "--strictPort", "--host", "127.0.0.1"],
         cwd=str(FRONTEND_DIR),
     )
-    if not wait_for_port(VITE_PORT, timeout=15.0):
+    if not wait_for_port(vite_port, timeout=15.0):
         print("Warning: Vite dev server may not have started", flush=True)
     else:
-        print(f"Vite dev server ready at http://127.0.0.1:{VITE_PORT}", flush=True)
-    return proc
+        print(f"Vite dev server ready at http://127.0.0.1:{vite_port}", flush=True)
+    return proc, vite_port
 
 
 def main():
@@ -77,9 +90,10 @@ def main():
     vite_proc = None
     is_dev = not (DIST_DIR / "index.html").exists()
 
+    vite_port = VITE_PORT
     if is_dev:
-        vite_proc = start_vite()
-        frontend_url = f"http://127.0.0.1:{VITE_PORT}?port={port}"
+        vite_proc, vite_port = start_vite()
+        frontend_url = f"http://127.0.0.1:{vite_port}?port={port}"
     else:
         frontend_url = str(DIST_DIR / "index.html") + f"?port={port}"
 
@@ -95,7 +109,7 @@ def main():
         )
         webview.start()
     except ImportError:
-        url = f"http://127.0.0.1:{VITE_PORT if is_dev else port}?port={port}"
+        url = f"http://127.0.0.1:{vite_port if is_dev else port}?port={port}"
         print(f"pywebview not installed. Open {url} in your browser.", flush=True)
         print("Install with: pip install pywebview", flush=True)
         try:

@@ -1,11 +1,15 @@
 <script lang="ts" generics="T">
   import { cn } from '$lib/utils';
+  import { Image } from 'phosphor-svelte';
+  import TransitionBadge from './TransitionBadge.svelte';
+  import StatusBadge from './StatusBadge.svelte';
+  import Link from './Link.svelte';
 
   interface Column<T> {
     key: keyof T | string;
     header: string;
     width?: string;
-    type?: 'text' | 'link' | 'status';
+    type?: 'text' | 'link' | 'status' | 'transition';
   }
 
   interface Props {
@@ -13,6 +17,7 @@
     rows: T[];
     maxRows?: number;
     emptyMessage?: string;
+    onScreenshotClick?: (path: string) => void;
     class?: string;
   }
 
@@ -21,17 +26,11 @@
     rows,
     maxRows = 100,
     emptyMessage = 'No data to display',
+    onScreenshotClick,
     class: className,
   }: Props = $props();
 
   const displayedRows = $derived(rows.slice(0, maxRows));
-
-  const statusColors: Record<string, string> = {
-    live: 'text-status-live',
-    removed: 'text-status-removed',
-    restricted: 'text-status-restricted',
-    error: 'text-status-error',
-  };
 
   function getCellValue(row: T, key: keyof T | string): unknown {
     if (typeof key === 'string' && key.includes('.')) {
@@ -50,18 +49,11 @@
     return value.startsWith('http://') || value.startsWith('https://');
   }
 
-  function getStatusColor(status: string): string {
-    const normalized = status.toLowerCase();
-    return statusColors[normalized] ?? 'text-text-body';
-  }
 
-  function openLink(url: string) {
-    window.open(url, '_blank');
-  }
 </script>
 
 <div class={cn('overflow-auto border border-border-mid rounded', className)}>
-  <table class="min-w-full text-sm whitespace-nowrap">
+  <table class="min-w-full text-base whitespace-nowrap">
     <thead class="bg-bg-controls sticky top-0">
       <tr>
         {#each columns as col}
@@ -91,18 +83,27 @@
               {@const value = getCellValue(row, col.key)}
               <td class="px-4 py-3 text-text-body">
                 {#if (col.type === 'link' || col.key === 'url') && isUrl(value)}
-                  <button
-                    type="button"
-                    class="text-accent-primary text-left truncate max-w-[280px] block cursor-pointer"
-                    onclick={() => openLink(String(value))}
-                    title={String(value)}
-                  >
-                    {value}
-                  </button>
+                  <div class="flex items-center gap-2">
+                    {#if onScreenshotClick}
+                      {@const screenshotPath = String(getCellValue(row, 'screenshot_path') ?? '')}
+                      {#if screenshotPath}
+                        <button
+                          class="shrink-0 cursor-pointer opacity-60 hover:opacity-100 text-text-muted"
+                          onclick={() => onScreenshotClick(screenshotPath)}
+                          title="Open screenshot"
+                        >
+                          <Image size={16} />
+                        </button>
+                      {/if}
+                    {/if}
+                    <Link href={String(value)} class="max-w-[280px] block">{value}</Link>
+                  </div>
+                {:else if col.type === 'transition'}
+                  {@const prev = String(getCellValue(row, 'previous_status') ?? '')}
+                  {@const curr = String(getCellValue(row, 'status') ?? '')}
+                  <TransitionBadge from={prev} to={curr} />
                 {:else if col.type === 'status' || col.key === 'status'}
-                  <span class={cn('font-medium', getStatusColor(String(value ?? '')))}>
-                    {value ?? ''}
-                  </span>
+                  <StatusBadge status={String(value ?? '').toLowerCase()} />
                 {:else}
                   {value ?? ''}
                 {/if}
@@ -115,7 +116,7 @@
   </table>
 
   {#if rows.length > maxRows}
-    <div class="px-4 py-2 text-xs text-text-muted bg-bg-controls border-t border-border-mid">
+    <div class="px-4 py-2 text-base text-text-muted bg-bg-controls border-t border-border-mid">
       Showing {maxRows} of {rows.length} rows
     </div>
   {/if}

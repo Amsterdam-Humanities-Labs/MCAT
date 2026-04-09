@@ -71,9 +71,9 @@ export const api = {
   resumeProcessing: () =>
     callBackend<{ success: boolean }>('/process/resume', 'POST'),
   // Run data
-  getRunChanges: (run_id: string) =>
-    callBackend<{ changes: Array<{ url: string; previous_status: string; new_status: string; timestamp: string }> }>(
-      '/run/changes', 'POST', { run_id }
+  getRunChangedResults: (run_id: string) =>
+    callBackend<{ columns: string[]; rows: Record<string, unknown>[] }>(
+      '/run/changed-results', 'POST', { run_id }
     ),
   getRunResults: (run_id: string) =>
     callBackend<{ columns: string[]; rows: Record<string, unknown>[] }>(

@@ -49,5 +49,5 @@
 </script>
 
 {#if label}
-  <span class={cn("text-text-hint text-sm", className)} class:animate-pulse={!isRunning && remainingSeconds > 0}>{label}</span>
+  <span class={cn("text-text-hint text-base", className)} class:animate-pulse={!isRunning && remainingSeconds > 0}>{label}</span>
 {/if}

@@ -34,7 +34,7 @@
 </script>
 
 {#if visible}
-  <div class={cn('p-3 border rounded text-sm relative', variantClasses[variant], className)}>
+  <div class={cn('p-3 border rounded text-base relative', variantClasses[variant], className)}>
     {#if dismissible}
       <button
         type="button"

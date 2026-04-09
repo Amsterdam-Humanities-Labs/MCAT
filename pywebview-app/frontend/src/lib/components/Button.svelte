@@ -31,7 +31,7 @@
     primary:
       'bg-accent-primary hover:bg-interactive-primary text-white focus:ring-accent-primary',
     secondary:
-      'bg-accent-secondary-bg hover:bg-interactive-input text-accent-primary border border-accent-primary focus:ring-accent-primary',
+      'bg-bg-detail hover:bg-interactive-input text-accent-primary border border-accent-primary focus:ring-accent-primary',
     danger:
       'bg-transparent hover:bg-interactive-danger text-status-removed border border-status-removed focus:ring-status-removed',
     ghost:
@@ -39,8 +39,8 @@
   };
 
   const sizes = {
-    sm: 'px-3 py-2 text-sm',
-    md: 'px-4 py-2 text-sm',
+    sm: 'px-3 py-2 text-base',
+    md: 'px-4 py-2 text-base',
     lg: 'px-6 py-3 text-base',
   };
 </script>

@@ -1,39 +1,43 @@
 <script lang="ts">
   import { cn } from '$lib/utils';
-  import type { ContentStatus } from '$types/processing';
 
   interface Props {
-    status: ContentStatus;
+    status: string;
     class?: string;
   }
 
   let { status, class: className }: Props = $props();
 
-  const statusConfig: Record<ContentStatus, { label: string; classes: string }> = {
+  const statusConfig: Record<string, { label: string; classes: string }> = {
     live: {
       label: 'Live',
-      classes: 'bg-status-live/20 text-status-live border-status-live/30',
+      classes: 'bg-badge-live-bg text-status-live border-badge-live-border',
     },
     removed: {
       label: 'Removed',
-      classes: 'bg-status-removed/20 text-status-removed border-status-removed/30',
+      classes: 'bg-badge-removed-bg text-status-removed border-badge-removed-border',
     },
     restricted: {
       label: 'Restricted',
-      classes: 'bg-status-restricted/20 text-status-restricted border-status-restricted/30',
+      classes: 'bg-badge-restricted-bg text-status-restricted border-badge-restricted-border',
+    },
+    private: {
+      label: 'Private',
+      classes: 'bg-badge-restricted-bg text-status-restricted border-badge-restricted-border',
     },
     error: {
       label: 'Error',
-      classes: 'bg-status-error/20 text-status-error border-status-error/30',
+      classes: 'bg-badge-error-bg text-status-error border-badge-error-border',
     },
   };
 
-  const config = $derived(statusConfig[status] ?? statusConfig.error);
+  const normalized = $derived(status.toLowerCase());
+  const config = $derived(statusConfig[normalized] ?? { label: status, classes: 'bg-bg-controls text-text-muted border-border-light' });
 </script>
 
 <span
   class={cn(
-    'inline-flex items-center px-2 py-0.5 text-xs font-medium rounded border',
+    'inline-flex items-center px-2 py-0.5 text-base rounded border whitespace-nowrap',
     config.classes,
     className
   )}
