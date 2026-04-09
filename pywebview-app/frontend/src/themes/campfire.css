@@ -1,10 +1,10 @@
 @theme {
   /* Background colors */
   --color-bg-primary: #FBF6EC;
-  --color-bg-timeline: #F7EDDA;
+  --color-bg-timeline: #F2E4CC;
   --color-bg-controls: #F4E8D0;
   --color-bg-toolbar: #EEE0C2;
-  --color-bg-detail: #F7EDDA;
+  --color-bg-detail: #FBF6EC;
 
   /* Border colors */
   --color-border-light: #E4CA9A;

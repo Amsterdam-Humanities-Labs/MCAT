@@ -23,12 +23,12 @@
   );
 
   const TRANSITION_COLUMNS = [
-    { key: 'live_to_removed', label: 'Live → Removed', color: colors.status.removed },
-    { key: 'live_to_restricted', label: 'Live → Restricted', color: colors.status.restricted },
-    { key: 'live_to_private', label: 'Live → Private', color: colors.status.restricted },
     { key: 'removed_to_live', label: 'Removed → Live', color: colors.status.live },
     { key: 'restricted_to_live', label: 'Restricted → Live', color: colors.status.live },
+    { key: 'live_to_restricted', label: 'Live → Restricted', color: colors.status.restricted },
+    { key: 'live_to_private', label: 'Live → Private', color: colors.status.restricted },
     { key: 'restricted_to_removed', label: 'Restricted → Removed', color: colors.status.removed },
+    { key: 'live_to_removed', label: 'Live → Removed', color: colors.status.removed },
   ];
 
   const summary = $derived(run.changes_summary || {});
@@ -59,29 +59,21 @@
       {#if run.status_summary.live > 0}
         <span style="color: {colors.status.live}">{run.status_summary.live} Live</span>
       {/if}
-      {#if run.status_summary.removed > 0}
-        <span style="color: {colors.status.removed}">{run.status_summary.removed} Removed</span>
-      {/if}
       {#if run.status_summary.restricted > 0}
         <span style="color: {colors.status.restricted}">{run.status_summary.restricted} Restricted</span>
+      {/if}
+      {#if run.status_summary.removed > 0}
+        <span style="color: {colors.status.removed}">{run.status_summary.removed} Removed</span>
       {/if}
     {/if}
   {:else}
     <span class="text-text-primary shrink-0">{run.changes_count > 0 ? `${run.changes_count} changes` : 'No changes'}</span>
 
-    <!-- Fixed transition columns -->
-    <span class="flex items-center flex-1 min-w-0 overflow-hidden">
-      {#each TRANSITION_COLUMNS as col, i}
-        {#if i > 0}
-          <span class="text-border-mid shrink-0">|</span>
+    <span class="flex items-center gap-3">
+      {#each TRANSITION_COLUMNS as col}
+        {#if summary[col.key]}
+          <span style="color: {col.color}">{summary[col.key]} {col.label}</span>
         {/if}
-        <span class="flex-1 text-center truncate" style="color: {summary[col.key] ? col.color : 'transparent'}">
-          {#if summary[col.key]}
-            {summary[col.key]} {col.label}
-          {:else}
-            &nbsp;
-          {/if}
-        </span>
       {/each}
     </span>
   {/if}
