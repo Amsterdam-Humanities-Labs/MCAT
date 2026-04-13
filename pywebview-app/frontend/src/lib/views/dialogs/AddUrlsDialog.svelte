@@ -82,16 +82,16 @@
 
         <div class="grid grid-cols-3 gap-4">
           <div>
-            <span class="block text-base text-text-muted mb-1">Total in File</span>
+            <span class="block text-base text-text-secondary mb-1">Total in File</span>
             <span class="text-lg font-medium">{preview.total_in_file}</span>
           </div>
           <div>
-            <span class="block text-base text-text-muted mb-1">New URLs</span>
+            <span class="block text-base text-text-secondary mb-1">New URLs</span>
             <span class="text-lg font-medium text-status-live">{preview.new_urls}</span>
           </div>
           <div>
-            <span class="block text-base text-text-muted mb-1">Duplicates</span>
-            <span class="text-lg font-medium text-text-muted">{preview.duplicates_skipped}</span>
+            <span class="block text-base text-text-secondary mb-1">Duplicates</span>
+            <span class="text-lg font-medium text-text-secondary">{preview.duplicates_skipped}</span>
           </div>
         </div>
 
@@ -101,10 +101,10 @@
           </div>
         {:else if preview.sample_urls.length > 0}
           <div>
-            <span class="block text-base text-text-muted mb-2">Sample URLs to add:</span>
+            <span class="block text-base text-text-secondary mb-2">Sample URLs to add:</span>
             <div class="space-y-1 max-h-32 overflow-auto">
               {#each preview.sample_urls.slice(0, 5) as url}
-                <div class="text-base text-text-muted font-mono truncate" title={url}>
+                <div class="text-base text-text-secondary font-mono truncate" title={url}>
                   {url}
                 </div>
               {/each}

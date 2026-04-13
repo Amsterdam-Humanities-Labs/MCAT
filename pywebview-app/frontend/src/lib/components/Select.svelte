@@ -60,15 +60,15 @@
       error ? 'border-status-removed' : 'border-border-mid'
     )}
   >
-    <span class={selectedOption ? '' : 'text-text-muted'}>
+    <span class={selectedOption ? '' : 'text-text-secondary'}>
       {selectedOption?.label ?? placeholder}
     </span>
-    <CaretDown size={16} weight="bold" class="text-text-muted {select.trigger['aria-expanded'] ? 'rotate-180' : ''}" />
+    <CaretDown size={16} weight="bold" class="text-text-secondary {select.trigger['aria-expanded'] ? 'rotate-180' : ''}" />
   </button>
 
   <div
     {...select.content}
-    class="absolute z-50 mt-1 w-full bg-bg-controls border border-border-mid rounded shadow-lg max-h-60 overflow-auto divide-y divide-border-light"
+    class="absolute z-50 mt-1 w-full bg-bg-primary border border-border-mid rounded shadow-[0_4px_12px_-2px_rgba(0,0,0,0.25)] max-h-60 overflow-auto divide-y divide-border-light"
   >
     {#each options as opt}
       <div
@@ -76,7 +76,7 @@
         class={cn(
           'px-3 py-2 text-base cursor-pointer',
           select.isSelected(opt.value)
-            ? 'bg-accent-tab-active text-text-body'
+            ? 'bg-interactive-active text-bg-primary hover:bg-accent-primary'
             : 'text-text-body hover:bg-interactive-hover',
           opt.disabled && 'opacity-50 cursor-not-allowed pointer-events-none'
         )}

@@ -2,21 +2,21 @@
 @import "./themes/noctua.css";
 
 @font-face {
-  font-family: 'Switzer';
-  src: url('/fonts/Switzer-Regular.otf') format('opentype');
+  font-family: 'General Sans';
+  src: url('/fonts/GeneralSans-Regular.otf') format('opentype');
   font-weight: 400;
   font-style: normal;
 }
 
 @font-face {
-  font-family: 'Switzer';
-  src: url('/fonts/Switzer-Semibold.otf') format('opentype');
+  font-family: 'General Sans';
+  src: url('/fonts/GeneralSans-Semibold.otf') format('opentype');
   font-weight: 600;
   font-style: normal;
 }
 
 html {
-  font-family: Switzer, system-ui, sans-serif;
+  font-family: 'General Sans', system-ui, sans-serif;
   font-size: 16px;
   background: var(--color-bg-primary);
   color: var(--color-text-body);

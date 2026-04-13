@@ -1,5 +1,6 @@
 <script lang="ts">
   import { cn } from '$lib/utils';
+  import { Circle } from 'phosphor-svelte';
 
   interface Props {
     enabled: boolean;
@@ -46,8 +47,17 @@
     if (remainingSeconds > 0) return `Next run in ${formatCountdown(remainingSeconds)}`;
     return '';
   });
+
+  const showDot = $derived(enabled && !isRunning && remainingSeconds > 0);
 </script>
 
 {#if label}
-  <span class={cn("text-text-hint text-base", className)} class:animate-pulse={!isRunning && remainingSeconds > 0}>{label}</span>
+  <span class={cn("flex items-center gap-2 text-text-hint text-base", className)}>
+    {#if showDot}
+      <span class="animate-pulse text-status-live">
+        <Circle size={12} weight="fill" />
+      </span>
+    {/if}
+    {label}
+  </span>
 {/if}

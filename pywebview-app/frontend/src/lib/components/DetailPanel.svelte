@@ -88,7 +88,7 @@
   }
 </script>
 
-<div class={cn("bg-bg-detail overflow-auto max-h-[800px] shadow-[0_4px_8px_-2px_rgba(0,0,0,0.1)]", className)}>
+<div class={cn("bg-bg-primary overflow-auto max-h-[800px] shadow-[0_8px_12px_-4px_rgba(0,0,0,0.2)] relative z-10 border-b border-border-light", className)}>
   <!-- Header: Run #N | Tabs | Run Folder -->
   <div class="flex items-center gap-3 px-4 py-2">
     <span class="text-base text-text-primary shrink-0">Run #{runNumber}</span>

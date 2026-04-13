@@ -70,6 +70,7 @@
     projectName={project.name}
     platform={project.platform}
     urlCount={project.url_count}
+    projectPath={project.path}
     onOpenFolder={handleOpenFolder}
     onClose={onclose}
   />
@@ -86,9 +87,9 @@
     onStart={handleStart}
     onPause={() => processing.pause()}
     onResume={() => processing.resume()}
-    onIntervalToggle={(v) => api.setTrackingConfig({ enabled: v })}
-    onIntervalChange={(v, u) => api.setTrackingConfig({ interval_value: v, interval_unit: u })}
-    onScreenshotsToggle={(v) => api.setScreenshots(v)}
+    onIntervalToggle={async (v) => { const r = await api.setTrackingConfig({ enabled: v }); if (r.project) projectStore.setProject(r.project); }}
+    onIntervalChange={async (v, u) => { const r = await api.setTrackingConfig({ interval_value: v, interval_unit: u }); if (r.project) projectStore.setProject(r.project); }}
+    onScreenshotsToggle={async (v) => { const r = await api.setScreenshots(v); if (r.project) projectStore.setProject(r.project); }}
   />
 
   {#if !processing.isIdle}

@@ -33,6 +33,6 @@
   {@render children?.()}
 
   {#if hint && !error}
-    <p class="mt-1 text-base text-text-muted">{hint}</p>
+    <p class="mt-1 text-base text-text-secondary">{hint}</p>
   {/if}
 </div>

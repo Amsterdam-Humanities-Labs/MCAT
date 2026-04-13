@@ -60,9 +60,9 @@ export const api = {
   closeProject: () =>
     callBackend<{ success: boolean }>('/project/close', 'POST'),
   setScreenshots: (enabled: boolean) =>
-    callBackend<{ success: boolean }>('/project/screenshots', 'POST', { enabled }),
+    callBackend<{ success: boolean; project: Project }>('/project/screenshots', 'POST', { enabled }),
   setTrackingConfig: (config: { enabled?: boolean; interval_value?: number; interval_unit?: string }) =>
-    callBackend<{ success: boolean }>('/project/tracking-config', 'POST', config),
+    callBackend<{ success: boolean; project: Project }>('/project/tracking-config', 'POST', config),
 
   // Processing
   startProcessing: (data?: StartProcessingRequest) =>
@@ -91,7 +91,7 @@ export const api = {
   previewImport: (csv_path: string) =>
     callBackend<ImportPreview>('/project/import-preview', 'POST', { csv_path }),
   confirmImport: () =>
-    callBackend<{ added: number; url_count: number }>('/project/import-confirm', 'POST'),
+    callBackend<{ added: number; project: Project }>('/project/import-confirm', 'POST'),
 
   // Tracking
   startTracking: (interval_value: number, interval_unit: string = 'minutes') =>

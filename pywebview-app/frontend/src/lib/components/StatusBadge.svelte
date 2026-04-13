@@ -3,10 +3,11 @@
 
   interface Props {
     status: string;
+    count?: number;
     class?: string;
   }
 
-  let { status, class: className }: Props = $props();
+  let { status, count, class: className }: Props = $props();
 
   const statusConfig: Record<string, { label: string; classes: string }> = {
     live: {
@@ -32,7 +33,7 @@
   };
 
   const normalized = $derived(status.toLowerCase());
-  const config = $derived(statusConfig[normalized] ?? { label: status, classes: 'bg-bg-controls text-text-muted border-border-light' });
+  const config = $derived(statusConfig[normalized] ?? { label: status, classes: 'bg-bg-controls text-text-secondary border-border-light' });
 </script>
 
 <span
@@ -42,5 +43,5 @@
     className
   )}
 >
-  {config.label}
+  {config.label}{#if count !== undefined} ({count}){/if}
 </span>

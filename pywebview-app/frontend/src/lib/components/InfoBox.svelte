@@ -21,7 +21,7 @@
   let visible = $state(true);
 
   const variantClasses = {
-    info: 'bg-bg-primary border-border-mid text-text-muted',
+    info: 'bg-bg-primary border-border-mid text-text-secondary',
     warning: 'bg-status-restricted/10 border-status-restricted/30 text-status-restricted',
     success: 'bg-status-live/10 border-status-live/30 text-status-live',
     error: 'bg-status-removed/10 border-status-removed/30 text-status-removed',

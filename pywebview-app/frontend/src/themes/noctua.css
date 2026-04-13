@@ -1,9 +1,9 @@
 @theme {
   /* Background colors */
   --color-bg-primary: #FAF6F0;
-  --color-bg-timeline: #EDE5D8;
-  --color-bg-controls: #F5EDE0;
-  --color-bg-toolbar: #EDE5D8;
+  --color-bg-timeline: #E0D1BC;
+  --color-bg-controls: #EAE0CE;
+  --color-bg-toolbar: #F5EDE0;
   --color-bg-detail: #F3EDE4;
 
   /* Border colors */
@@ -15,11 +15,10 @@
   --color-text-primary: #1A1209;
   --color-text-body: #2A1E0E;
   --color-text-secondary: #6B5540;
-  --color-text-muted: #B0997A;
   --color-text-hint: #7A6548;
 
   /* Accent colors */
-  --color-accent-primary: #6B4C2A;
+  --color-accent-primary: #694625;
   --color-accent-secondary: #C9A96E;
   --color-accent-tab-active: #E8DCC8;
   --color-accent-secondary-bg: #EDE5D8;
@@ -44,7 +43,7 @@
   --color-link: #2B5C8A;
 
   /* Console */
-  --color-console-timestamp: #9A8468;
+  --color-console-timestamp: #6B5540;
   --color-console-warning-count: #A0522D;
 
   /* Timeline */

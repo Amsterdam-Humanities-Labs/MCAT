@@ -232,6 +232,7 @@ class YouTubeScraper(BaseScraper):
             # Video removed/unavailable
             if any(phrase in page_text for phrase in [
                 'video unavailable', 'this video is not available',
+                "this video isn't available", "video isn't available anymore",
                 'removed by the user', 'account has been terminated'
             ]):
                 result.status = "Removed"

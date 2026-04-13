@@ -275,8 +275,7 @@ class BatchProcessor:
 
                 # Log the result
                 short_url = url[:50] + '...' if len(url) > 50 else url
-                log_level = "success" if status == "live" else "info" if status in ["removed", "restricted", "private"] else "error"
-                self._log(f"[{current_processed}/{total}] {short_url} → {result.status}", log_level)
+                self._log(f"[{current_processed}/{total}] {short_url} → {result.status}", "info")
 
                 # Don't send progress updates after cancellation
                 if self.cancel_flag.is_set():

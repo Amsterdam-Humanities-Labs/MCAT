@@ -20,7 +20,7 @@
   const isNoChange = $derived(!run.is_baseline && run.changes_count === 0 && !isAbandoned);
   const dotSize = $derived(isAbandoned || isNoChange ? 'text-[7px]' : 'text-[10px]');
   const dotColor = $derived(
-    isAbandoned ? 'text-text-muted opacity-50' : isNoChange ? 'text-text-muted' : 'text-text-secondary'
+    isAbandoned || isNoChange ? 'text-text-secondary' : 'text-text-secondary'
   );
 
   const TRANSITIONS = [
@@ -38,7 +38,7 @@
 
 <button
   type="button"
-  class={cn("w-full flex items-center gap-3 px-4 py-2.5 text-left cursor-ns-resize hover:bg-interactive-hover transition-colors text-base", isSelected ? 'bg-bg-detail shadow-[0_-4px_8px_-2px_rgba(0,0,0,0.1)]' : 'border-b border-solid border-border-light', className)}
+  class={cn("w-full flex items-center gap-3 px-4 py-2.5 text-left cursor-ns-resize hover:bg-interactive-hover transition-colors text-base bg-bg-primary", isSelected ? 'shadow-[0_-4px_8px_-2px_rgba(0,0,0,0.25)] hover:bg-interactive-row' : 'border-b border-solid border-border-light', className)}
   onclick={onClick}
 >
   <!-- Dot -->
@@ -53,19 +53,19 @@
   <span class="text-text-secondary shrink-0">{timestamp}</span>
 
   {#if isAbandoned}
-    <span class="text-text-muted">Abandoned</span>
+    <span class="text-text-secondary">Abandoned</span>
   {:else if run.is_baseline}
     <span class="text-text-primary shrink-0">Baseline</span>
     {#if run.status_summary}
       <span class="flex items-center gap-1.5">
         {#if run.status_summary.live > 0}
-          <StatusBadge status="live" />
+          <StatusBadge status="live" count={run.status_summary.live} />
         {/if}
         {#if run.status_summary.restricted > 0}
-          <StatusBadge status="restricted" />
+          <StatusBadge status="restricted" count={run.status_summary.restricted} />
         {/if}
         {#if run.status_summary.removed > 0}
-          <StatusBadge status="removed" />
+          <StatusBadge status="removed" count={run.status_summary.removed} />
         {/if}
       </span>
     {/if}
@@ -85,7 +85,7 @@
     </span>
   {/if}
 
-  <span class="ml-auto text-text-muted shrink-0">
+  <span class="ml-auto text-text-secondary shrink-0">
     {#if isSelected}
       <CaretUp size={14} weight="bold" />
     {:else}

@@ -64,7 +64,7 @@ def start_vite():
     vite_port = find_available_vite_port(VITE_PORT)
     print(f"Starting Vite dev server on port {vite_port}...", flush=True)
     proc = subprocess.Popen(
-        ["pnpm", "vite", "--port", str(vite_port), "--strictPort", "--host", "127.0.0.1"],
+        ["pnpm", "vite", "--port", str(vite_port), "--strictPort", "--host", "127.0.0.1", "--clearScreen", "false"],
         cwd=str(FRONTEND_DIR),
     )
     if not wait_for_port(vite_port, timeout=15.0):

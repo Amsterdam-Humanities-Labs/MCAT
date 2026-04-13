@@ -14,12 +14,14 @@
   let { enabled, value, unit, onToggle, onChange, class: className }: Props = $props();
 
   const unitOptions = [
+    { value: 'seconds', label: 'seconds' },
     { value: 'minutes', label: 'minutes' },
     { value: 'hours', label: 'hours' },
     { value: 'days', label: 'days' },
   ];
 
   const minValues: Record<string, number> = {
+    seconds: 5,
     minutes: 1,
     hours: 1,
     days: 1,

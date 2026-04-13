@@ -34,7 +34,7 @@
 
 <div class={cn(className)}>
 {#if loading}
-  <p class="text-text-muted text-base py-4">Loading...</p>
+  <p class="text-text-secondary text-base py-4">Loading...</p>
 {:else if error}
   <p class="text-status-removed text-base py-4">{error}</p>
 {:else}

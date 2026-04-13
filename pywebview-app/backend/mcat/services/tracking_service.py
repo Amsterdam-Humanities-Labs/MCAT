@@ -60,7 +60,7 @@ class TrackingService:
         # Log and publish event
         if self._log_callback:
             self._log_callback(
-                f"URL tracking started (every {interval_value} {interval_unit})",
+                f"Tracking started (every {interval_value} {interval_unit})",
                 "info"
             )
 
@@ -92,7 +92,7 @@ class TrackingService:
 
         # Log and publish event
         if self._log_callback:
-            self._log_callback("URL tracking stopped", "info")
+            self._log_callback("Tracking stopped", "info")
 
 
         return {"enabled": False}
@@ -144,9 +144,11 @@ class TrackingService:
             return
 
         try:
-            # Skip if a run is already active, reschedule for later
+            # Skip if a run is already active, wait and retry
             if self._project_state.is_running:
-                self._schedule_next_check()
+                self._timer = threading.Timer(5, self._execute_tracking_run)
+                self._timer.daemon = True
+                self._timer.start()
                 return
 
             # Create tracking run
@@ -164,7 +166,7 @@ class TrackingService:
                     os.environ["MCAT_MOCK_RUN"] = str(len(self._project_state.config.runs))
 
                 if self._log_callback:
-                    self._log_callback(f"Tracking check started: {run.id}", "info")
+                    self._log_callback("Tracking started", "info")
 
                 # Read URLs from urls.csv
                 all_urls_df = pl.read_csv(self._project_state.urls_csv_path)

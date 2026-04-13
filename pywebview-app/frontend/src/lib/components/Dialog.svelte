@@ -70,7 +70,7 @@
   <button
     type="button"
     onclick={() => (dialog.open = false)}
-    class="absolute top-4 right-4 p-1 text-text-muted hover:text-text-body transition-colors"
+    class="absolute top-4 right-4 p-1 text-text-secondary hover:text-text-body transition-colors"
     aria-label="Close"
   >
     <X size={20} />

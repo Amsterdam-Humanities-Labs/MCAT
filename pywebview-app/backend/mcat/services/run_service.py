@@ -42,9 +42,9 @@ class RunService:
         Generate a unique run ID based on current timestamp.
 
         Returns:
-            Run ID in format "YYYY-MM-DDTHH-MM"
+            Run ID in format "YYYY-MM-DDTHH-MM-SS"
         """
-        return datetime.now().strftime("%Y-%m-%dT%H-%M")
+        return datetime.now().strftime("%Y-%m-%dT%H-%M-%S")
 
     def start_run(
         self,

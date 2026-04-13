@@ -18,7 +18,7 @@
   </span>
   <span class="flex items-center gap-2">
     <span class="text-text-secondary">{formatTimestamp(timestamp)}</span>
-    <span class="text-text-muted">·</span>
+    <span class="text-text-secondary">·</span>
     <span class="text-text-hint">Running... {progressPercent}%</span>
   </span>
 </div>

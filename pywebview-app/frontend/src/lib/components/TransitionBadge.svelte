@@ -21,7 +21,7 @@
       case 'removed': return 'text-status-removed bg-badge-removed-bg border-badge-removed-border';
       case 'restricted': case 'private': return 'text-status-restricted bg-badge-restricted-bg border-badge-restricted-border';
       case 'error': return 'text-status-error bg-badge-error-bg border-badge-error-border';
-      default: return 'text-text-muted bg-bg-controls border-border-light';
+      default: return 'text-text-secondary bg-bg-controls border-border-light';
     }
   }
 </script>

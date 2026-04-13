@@ -20,10 +20,14 @@
   }: Props = $props();
 
   function handleInput(e: Event) {
+    const raw = (e.target as HTMLInputElement).value.replace(/\D/g, '');
+    (e.target as HTMLInputElement).value = raw;
+  }
+
+  function handleBlur(e: Event) {
     const raw = (e.target as HTMLInputElement).value;
     const v = parseInt(raw);
-    if (isNaN(v)) return;
-    const clamped = Math.max(min, Math.min(max, v));
+    const clamped = isNaN(v) ? min : Math.max(min, Math.min(max, v));
     value = clamped;
     (e.target as HTMLInputElement).value = String(clamped);
     onchange?.(clamped);
@@ -36,6 +40,7 @@
   {value}
   {disabled}
   oninput={handleInput}
+  onblur={handleBlur}
   class={cn(
     'w-16 px-3 py-2 bg-bg-detail border border-border-mid rounded text-text-body text-base text-center cursor-pointer',
     'hover:bg-interactive-input focus:outline-none focus:ring-2 focus:ring-accent-primary focus:border-transparent',

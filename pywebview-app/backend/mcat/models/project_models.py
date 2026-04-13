@@ -97,7 +97,7 @@ class TrackingConfig:
     @property
     def interval_seconds(self) -> int:
         """Get interval in seconds."""
-        multipliers = {"minutes": 60, "hours": 3600, "days": 86400}
+        multipliers = {"seconds": 1, "minutes": 60, "hours": 3600, "days": 86400}
         return self.interval_value * multipliers.get(self.interval_unit, 60)
 
     def to_dict(self) -> dict:

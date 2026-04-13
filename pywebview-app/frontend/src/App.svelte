@@ -79,6 +79,7 @@
   async function handleImportUrls() {
     try {
       const result = await api.confirmImport();
+      if (result.project) projectStore.setProject(result.project);
       consoleStore.success(`Added ${result.added} new URLs`);
       dialogsStore.closeAddUrls();
     } catch (e) {

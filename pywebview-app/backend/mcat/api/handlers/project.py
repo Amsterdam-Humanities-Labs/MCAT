@@ -83,7 +83,7 @@ def set_screenshots(body: dict) -> dict:
 
     ctx.current_project.config.screenshots_enabled = body.get("enabled", False)
     ctx.current_project.save()
-    return {"success": True}
+    return {"success": True, "project": _build_project_dict()}
 
 
 def set_tracking_config(body: dict) -> dict:
@@ -97,13 +97,15 @@ def set_tracking_config(body: dict) -> dict:
         tracking.enabled = body["enabled"]
         if not body["enabled"]:
             tracking.next_check = None
+            if ctx.tracking_service:
+                ctx.tracking_service.stop_tracking(ctx.current_project)
     if "interval_value" in body:
         tracking.interval_value = body["interval_value"]
     if "interval_unit" in body:
         tracking.interval_unit = body["interval_unit"]
 
     ctx.current_project.save()
-    return {"success": True}
+    return {"success": True, "project": _build_project_dict()}
 
 
 def close() -> dict:
@@ -157,5 +159,4 @@ def confirm_import(body: dict) -> dict:
         ctx._pending_import
     )
     ctx._pending_import = None
-    url_count = ctx.project_service.get_url_count(ctx.current_project)
-    return {"added": added, "url_count": url_count}
+    return {"added": added, "project": _build_project_dict()}

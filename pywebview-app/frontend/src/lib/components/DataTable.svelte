@@ -71,7 +71,7 @@
         <tr>
           <td
             colspan={columns.length}
-            class="px-4 py-8 text-center text-text-muted"
+            class="px-4 py-8 text-center text-text-secondary"
           >
             {emptyMessage}
           </td>
@@ -88,7 +88,7 @@
                       {@const screenshotPath = String(getCellValue(row, 'screenshot_path') ?? '')}
                       {#if screenshotPath}
                         <button
-                          class="shrink-0 cursor-pointer opacity-60 hover:opacity-100 text-text-muted"
+                          class="shrink-0 cursor-pointer opacity-60 hover:opacity-100 text-text-secondary"
                           onclick={() => onScreenshotClick(screenshotPath)}
                           title="Open screenshot"
                         >
@@ -116,7 +116,7 @@
   </table>
 
   {#if rows.length > maxRows}
-    <div class="px-4 py-2 text-base text-text-muted bg-bg-controls border-t border-border-mid">
+    <div class="px-4 py-2 text-base text-text-secondary bg-bg-controls border-t border-border-mid">
       Showing {maxRows} of {rows.length} rows
     </div>
   {/if}
