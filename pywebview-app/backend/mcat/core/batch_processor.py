@@ -83,8 +83,10 @@ class BatchProcessor:
             if output_folder:
                 output_csv_path = Path(output_folder) / "results.csv"
                 # Include all original columns plus result columns
-                result_columns = ['status', 'info', 'screenshot_path', 'timestamp', 'error_message', 'platform']
-                all_columns = list(df.columns) + result_columns
+                url_col = column_mapping.get('post', df.columns[0])
+                result_columns = ['status', 'status_detail', 'status_screenshot', 'status_timestamp', 'status_error']
+                other_columns = [c for c in df.columns if c != url_col]
+                all_columns = [url_col, *result_columns, *other_columns]
                 csv_writer = IncrementalCSVWriter(
                     output_path=str(output_csv_path),
                     columns=all_columns
@@ -249,11 +251,10 @@ class BatchProcessor:
                     # Add scraping results
                     original_row.update({
                         'status': result.status,
-                        'info': result.info,
-                        'screenshot_path': result.screenshot_path or '',
-                        'timestamp': result.timestamp,
-                        'error_message': result.error_message,
-                        'platform': result.platform
+                        'status_detail': result.info,
+                        'status_screenshot': result.screenshot_path or '',
+                        'status_timestamp': result.timestamp,
+                        'status_error': result.error_message,
                     })
                     csv_writer.append_row(original_row)
 

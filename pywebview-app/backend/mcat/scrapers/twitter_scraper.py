@@ -157,7 +157,7 @@ class TwitterScraper(BaseScraper):
     def enable_screenshots(self, enabled: bool, base_path: str) -> None:
         self.save_screenshots = enabled
         if enabled:
-            self.screenshot_base_path = Path(base_path) / "screenshots" / self.get_platform_name()
+            self.screenshot_base_path = Path(base_path) / "screenshots"
 
     def _save_screenshot(self, driver, url: str, status: str) -> str:
         if not self.screenshot_base_path:
@@ -210,7 +210,7 @@ class TwitterScraper(BaseScraper):
             if self.is_cancelled():
                 result = ScrapingResult()
                 result.url = url
-                result.platform = self.get_platform_name()
+        
                 result.status = "Cancelled"
                 result.info = "Processing was cancelled"
                 return result
@@ -238,7 +238,7 @@ class TwitterScraper(BaseScraper):
 
         result = ScrapingResult()
         result.url = url
-        result.platform = self.get_platform_name()
+
 
         if self.is_cancelled():
             result.status = "Cancelled"
@@ -309,9 +309,22 @@ class TwitterScraper(BaseScraper):
                     self._log(f"OK: {url}: {result.status} - {result.info}")
                     return result
 
-            # No notice matched
-            result.status = "Live"
-            result.info = "Post available"
+            # Positive check: tweet article present → Live
+            try:
+                article = driver.find_element(By.CSS_SELECTOR, 'article[data-testid="tweet"], article[role="article"]')
+                if article:
+                    result.status = "Live"
+                    result.info = "Post available"
+                    self._log(f"OK: {url}: {result.status} - {result.info}")
+                    if self.save_screenshots:
+                        result.screenshot_path = self._save_screenshot(driver, url, result.status)
+                    return result
+            except Exception:
+                pass
+
+            # No positive Live indicator, no known notice → Unknown
+            result.status = "Unknown"
+            result.info = ""
             self._log(f"OK: {url}: {result.status} - {result.info}")
             if self.save_screenshots:
                 result.screenshot_path = self._save_screenshot(driver, url, result.status)

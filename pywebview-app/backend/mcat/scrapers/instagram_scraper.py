@@ -93,7 +93,7 @@ class InstagramScraper(BaseScraper):
         """
         self.save_screenshots = enabled
         if enabled:
-            self.screenshot_base_path = Path(base_path) / "screenshots" / self.get_platform_name()
+            self.screenshot_base_path = Path(base_path) / "screenshots"
 
     def _save_screenshot(self, driver, url: str, status: str) -> str:
         """
@@ -154,7 +154,7 @@ class InstagramScraper(BaseScraper):
             if self.is_cancelled():
                 result = ScrapingResult()
                 result.url = url
-                result.platform = self.get_platform_name()
+        
                 result.status = "Cancelled"
                 result.info = "Processing was cancelled"
                 return result
@@ -186,7 +186,7 @@ class InstagramScraper(BaseScraper):
 
         result = ScrapingResult()
         result.url = url
-        result.platform = self.get_platform_name()
+
 
         # Early cancellation check
         if self.is_cancelled():
@@ -250,9 +250,9 @@ class InstagramScraper(BaseScraper):
                     result.screenshot_path = self._save_screenshot(driver, url, result.status)
                 return result
 
-            # If no clear indicators, assume live (defensive default)
-            result.status = "Live"
-            result.info = "Post available"
+            # No positive Live indicator, no known error pattern → Unknown
+            result.status = "Unknown"
+            result.info = ""
             self._log(f"OK: {url}: {result.status} - {result.info}")
             if self.save_screenshots:
                 result.screenshot_path = self._save_screenshot(driver, url, result.status)

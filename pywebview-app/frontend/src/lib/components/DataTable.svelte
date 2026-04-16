@@ -1,6 +1,5 @@
 <script lang="ts" generics="T">
   import { cn } from '$lib/utils';
-  import { Image } from 'phosphor-svelte';
   import TransitionBadge from './TransitionBadge.svelte';
   import StatusBadge from './StatusBadge.svelte';
   import Link from './Link.svelte';
@@ -9,7 +8,7 @@
     key: keyof T | string;
     header: string;
     width?: string;
-    type?: 'text' | 'link' | 'status' | 'transition';
+    type?: 'text' | 'link' | 'status' | 'transition' | 'file';
   }
 
   interface Props {
@@ -83,21 +82,16 @@
               {@const value = getCellValue(row, col.key)}
               <td class="px-4 py-3 text-text-body">
                 {#if (col.type === 'link' || col.key === 'url') && isUrl(value)}
-                  <div class="flex items-center gap-2">
-                    {#if onScreenshotClick}
-                      {@const screenshotPath = String(getCellValue(row, 'screenshot_path') ?? '')}
-                      {#if screenshotPath}
-                        <button
-                          class="shrink-0 cursor-pointer opacity-60 hover:opacity-100 text-text-secondary"
-                          onclick={() => onScreenshotClick(screenshotPath)}
-                          title="Open screenshot"
-                        >
-                          <Image size={16} />
-                        </button>
-                      {/if}
-                    {/if}
-                    <Link href={String(value)} class="max-w-[280px] block">{value}</Link>
-                  </div>
+                  <Link href={String(value)} class="max-w-[280px] block">{value}</Link>
+                {:else if col.type === 'file' && value && onScreenshotClick}
+                  <button
+                    class="text-accent-primary underline decoration-accent-primary/40 hover:decoration-accent-primary cursor-pointer truncate max-w-[200px] block text-left"
+                    onclick={() => onScreenshotClick(String(value))}
+                  >
+                    {String(value).split('/').pop()}
+                  </button>
+                {:else if col.type === 'file'}
+                  <span class="text-text-secondary">{value ? String(value).split('/').pop() : ''}</span>
                 {:else if col.type === 'transition'}
                   {@const prev = String(getCellValue(row, 'previous_status') ?? '')}
                   {@const curr = String(getCellValue(row, 'status') ?? '')}

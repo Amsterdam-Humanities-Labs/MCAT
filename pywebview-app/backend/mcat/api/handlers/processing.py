@@ -64,7 +64,7 @@ def _on_processing_completed(sender, **kwargs):
     if ctx.current_project and ctx.current_project.current_run:
         run = ctx.current_project.current_run
         ctx.run_service.complete_run(ctx.current_project, run)
-        log_buffer.success(f"Run {run.id} completed")
+        log_buffer.success("Run completed")
     _publish_status()
     _publish_project()
 
@@ -143,7 +143,7 @@ def start(body: dict) -> dict:
     )
 
     url_count = len(urls) if urls else len(df)
-    log_buffer.info(f"Starting run {run.id}: {url_count} URLs on {project.platform}")
+    log_buffer.info(f"Starting run: {url_count} URLs on {project.platform}")
 
     success = ctx.processing_service.start_processing(job, urls=urls)
     if not success:

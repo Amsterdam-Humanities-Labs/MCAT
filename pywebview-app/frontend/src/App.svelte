@@ -118,7 +118,7 @@
     <ProjectView
       project={projectStore.project}
       processing={processingStore}
-      messages={consoleStore.messages}
+      messages={consoleStore.filteredMessages}
       onclose={handleCloseProject}
     />
   {/if}

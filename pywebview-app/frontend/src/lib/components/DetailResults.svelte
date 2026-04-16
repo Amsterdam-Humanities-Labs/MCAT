@@ -13,7 +13,7 @@
 
   let { columns, rows, loading, error, onOpenScreenshot, class: className }: Props = $props();
 
-  const INTERNAL_COLUMNS = ['screenshot_path'];
+  const INTERNAL_COLUMNS: string[] = [];
 
   const tableColumns = $derived.by(() => {
     const urlCol = columns.find(c => !INTERNAL_COLUMNS.includes(c) && c !== 'status');
@@ -27,7 +27,7 @@
     return ordered.map((col) => ({
       key: col,
       header: col,
-      type: col === 'status' ? 'status' as const : col === urlCol ? 'link' as const : 'text' as const,
+      type: col === 'status' ? 'status' as const : col === urlCol ? 'link' as const : col === 'status_screenshot' ? 'file' as const : 'text' as const,
     }));
   });
 </script>

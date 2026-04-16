@@ -11,7 +11,7 @@
   let { from, to, count, class: className }: Props = $props();
 
   function statusLabel(s: string): string {
-    const map: Record<string, string> = { live: 'Live', removed: 'Removed', restricted: 'Restricted', error: 'Error', private: 'Private' };
+    const map: Record<string, string> = { live: 'Live', removed: 'Removed', restricted: 'Restricted', error: 'Error', private: 'Private', unknown: 'Unknown' };
     return map[s.toLowerCase()] || s.charAt(0).toUpperCase() + s.slice(1);
   }
 
@@ -21,6 +21,7 @@
       case 'removed': return 'text-status-removed bg-badge-removed-bg border-badge-removed-border';
       case 'restricted': case 'private': return 'text-status-restricted bg-badge-restricted-bg border-badge-restricted-border';
       case 'error': return 'text-status-error bg-badge-error-bg border-badge-error-border';
+      case 'unknown': return 'text-text-secondary bg-bg-controls border-border-light';
       default: return 'text-text-secondary bg-bg-controls border-border-light';
     }
   }

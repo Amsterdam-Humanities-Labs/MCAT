@@ -16,7 +16,7 @@
 
   let { run, columns, rows, loading, error, onOpenScreenshot, class: className }: Props = $props();
 
-  const INTERNAL_COLUMNS = ['previous_status', 'screenshot_path'];
+  const INTERNAL_COLUMNS = ['previous_status'];
 
   const urlColumn = $derived(columns.find(c => !INTERNAL_COLUMNS.includes(c) && c !== 'status'));
 
@@ -28,7 +28,7 @@
     return ordered.map((col) => ({
       key: col,
       header: col === 'status' ? 'change' : col,
-      type: col === 'status' ? 'transition' as const : col === urlColumn ? 'link' as const : 'text' as const,
+      type: col === 'status' ? 'transition' as const : col === urlColumn ? 'link' as const : col === 'status_screenshot' ? 'file' as const : 'text' as const,
     }));
   });
 </script>

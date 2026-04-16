@@ -86,7 +86,7 @@ class YouTubeScraper(BaseScraper):
         """
         self.save_screenshots = enabled
         if enabled:
-            self.screenshot_base_path = Path(base_path) / "screenshots" / self.get_platform_name()
+            self.screenshot_base_path = Path(base_path) / "screenshots"
 
     def _save_screenshot(self, driver, url: str, status: str) -> str:
         """
@@ -132,7 +132,7 @@ class YouTubeScraper(BaseScraper):
             if self.is_cancelled():
                 result = ScrapingResult()
                 result.url = url
-                result.platform = self.get_platform_name()
+        
                 result.status = "Cancelled"
                 result.info = "Processing was cancelled"
                 return result
@@ -166,7 +166,7 @@ class YouTubeScraper(BaseScraper):
 
         result = ScrapingResult()
         result.url = url
-        result.platform = self.get_platform_name()
+
 
         # Early cancellation check
         if self.is_cancelled():
@@ -284,9 +284,22 @@ class YouTubeScraper(BaseScraper):
             except Exception:
                 pass
 
-            # If no restrictions found, assume live
-            result.status = "Live"
-            result.info = "Video available"
+            # Positive check: video player with title present → Live
+            try:
+                title_el = driver.find_element(By.CSS_SELECTOR, 'h1.ytd-watch-metadata, h1.title')
+                if title_el.text.strip():
+                    result.status = "Live"
+                    result.info = "Video available"
+                    self._log(f"OK: {url}: {result.status} - {result.info}")
+                    if self.save_screenshots:
+                        result.screenshot_path = self._save_screenshot(driver, url, result.status)
+                    return result
+            except Exception:
+                pass
+
+            # No positive Live indicator, no known error pattern → Unknown
+            result.status = "Unknown"
+            result.info = ""
             self._log(f"OK: {url}: {result.status} - {result.info}")
             if self.save_screenshots:
                 result.screenshot_path = self._save_screenshot(driver, url, result.status)

@@ -30,6 +30,10 @@
       label: 'Error',
       classes: 'bg-badge-error-bg text-status-error border-badge-error-border',
     },
+    unknown: {
+      label: 'Unknown',
+      classes: 'bg-bg-controls text-text-secondary border-border-light',
+    },
   };
 
   const normalized = $derived(status.toLowerCase());

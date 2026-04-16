@@ -23,17 +23,34 @@
     isAbandoned || isNoChange ? 'text-text-secondary' : 'text-text-secondary'
   );
 
-  const TRANSITIONS = [
-    { key: 'removed_to_live', from: 'removed', to: 'live' },
-    { key: 'restricted_to_live', from: 'restricted', to: 'live' },
-    { key: 'live_to_restricted', from: 'live', to: 'restricted' },
-    { key: 'live_to_private', from: 'live', to: 'private' },
-    { key: 'restricted_to_removed', from: 'restricted', to: 'removed' },
-    { key: 'live_to_removed', from: 'live', to: 'removed' },
-  ];
+  // Sort order: recoveries (→ live) first, then degradations by severity
+  const STATUS_WEIGHT: Record<string, number> = {
+    live: 0, restricted: 1, private: 2, unknown: 3, removed: 4, error: 5,
+  };
 
   const summary = $derived(run.changes_summary || {});
   const timestamp = $derived(formatTimestamp(run.started_at));
+
+  // Derive transitions from summary keys like "live_to_removed"
+  const transitions = $derived.by(() => {
+    const entries = Object.entries(summary)
+      .map(([key, count]) => {
+        const [from, to] = key.split('_to_');
+        return { key, from, to, count: count as number };
+      })
+      .filter((t) => t.from && t.to && t.count > 0);
+
+    entries.sort((a, b) => {
+      const aToLive = a.to === 'live' ? 0 : 1;
+      const bToLive = b.to === 'live' ? 0 : 1;
+      if (aToLive !== bToLive) return aToLive - bToLive;
+      const aWeight = (STATUS_WEIGHT[a.to] ?? 99) - (STATUS_WEIGHT[a.from] ?? 99);
+      const bWeight = (STATUS_WEIGHT[b.to] ?? 99) - (STATUS_WEIGHT[b.from] ?? 99);
+      return aWeight - bWeight;
+    });
+
+    return entries;
+  });
 </script>
 
 <button
@@ -77,10 +94,8 @@
     {/if}
 
     <span class="flex items-center gap-1.5">
-      {#each TRANSITIONS as t}
-        {#if summary[t.key]}
-          <TransitionBadge from={t.from} to={t.to} count={summary[t.key]} />
-        {/if}
+      {#each transitions as t (t.key)}
+        <TransitionBadge from={t.from} to={t.to} count={t.count} />
       {/each}
     </span>
   {/if}

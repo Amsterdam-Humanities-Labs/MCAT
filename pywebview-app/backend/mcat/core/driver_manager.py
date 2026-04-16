@@ -1,6 +1,7 @@
 import os
 import threading
 import time
+from pathlib import Path
 from queue import Queue
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
@@ -41,9 +42,17 @@ class WebDriverPool:
 
     def _setup_chromedriver(self):
         """Install and setup ChromeDriver automatically."""
+        import chromedriver_autoinstaller.utils as cdu
+        # Check if chromedriver is already installed at the expected path
+        chrome_version = chromedriver_autoinstaller.get_chrome_version()
+        if chrome_version:
+            major = chrome_version.split('.')[0]
+            expected = Path(cdu.get_chromedriver_path()) / major / cdu.get_chromedriver_filename()
+            if expected.exists():
+                self.chromedriver_path = str(expected)
+                return
         try:
             self.chromedriver_path = chromedriver_autoinstaller.install()
-            self._log(f"ChromeDriver ready: {self.chromedriver_path}", "debug")
         except Exception as e:
             raise Exception(f"Failed to install ChromeDriver: {e}")
 

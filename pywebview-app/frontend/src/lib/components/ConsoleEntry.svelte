@@ -1,7 +1,6 @@
 <script lang="ts">
   import { cn } from '$lib/utils';
   import type { LogLevel } from '$types/console';
-  import { Check, Warning, XCircle } from 'phosphor-svelte';
 
   interface Props {
     timestamp: Date;
@@ -12,12 +11,12 @@
 
   let { timestamp, message, level, class: className }: Props = $props();
 
-  const levelColors: Record<LogLevel, string> = {
+  const messageColors: Record<LogLevel, string> = {
     debug: 'text-text-secondary',
     info: 'text-text-body',
     warning: 'text-status-restricted',
-    error: 'text-status-removed',
-    success: 'text-status-live',
+    error: 'text-status-restricted',
+    success: 'text-text-body',
   };
 
   const statusColors: Record<string, string> = {
@@ -26,6 +25,7 @@
     restricted: 'text-status-restricted',
     private: 'text-status-restricted',
     error: 'text-status-error',
+    unknown: 'text-text-secondary',
   };
 
   function formatTime(date: Date): string {
@@ -47,17 +47,10 @@
   });
 </script>
 
-<div class={cn("flex gap-3 leading-7 text-base", levelColors[level], className)}>
+<div class={cn("flex gap-3 leading-7 text-base", messageColors[level], className)}>
   <span class="text-console-timestamp shrink-0">{formatTime(timestamp)}</span>
-  {#if level === 'success'}
-    <span class="shrink-0 flex items-center"><Check size={14} weight="bold" /></span>
-  {:else if level === 'warning'}
-    <span class="shrink-0 flex items-center"><Warning size={14} weight="bold" /></span>
-  {:else if level === 'error'}
-    <span class="shrink-0 flex items-center"><XCircle size={14} weight="bold" /></span>
-  {/if}
   {#if parsed}
-    <span class="break-all">{parsed.prefix}<span class={parsed.colorClass}>{parsed.status}</span></span>
+    <span class="break-all text-text-body">{parsed.prefix}<span class={parsed.colorClass}>{parsed.status}</span></span>
   {:else}
     <span class="break-all">{message}</span>
   {/if}

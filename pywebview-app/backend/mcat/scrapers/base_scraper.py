@@ -9,24 +9,11 @@ class ScrapingResult:
     """Standardized result format for all scrapers."""
 
     url: str = ""
-    status: str = ""  # "Live", "Removed", "Restricted", "Error"
-    info: str = ""    # Additional details
+    status: str = ""
+    info: str = ""
     timestamp: str = field(default_factory=lambda: datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
     error_message: str = ""
-    platform: str = ""
-    screenshot_path: str = ""  # Path to screenshot file if saved
-
-    def to_dict(self) -> Dict[str, Any]:
-        """Convert result to dictionary for CSV export."""
-        return {
-            'url': self.url,
-            'status': self.status,
-            'info': self.info,
-            'timestamp': self.timestamp,
-            'error_message': self.error_message,
-            'platform': self.platform,
-            'screenshot_path': self.screenshot_path
-        }
+    screenshot_path: str = ""
 
 
 class BaseScraper(ABC):

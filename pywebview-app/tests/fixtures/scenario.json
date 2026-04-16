@@ -1,23 +1,26 @@
 {
   "run_1": {
-    "_comment": "Baseline: all live except 2 removed, 1 restricted",
+    "_comment": "Baseline: mostly live, 2 removed, 1 restricted, 1 unknown",
     "TEST003": "Removed",
     "TEST007": "Removed",
     "TEST015": "Restricted",
+    "TEST018": "Unknown",
     "default": "Live"
   },
   "run_2": {
-    "_comment": "3 newly removed, 1 restored, 1 newly restricted",
+    "_comment": "3 newly removed, 1 restored, 1 newly restricted, 1 newly unknown",
     "TEST001": "Removed",
     "TEST003": "Removed",
     "TEST005": "Removed",
     "TEST007": "Live",
     "TEST010": "Restricted",
     "TEST015": "Restricted",
+    "TEST018": "Unknown",
+    "TEST022": "Unknown",
     "default": "Live"
   },
   "run_3": {
-    "_comment": "More removals, one private",
+    "_comment": "More removals, one private, unknown resolved to live",
     "TEST001": "Removed",
     "TEST003": "Removed",
     "TEST005": "Removed",
@@ -25,10 +28,12 @@
     "TEST010": "Restricted",
     "TEST012": "Private",
     "TEST015": "Restricted",
+    "TEST018": "Live",
+    "TEST022": "Unknown",
     "default": "Live"
   },
   "run_4": {
-    "_comment": "Some restored, new removals",
+    "_comment": "Some restored, new removals, unknown resolved to removed",
     "TEST001": "Live",
     "TEST003": "Removed",
     "TEST005": "Removed",
@@ -37,6 +42,7 @@
     "TEST012": "Private",
     "TEST015": "Live",
     "TEST020": "Removed",
+    "TEST022": "Removed",
     "TEST025": "Restricted",
     "default": "Live"
   }
