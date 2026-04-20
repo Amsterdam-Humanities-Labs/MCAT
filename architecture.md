@@ -1,421 +1,146 @@
 # MCAT Architecture
 
-## System Overview
+MCAT is a desktop app for monitoring content moderation status across social platforms. It wraps a Python backend (HTTP server + Selenium scrapers) in a pywebview window, with a Svelte 5 frontend served by Vite in dev and from a built `dist/` in production.
 
-```mermaid
-graph TB
-    subgraph Desktop["pywebview Desktop Window"]
-        subgraph Frontend["Svelte 5 Frontend"]
-            subgraph Views["Views"]
-                StartScreen
-                ProjectWizard
-                ProjectView
-            end
+**Communication model:** user-initiated actions use plain HTTP request/response. Background events (processing progress, tracking timer fires, log messages) stream from backend to frontend via Server-Sent Events on `/events`.
 
-            subgraph Stores["Stores (Svelte 5 Runes)"]
-                appStore["appStore<br/>view, backendConnected"]
-                projectStore["projectStore<br/>project, runs, loading"]
-                processingStore["processingStore<br/>state, progress, statusCounts"]
-                consoleStore["consoleStore<br/>messages[]"]
-                wizardStore["wizardStore<br/>name, platform, csv_path"]
-            end
+---
 
-            subgraph APILayer["API Layer"]
-                apiClient["api client<br/>fetch() + retry"]
-                sseListener["SSE listener<br/>EventSource /events"]
-            end
-        end
-
-        subgraph Backend["Python Backend (ThreadingHTTPServer)"]
-            subgraph HTTPServer["HTTP Server"]
-                GET["GET handlers"]
-                POST["POST handlers"]
-                SSEEndpoint["SSE /events endpoint"]
-            end
-
-            subgraph Handlers["API Handlers"]
-                projectHandler["project handler"]
-                processingHandler["processing handler"]
-                runHandler["run handler"]
-                trackingHandler["tracking handler"]
-                csvHandler["csv handler"]
-                dialogHandler["dialog handler"]
-            end
-
-            subgraph Services["Services"]
-                projectService["ProjectService"]
-                processingService["ProcessingService"]
-                runService["RunService"]
-                trackingService["TrackingService"]
-            end
-
-            subgraph Core["Core"]
-                batchProcessor["BatchProcessor<br/>ThreadPoolExecutor"]
-                scrapers["Scrapers<br/>YouTube / Instagram / Mock"]
-                dispatcher["PyDispatcher<br/>signal bus"]
-                eventBus["EventBus<br/>SSE pub/sub"]
-            end
-
-            subgraph Models["Models"]
-                projectConfig["ProjectConfig<br/>project.json"]
-                runConfig["RunConfig"]
-                processingJob["ProcessingJob"]
-            end
-
-            subgraph Storage["File System"]
-                projectJSON["project.json"]
-                urlsCSV["urls.csv"]
-                runsFolder["runs/{id}/<br/>results.csv, changes.csv,<br/>combined.csv, screenshots/"]
-            end
-        end
-    end
-```
-
-## Data Flow: User Action → Backend → SSE → UI Update
+## Data Flow
 
 ```mermaid
 sequenceDiagram
     participant User
-    participant View as ProjectView
-    participant Store as Stores
-    participant API as API Client
+    participant Frontend
     participant Handler as HTTP Handler
     participant Service as Service Layer
-    participant Core as BatchProcessor
+    participant Worker as Worker Thread
     participant Bus as EventBus
     participant SSE as SSE Stream
 
-    Note over User,SSE: === START PROCESSING ===
+    Note over User,SSE: User action — round trip via HTTP
 
-    User->>View: Click "Start"
-    View->>Store: processingStore.start()
-    Store->>API: POST /process/start
-    API->>Handler: processingHandler.start()
-    Handler->>Service: runService.start_run()
-    Service->>Service: Create run folder + RunConfig
-    Handler->>Service: processingService.start_processing(job)
-    Service->>Core: spawn worker thread
-    Handler-->>API: {status: ok}
-    API-->>Store: response
-    Core->>Core: batchProcessor.process_csv()
+    User->>Frontend: Click "Start"
+    Frontend->>Handler: POST /process/start
+    Handler->>Service: start_run() + start_processing()
+    Service->>Worker: spawn thread
+    Handler-->>Frontend: {success, run_id}
+    Frontend->>User: UI updates from response
 
-    Note over User,SSE: === PROGRESS UPDATES (per URL) ===
+    Note over User,SSE: Background progress — SSE stream
 
-    loop For each URL (4 concurrent)
-        Core->>Core: scraper.check_url(url)
-        Core->>Core: write row → results.csv
-        Core->>Service: dispatcher.send(PROGRESS)
-        Service->>Handler: _on_processing_progress()
-        Handler->>Bus: eventBus.publish({type: processing, ...})
-        Bus->>SSE: event: processing\ndata: {state, processed, statusCounts}
-        SSE->>Store: processingStore.updateFromSSE()
-        Store->>View: reactive UI update
-        View->>User: progress bar, counts, current URL
+    loop Per URL (4 concurrent)
+        Worker->>Worker: scraper.check_url()
+        Worker->>Worker: write row → results.csv
+        Worker->>Bus: publish "processing" event
+        Bus->>SSE: event: processing
+        SSE->>Frontend: updateFromSSE()
+        Frontend->>User: progress bar, counts, URL
     end
 
-    Note over User,SSE: === COMPLETION ===
+    Note over User,SSE: Completion
 
-    Core->>Service: dispatcher.send(COMPLETED)
-    Service->>Handler: _on_processing_completed()
-    Handler->>Service: runService.complete_run()
-    Service->>Service: generate combined.csv + changes.csv
-    Handler->>Bus: publish "processing" + "project" events
-    Bus->>SSE: event: processing {state: completed}
-    SSE->>Store: processingStore.updateFromSSE()
-    Bus->>SSE: event: project {runs: [...updated]}
-    SSE->>Store: projectStore.setProject()
-    Store->>View: show completed run in Timeline
+    Worker->>Service: complete_run() (status, changes.csv)
+    Service->>Bus: publish "project" event (with updated runs)
+    Bus->>SSE: event: project
+    SSE->>Frontend: setProject()
+    Frontend->>User: new run appears in timeline
 ```
 
-## SSE Event Flow
+The key principle: the HTTP response is the source of truth for the action the user just took. SSE is only for data that changes without the user doing anything — progress from the worker thread, runs completing, the tracking timer firing.
 
-```mermaid
-flowchart LR
-    subgraph Backend Services
-        PS[ProjectService]
-        PRS[ProcessingService]
-        TS[TrackingService]
-        LB[LogBuffer]
-    end
+---
 
-    subgraph EventBus
-        EB((EventBus<br/>pub/sub))
-    end
+## SSE Event Types
 
-    subgraph SSE Stream
-        SE[/GET /events/]
-    end
+| Event | Published By | Frontend Handler |
+|-------|--------------|------------------|
+| `processing` | Worker thread via `dispatcher` signals | Updates `processingStore` — progress %, status counts, current URL |
+| `project` | `_on_processing_completed`, tracking timer | Updates `projectStore` — adds completed run, updates `next_check` |
+| `log` | `log_buffer.add()` from any service | Appends to `consoleStore` — shows in Activity Log |
 
-    subgraph Frontend Stores
-        pStore[projectStore]
-        prStore[processingStore]
-        cStore[consoleStore]
-    end
-
-    PS -->|"event: project<br/>{name, runs[], tracking}"| EB
-    PRS -->|"event: processing<br/>{state, processed, statusCounts}"| EB
-    TS -->|"event: tracking.started<br/>event: tracking.stopped"| EB
-    TS -->|"event: project<br/>(next_check update)"| EB
-    LB -->|"event: log<br/>{id, text, level}"| EB
-
-    EB --> SE
-    SE -->|project| pStore
-    SE -->|processing| prStore
-    SE -->|log| cStore
-```
-
-## API Endpoints
-
-```mermaid
-flowchart TD
-    subgraph "POST Endpoints"
-        subgraph Project
-            PC["/project/create"]
-            PO["/project/open"]
-            PCL["/project/close"]
-            PSS["/project/screenshots"]
-            PTC["/project/tracking-config"]
-            PIP["/project/import-preview"]
-            PIC["/project/import-confirm"]
-        end
-
-        subgraph Processing
-            PStart["/process/start"]
-            PPause["/process/pause"]
-            PResume["/process/resume"]
-        end
-
-        subgraph Run
-            RA["/run/abandon"]
-            RC["/run/changes"]
-            RR["/run/results"]
-        end
-
-        subgraph Tracking
-            TStart["/tracking/start"]
-            TStop["/tracking/stop"]
-            TStatus["/tracking/status"]
-        end
-
-        subgraph CSV
-            CL["/csv/load"]
-            CD["/csv/detect-url-column"]
-        end
-
-        subgraph Dialog["Dialog (Native OS)"]
-            DOF["/dialog/open-file"]
-            DOD["/dialog/open-folder"]
-            DOE["/dialog/open-external"]
-        end
-    end
-
-    subgraph "GET Endpoints"
-        H["/health"]
-        E["/events (SSE)"]
-    end
-```
-
-## Processing Pipeline
-
-```mermaid
-flowchart TD
-    Start["processingService.start_processing()"] --> Thread["Spawn Worker Thread"]
-    Thread --> Load["Load urls.csv"]
-    Load --> Init["Initialize Scraper"]
-
-    Init --> Mock{MCAT_MOCK=1?}
-    Mock -->|Yes| MS["MockScraper<br/>reads scenario.json"]
-    Mock -->|No| Platform{Platform?}
-    Platform -->|YouTube| YS["YouTubeScraper<br/>Selenium + Chrome"]
-    Platform -->|Instagram| IS["InstagramScraper<br/>Selenium + Chrome"]
-
-    MS --> Pool
-    YS --> Pool
-    IS --> Pool
-
-    Pool["ThreadPoolExecutor<br/>max_workers=4"]
-    Pool --> Process
-
-    subgraph Process["Per URL"]
-        Check["scraper.check_url(url)"]
-        Check --> Status["Return status:<br/>Live / Removed / Restricted /<br/>Age-restricted / Private / Error"]
-        Status --> Write["Write row → results.csv"]
-        Write --> Signal["dispatcher.send(PROGRESS)"]
-        Signal --> Pause{"pause_event<br/>cleared?"}
-        Pause -->|Yes| Wait["Block until resumed"]
-        Pause -->|No| Cancel{"cancel_flag<br/>set?"}
-        Cancel -->|Yes| Abort["Return early"]
-        Cancel -->|No| Next["Next URL"]
-    end
-
-    Process --> Complete["All URLs done"]
-    Complete --> GenCSV["Generate changes.csv<br/>+ combined.csv"]
-    GenCSV --> Done["dispatcher.send(COMPLETED)"]
-```
-
-## Tracking (Scheduled Runs)
-
-```mermaid
-sequenceDiagram
-    participant User
-    participant View as ProjectView
-    participant API as API Client
-    participant TS as TrackingService
-    participant PS as ProcessingService
-    participant Bus as EventBus
-
-    User->>View: Enable tracking + set interval
-    View->>API: POST /project/tracking-config
-    User->>View: Click "Start"
-    View->>API: POST /tracking/start {interval, unit}
-    API->>TS: start_tracking()
-    TS->>Bus: publish tracking.started
-    TS->>TS: _schedule_next_check()
-    TS->>TS: threading.Timer(interval_seconds)
-
-    Note over TS: Timer fires after interval
-
-    TS->>TS: _execute_tracking_run()
-    TS->>PS: start_processing(job)
-    PS->>PS: process all URLs...
-    PS->>TS: dispatcher.send(COMPLETED)
-    TS->>TS: complete_run()
-    TS->>TS: _schedule_next_check()
-    TS->>Bus: publish project (next_check updated)
-
-    Note over TS: Repeats until stopped
-
-    User->>View: Click "Stop" or close project
-    View->>API: POST /tracking/stop
-    API->>TS: stop_tracking()
-    TS->>TS: cancel timer
-    TS->>Bus: publish tracking.stopped
-```
+---
 
 ## Scraper Detection Strategies
 
-All scrapers use headless Chrome via Selenium with a shared driver pool. No login required. Each scraper returns a `ScrapingResult` with a status (`Live`, `Removed`, `Restricted`, `Error`) and an `info` field with details.
+All scrapers use headless Chrome via Selenium with a shared driver pool, no login required. Each returns a `ScrapingResult` with a `status` and optional `info` (the specific text that matched). The detection logic exhausts known error patterns first, then requires a positive signal for Live. If neither matches → **Unknown** (researcher can verify via screenshot).
 
-### YouTube (`YouTubeScraper`)
+### YouTube
 
-Checks video availability by loading the page and scanning `page_source` for known text patterns.
+| Order | Check | Status |
+|-------|-------|--------|
+| 1 | Body text contains `"video unavailable"`, `"this video isn't available"`, `"removed by the user"`, `"account has been terminated"` | Removed |
+| 2 | Body text contains `"age-restricted"`, `"sign in to confirm your age"` | Age-restricted |
+| 3 | Body text contains `"not available in your country"` | Geo-blocked |
+| 4 | Body text contains `"private video"` | Private |
+| 5 | Warning/restricted element present with non-empty text | Restricted |
+| 6 | `h1.ytd-watch-metadata` video title present | Live |
+| — | None matched | Unknown |
 
-| Order | Strategy | Detects | Status |
-|-------|----------|---------|--------|
-| 1 | Wait for page title to change from "YouTube" | SPA render complete | — |
-| 2 | Text match: `video unavailable`, `removed by the user`, `account has been terminated` | Removed/terminated videos | Removed |
-| 3 | Text match: `age-restricted`, `sign in to confirm your age` | Age-gated content | Age-restricted |
-| 4 | Text match: `not available in your country` | Geo-blocked content | Geo-blocked |
-| 5 | Text match: `private video` | Private videos | Private |
-| 6 | CSS selector: `[class*="warning"], [class*="restricted"]` | Content warning panels | Restricted |
-| 7 | No restrictions found | Normal video | Live |
+Also dismisses the cookie consent modal before detection.
 
-Also dismisses YouTube cookie consent modal via `youtube_cookie_handler`.
+### Instagram
 
-### Instagram (`InstagramScraper`)
+| Order | Check | Status |
+|-------|-------|--------|
+| 1 | `svg[aria-label="error"]` present | Removed |
+| 2 | Body text contains `"post isn't available"`, `"sorry, this page isn't available"`, `"page not found"` | Removed |
+| 3 | Error container div (`.x9f619.xjbqb8w.x78zum5`) with keyword text | Removed |
+| 4 | `article[role="presentation"]` present | Live |
+| — | None matched | Unknown |
 
-Checks post availability using 4 layered strategies against Instagram's React SPA.
+### Facebook
 
-| Order | Strategy | Detects | Status |
-|-------|----------|---------|--------|
-| 1 | CSS selector: `svg[aria-label="error"]` + extract `span[dir="auto"]` text | Error icon with message | Removed |
-| 2 | Text match: `post isn't available`, `sorry, this page isn't available`, `page not found` | Unavailable pages | Removed |
-| 3 | CSS selector: `div.x9f619.xjbqb8w.x78zum5` + keyword match in container text | Error container divs | Removed |
-| 4 | CSS selector: `article[role="presentation"]` exists | Normal post loaded | Live |
-| — | None of the above triggered | Defensive default | Live |
+| Order | Check | Status |
+|-------|-------|--------|
+| 1 | Moderation overlay div (`.xzueoph.x1k70j0n`) contains text | Restricted |
+| 2 | Body text contains `"this content isn't available"`, `"content has been removed"`, etc. | Removed |
+| 3 | `div[role="article"]` present | Live |
+| — | None matched | Unknown |
 
-### Facebook (`FacebookScraper`)
+### Twitter / X
 
-Checks post moderation status. The primary detection is the moderation overlay div that Facebook renders over moderated content.
+Uses a different approach — full page text scanning against a curated dictionary of ~60 known moderation notices. More resilient because notice text stays stable while DOM changes frequently.
 
-| Order | Strategy | Detects | Status |
-|-------|----------|---------|--------|
-| 1 | CSS selector: `.xzueoph.x1k70j0n` — extract text from overlay elements | Moderation labels (text visible on moderated posts) | Restricted |
-| 2 | Text match: `this content isn't available`, `this page isn't available`, `content has been removed`, etc. | Removed/unavailable content | Removed |
-| — | None of the above triggered | Normal post | Live |
+| Order | Check | Status |
+|-------|-------|--------|
+| 1 | Scroll page to load lazy content | — |
+| 2 | Match against `REMOVED_NOTICES` (suspended accounts, deleted posts, rule violations removing content) | Removed |
+| 3 | Match against `RESTRICTED_NOTICES` (age-restricted, sensitive, withheld, disputed, community notes, rule violations with "remain accessible") | Restricted |
+| 4 | Match against `ERROR_NOTICES` (`"Something went wrong"`) | Error |
+| 5 | `article[data-testid="tweet"]` present | Live |
+| — | None matched | Unknown |
 
-Strategy 1 comes from the original notebook. Strategy 2 is an addition based on common Facebook behaviors, following the same defensive layering pattern as the Instagram and YouTube scrapers.
+The matched notice text is stored in `status_detail` so the researcher sees the exact moderation label Twitter displayed.
 
-### Twitter / X (`TwitterScraper`)
+---
 
-Uses a fundamentally different approach from the other scrapers: **full page text scanning** against a curated dictionary of ~60 known moderation notices. This is more resilient than CSS selectors because Twitter/X changes DOM structure frequently but notice text stays stable.
+## Key Files
 
-| Order | Strategy | Detects | Status |
-|-------|----------|---------|--------|
-| 1 | Scroll page 3 times (2s pause each) | Trigger lazy-loaded content | — |
-| 2 | Get all visible body text, match against `REMOVED_NOTICES` list | Suspended accounts, deleted posts, unavailable pages, rule violations (content removed) | Removed |
-| 3 | Match against `RESTRICTED_NOTICES` list | Age-restricted, sensitive content, withheld, manipulated media, community notes, disputed content, rule violations (content kept accessible), muted/blocked accounts | Restricted |
-| 4 | Match against `ERROR_NOTICES` list | "Something went wrong" | Error |
-| 5 | No notice matched | Normal tweet | Live |
+**Backend**
+- `backend/mcat/app.py` — entry point: spawns HTTP server, Vite dev server, pywebview window
+- `backend/mcat/server.py` — `BaseHTTPRequestHandler` with SSE endpoint
+- `backend/mcat/api/router.py` — route → handler mapping
+- `backend/mcat/api/handlers/*.py` — one file per domain (project, processing, run, tracking, csv, dialog)
+- `backend/mcat/api/context.py` — `AppContext` singleton holding services, `EventBus`, `LogBuffer`
+- `backend/mcat/services/*.py` — business logic: project lifecycle, run lifecycle, processing coordinator, tracking scheduler
+- `backend/mcat/core/batch_processor.py` — thread pool + scraper invocation + incremental CSV write
+- `backend/mcat/core/driver_manager.py` — Chrome driver pool
+- `backend/mcat/scrapers/*.py` — one per platform, plus `base_scraper.py`
+- `backend/mcat/models/project_models.py` — `ProjectConfig`, `RunConfig`, `TrackingConfig` (serialized to `project.json`)
 
-The matched notice text is stored in `result.info` so the researcher sees the exact moderation label Twitter displayed. Notices are pre-lowercased at init time for efficient matching.
+**Frontend**
+- `frontend/src/App.svelte` — top-level view router (start / wizard / project)
+- `frontend/src/lib/views/` — full-screen views
+- `frontend/src/lib/stores/` — Svelte 5 `$state` stores; SSE listener populates them
+- `frontend/src/lib/api/client.ts` — typed fetch wrappers for every endpoint
+- `frontend/src/lib/api/sse.ts` — `EventSource` listener, routes events to stores
+- `frontend/src/lib/components/` — reusable UI (DataTable, TransitionBadge, etc.)
+- `frontend/src/themes/*.css` — swappable color themes; active one imported by `app.css`
 
-## Frontend Component Tree
-
-```mermaid
-flowchart TD
-    App["App.svelte"]
-    App -->|"view=start"| SS["StartScreen"]
-    App -->|"view=wizard"| PW["ProjectWizard"]
-    App -->|"view=project"| PV["ProjectView"]
-
-    PV --> TB["Toolbar<br/>project name, url count, folder button"]
-    PV --> CTRL["Controls"]
-    PV --> PROG["ProgressSection"]
-    PV --> TL["Timeline"]
-    PV --> CP["ConsolePanel"]
-
-    CTRL --> CSB["ControlsStartButton<br/>Start / Pause / Resume"]
-    CTRL --> CI["ControlsInterval<br/>interval value + unit"]
-    CTRL --> CB["Checkbox<br/>screenshots toggle"]
-    CTRL --> CTS["ControlsTrackingStatus<br/>countdown / in-progress"]
-
-    PROG --> PB["ProgressBar"]
-    PROG --> PL["ProgressLegend<br/>status counts + deltas"]
-
-    TL --> TR["TimelineRunning<br/>active run indicator"]
-    TL --> TRow["TimelineRow<br/>dot, date, changes, transitions"]
-    TL --> DP["DetailPanel"]
-
-    DP --> DH["DetailHeader<br/>run folder button"]
-    DP --> Tabs["Tabs"]
-    Tabs --> DR["DetailRun<br/>run metadata"]
-    Tabs --> DC["DetailChanges<br/>grouped transitions"]
-    Tabs --> DRes["DetailResults<br/>DataTable"]
-
-    CP --> CH["ConsoleHeader"]
-    CP --> CBod["ConsoleBody"]
-    CBod --> CE["ConsoleEntry<br/>log line"]
-```
-
-## Store → View Data Flow
-
-```mermaid
-flowchart LR
-    subgraph "Svelte Stores ($state)"
-        AS["appStore<br/>view"]
-        PS["projectStore<br/>project, runs"]
-        PRS["processingStore<br/>state, progress"]
-        CS["consoleStore<br/>messages"]
-    end
-
-    subgraph "SSE Updates"
-        SSE["EventSource /events"]
-    end
-
-    subgraph "API Calls (user-initiated)"
-        APIout["fetch POST /..."]
-    end
-
-    SSE -->|"event: project"| PS
-    SSE -->|"event: processing"| PRS
-    SSE -->|"event: log"| CS
-
-    PS -->|project, runs, baselineRun| PV["ProjectView"]
-    PRS -->|state, progress, statusCounts| PV
-    CS -->|messages| PV
-    AS -->|view| App["App.svelte"]
-
-    PV -->|"user actions"| APIout
-    APIout -->|"triggers backend"| SSE
-```
+**Data on disk** (per project folder)
+- `project.json` — name, platform, runs list, tracking config
+- `urls.csv` — source URLs (user's input CSV)
+- `runs/{run_id}/results.csv` — scraper output: original CSV columns + `status`, `status_detail`, `status_screenshot`, `status_timestamp`, `status_error`
+- `runs/{run_id}/changes.csv` — diff vs previous run: `url`, `previous_status`, `new_status`
+- `runs/{run_id}/screenshots/{status}/` — saved screenshots when enabled

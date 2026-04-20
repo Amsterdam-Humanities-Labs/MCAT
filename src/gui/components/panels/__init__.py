@@ -1,1 +1,0 @@
-# Panel components - Complex UI sections

@@ -5,12 +5,12 @@ Runs scrapers against real URLs to verify detection strategies.
 Requires a filled-in CSV at tests/fixtures/scraper_test_urls.csv
 
 Usage:
-    cd pywebview-app/backend
-    python -m pytest ../../tests/test_scrapers_live.py -v
-    python -m pytest ../../tests/test_scrapers_live.py -v -k facebook
-    python -m pytest ../../tests/test_scrapers_live.py -v -k youtube
-    python -m pytest ../../tests/test_scrapers_live.py -v -k instagram
-    python -m pytest ../../tests/test_scrapers_live.py -v -k twitter
+    cd backend
+    python -m pytest ../tests/test_scrapers_live.py -v
+    python -m pytest ../tests/test_scrapers_live.py -v -k facebook
+    python -m pytest ../tests/test_scrapers_live.py -v -k youtube
+    python -m pytest ../tests/test_scrapers_live.py -v -k instagram
+    python -m pytest ../tests/test_scrapers_live.py -v -k twitter
 """
 
 import csv
@@ -19,7 +19,7 @@ import pytest
 from pathlib import Path
 
 # Add backend to path
-backend_dir = Path(__file__).parent.parent / "pywebview-app" / "backend" / "mcat"
+backend_dir = Path(__file__).parent.parent / "backend" / "mcat"
 sys.path.insert(0, str(backend_dir))
 
 from core.driver_manager import WebDriverPool
