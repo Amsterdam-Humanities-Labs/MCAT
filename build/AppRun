@@ -1,0 +1,6 @@
+#!/bin/bash
+# AppImage launcher — runs inside the extracted AppDir.
+# AppImages set $APPDIR to the mount point when the AppImage is executed.
+
+HERE="$(dirname "$(readlink -f "${0}")")"
+exec "${HERE}/usr/bin/mcat" "$@"

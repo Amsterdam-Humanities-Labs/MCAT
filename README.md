@@ -58,3 +58,9 @@ MCAT/
 ## Architecture
 
 See `architecture.md` for diagrams covering the full data flow, API endpoints, SSE events, scraper detection strategies, and component tree.
+
+## License
+
+MCAT is licensed under the [European Union Public Licence v. 1.2](LICENSE) (EUPL-1.2).
+
+Third-party bundled assets (fonts) carry their own licenses in [`LICENSES/`](LICENSES/).

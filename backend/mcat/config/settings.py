@@ -1,7 +1,5 @@
 from typing import Dict
 
-UI_SPACING = 3  # Standard spacing throughout the app
-
 
 class AppConfig:
     """Simple configuration for MCAT application."""

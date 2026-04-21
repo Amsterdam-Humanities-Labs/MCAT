@@ -1,0 +1,8 @@
+[Desktop Entry]
+Name=MCAT
+Comment=Moderation Content Analysis Tool
+Exec=mcat
+Icon=mcat
+Type=Application
+Categories=Utility;Science;
+Terminal=false

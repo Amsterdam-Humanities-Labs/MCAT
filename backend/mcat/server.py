@@ -161,23 +161,3 @@ class MCATHandler(BaseHTTPRequestHandler):
         print(f"[API] {message}", flush=True)
 
 
-def main():
-    port = find_available_port(DEFAULT_PORT, MAX_PORT_ATTEMPTS)
-    print(f"Starting MCAT backend on port {port}...", flush=True)
-
-    port_file = Path(__file__).parent.parent / ".port"
-    port_file.write_text(str(port))
-
-    server = ThreadingHTTPServer(("127.0.0.1", port), MCATHandler)
-    print(f"Backend ready at http://127.0.0.1:{port}", flush=True)
-
-    try:
-        server.serve_forever()
-    except KeyboardInterrupt:
-        print("Backend shutting down...", flush=True)
-        port_file.unlink(missing_ok=True)
-        server.shutdown()
-
-
-if __name__ == "__main__":
-    main()

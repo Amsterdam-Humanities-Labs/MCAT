@@ -1,16 +1,17 @@
 data/mcat_notebook_jan_05_2026.py
 frontend/public/fonts/*
-pywebview-app/frontend/public/fonts/*
 
-# Build outputs
-dist/
-build/
-dev_assets/
-assets/
-data/youtube_results/
+# PyInstaller outputs (inside backend/)
+backend/build/
+backend/dist/
 
-# PyInstaller
-*.spec
+# Build/ source directory is committed; its build artifacts are not
+build/MCAT.AppDir/
+build/MCAT-x86_64.AppImage
+build/appimagetool-x86_64.AppImage
+
+# Frontend build output
+frontend/dist/
 
 # Python cache
 __pycache__/
@@ -36,19 +37,6 @@ Thumbs.db
 
 # Logs
 *.log
-
-# Rust/Cargo
-target/
-Cargo.lock
-**/*.rs.bk
-
-# Tauri
-.tauri/
-*.app
-*.dmg
-*.deb
-*.AppImage
-*.msi
 
 # Node/pnpm
 node_modules/

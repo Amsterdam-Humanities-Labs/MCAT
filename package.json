@@ -5,8 +5,9 @@
     "dev": "cd backend && venv/bin/python mcat/app.py",
     "dev:mock": "cd backend && MCAT_MOCK=1 venv/bin/python mcat/app.py",
     "build": "pnpm --filter frontend build",
+    "build:linux": "./build/build-linux.sh",
     "check": "pnpm --filter frontend check",
-    "clean": "rm -rf frontend/dist backend/.port",
+    "clean": "rm -rf frontend/dist backend/build backend/dist build/MCAT.AppDir build/MCAT-x86_64.AppImage",
     "start": "cd backend && venv/bin/python mcat/app.py"
   }
 }

@@ -22,9 +22,17 @@ if str(mcat_dir) not in sys.path:
 
 from server import find_available_port, MCATHandler, DEFAULT_PORT, MAX_PORT_ATTEMPTS
 
-PROJECT_ROOT = Path(__file__).parent.parent.parent
-FRONTEND_DIR = PROJECT_ROOT / "frontend"
-DIST_DIR = FRONTEND_DIR / "dist"
+# Resolve paths. When frozen (PyInstaller bundle), files live under sys._MEIPASS.
+# In dev, walk up from backend/mcat/app.py to the project root.
+if getattr(sys, "frozen", False):
+    PROJECT_ROOT = Path(sys._MEIPASS)
+    FRONTEND_DIR = PROJECT_ROOT / "frontend"
+    DIST_DIR = FRONTEND_DIR / "dist"
+else:
+    PROJECT_ROOT = Path(__file__).parent.parent.parent
+    FRONTEND_DIR = PROJECT_ROOT / "frontend"
+    DIST_DIR = FRONTEND_DIR / "dist"
+
 VITE_PORT = 5180
 
 
@@ -78,9 +86,6 @@ def main():
     port = find_available_port(DEFAULT_PORT, MAX_PORT_ATTEMPTS)
     print(f"Starting MCAT backend on port {port}...", flush=True)
 
-    port_file = Path(__file__).parent.parent / ".port"
-    port_file.write_text(str(port))
-
     # Start backend in background thread
     backend_thread = threading.Thread(target=start_backend, args=(port,), daemon=True)
     backend_thread.start()
@@ -120,7 +125,6 @@ def main():
         if vite_proc:
             vite_proc.terminate()
             vite_proc.wait()
-        port_file.unlink(missing_ok=True)
 
 
 if __name__ == "__main__":
