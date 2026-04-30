@@ -1,14 +1,14 @@
 """
 Live scraper integration tests.
 
-Runs scrapers against real URLs to verify detection strategies.
-Requires a filled-in CSV at tests/fixtures/scraper_test_urls.csv
+Runs scrapers against verified URLs in tests/fixtures/live/verified/.
+Each CSV uses the standard format: platform,url,title,status
 
 Usage:
     cd backend
     python -m pytest ../tests/test_scrapers_live.py -v
-    python -m pytest ../tests/test_scrapers_live.py -v -k facebook
     python -m pytest ../tests/test_scrapers_live.py -v -k youtube
+    python -m pytest ../tests/test_scrapers_live.py -v -k facebook
     python -m pytest ../tests/test_scrapers_live.py -v -k instagram
     python -m pytest ../tests/test_scrapers_live.py -v -k twitter
 """
@@ -18,7 +18,6 @@ import sys
 import pytest
 from pathlib import Path
 
-# Add backend to path
 backend_dir = Path(__file__).parent.parent / "backend" / "mcat"
 sys.path.insert(0, str(backend_dir))
 
@@ -28,32 +27,28 @@ from scrapers.instagram_scraper import InstagramScraper
 from scrapers.facebook_scraper import FacebookScraper
 from scrapers.twitter_scraper import TwitterScraper
 
-FIXTURES_PATH = Path(__file__).parent / "fixtures" / "scraper_test_urls.csv"
-
-SCRAPERS = {
-    "youtube": YouTubeScraper,
-    "instagram": InstagramScraper,
-    "facebook": FacebookScraper,
-    "twitter": TwitterScraper,
-}
+VERIFIED_DIR = Path(__file__).parent / "fixtures" / "live" / "verified"
 
 
-def load_test_urls():
-    """Load test URLs from CSV, skipping rows with empty URLs."""
+def load_verified_urls(platform):
+    """Load verified URLs for a platform from all CSVs in the verified directory."""
     rows = []
-    with open(FIXTURES_PATH, newline="") as f:
-        for row in csv.DictReader(f):
-            if row["url"].strip():
-                rows.append(row)
+    if not VERIFIED_DIR.exists():
+        return rows
+    for csv_path in VERIFIED_DIR.glob("*.csv"):
+        with open(csv_path, newline="", encoding="utf-8-sig") as f:
+            for row in csv.DictReader(f):
+                if row.get("platform") == platform and row.get("url", "").strip() and row.get("status", "").strip():
+                    rows.append(row)
     return rows
 
 
-def get_platform_urls(platform):
-    """Get test URLs for a specific platform."""
-    return [r for r in load_test_urls() if r["platform"] == platform]
+def make_test_id(row):
+    title = row.get("title", "")[:40]
+    return f"{row['status']}: {title}" if title else f"{row['status']}: {row['url'][:50]}"
 
 
-# Shared driver pool — created once per test session
+# Shared driver pool
 @pytest.fixture(scope="session")
 def driver_pool():
     pool = WebDriverPool(pool_size=2, headless=True)
@@ -61,46 +56,44 @@ def driver_pool():
     pool.cleanup()
 
 
+def _init_scraper(cls, driver_pool):
+    scraper = cls(driver_pool)
+    scraper.cancel_event = None
+    return scraper
+
+
 @pytest.fixture(scope="session")
 def youtube_scraper(driver_pool):
-    return YouTubeScraper(driver_pool)
+    return _init_scraper(YouTubeScraper, driver_pool)
 
 
 @pytest.fixture(scope="session")
 def instagram_scraper(driver_pool):
-    return InstagramScraper(driver_pool)
+    return _init_scraper(InstagramScraper, driver_pool)
 
 
 @pytest.fixture(scope="session")
 def facebook_scraper(driver_pool):
-    return FacebookScraper(driver_pool)
+    return _init_scraper(FacebookScraper, driver_pool)
 
 
 @pytest.fixture(scope="session")
 def twitter_scraper(driver_pool):
-    return TwitterScraper(driver_pool)
-
-
-def make_test_id(row):
-    """Create readable test ID from row."""
-    url = row["url"]
-    # Truncate URL for display
-    short = url[:60] + "..." if len(url) > 60 else url
-    return f"{row['expected_status']}: {short}"
+    return _init_scraper(TwitterScraper, driver_pool)
 
 
 # --- YouTube ---
 
-youtube_urls = get_platform_urls("youtube") if FIXTURES_PATH.exists() else []
+youtube_urls = load_verified_urls("youtube")
 
 
-@pytest.mark.skipif(not youtube_urls, reason="No YouTube test URLs in fixture CSV")
+@pytest.mark.skipif(not youtube_urls, reason="No verified YouTube URLs")
 @pytest.mark.parametrize("row", youtube_urls, ids=[make_test_id(r) for r in youtube_urls])
 def test_youtube(youtube_scraper, row):
     result = youtube_scraper.check_url_status(row["url"])
-    assert result.status == row["expected_status"], (
+    assert result.status == row["status"], (
         f"\n  URL:      {row['url']}"
-        f"\n  Expected: {row['expected_status']}"
+        f"\n  Expected: {row['status']}"
         f"\n  Got:      {result.status}"
         f"\n  Info:     {result.info}"
         f"\n  Error:    {result.error_message}"
@@ -109,16 +102,16 @@ def test_youtube(youtube_scraper, row):
 
 # --- Instagram ---
 
-instagram_urls = get_platform_urls("instagram") if FIXTURES_PATH.exists() else []
+instagram_urls = load_verified_urls("instagram")
 
 
-@pytest.mark.skipif(not instagram_urls, reason="No Instagram test URLs in fixture CSV")
+@pytest.mark.skipif(not instagram_urls, reason="No verified Instagram URLs")
 @pytest.mark.parametrize("row", instagram_urls, ids=[make_test_id(r) for r in instagram_urls])
 def test_instagram(instagram_scraper, row):
     result = instagram_scraper.check_url_status(row["url"])
-    assert result.status == row["expected_status"], (
+    assert result.status == row["status"], (
         f"\n  URL:      {row['url']}"
-        f"\n  Expected: {row['expected_status']}"
+        f"\n  Expected: {row['status']}"
         f"\n  Got:      {result.status}"
         f"\n  Info:     {result.info}"
         f"\n  Error:    {result.error_message}"
@@ -127,16 +120,16 @@ def test_instagram(instagram_scraper, row):
 
 # --- Facebook ---
 
-facebook_urls = get_platform_urls("facebook") if FIXTURES_PATH.exists() else []
+facebook_urls = load_verified_urls("facebook")
 
 
-@pytest.mark.skipif(not facebook_urls, reason="No Facebook test URLs in fixture CSV")
+@pytest.mark.skipif(not facebook_urls, reason="No verified Facebook URLs")
 @pytest.mark.parametrize("row", facebook_urls, ids=[make_test_id(r) for r in facebook_urls])
 def test_facebook(facebook_scraper, row):
     result = facebook_scraper.check_url_status(row["url"])
-    assert result.status == row["expected_status"], (
+    assert result.status == row["status"], (
         f"\n  URL:      {row['url']}"
-        f"\n  Expected: {row['expected_status']}"
+        f"\n  Expected: {row['status']}"
         f"\n  Got:      {result.status}"
         f"\n  Info:     {result.info}"
         f"\n  Error:    {result.error_message}"
@@ -145,16 +138,16 @@ def test_facebook(facebook_scraper, row):
 
 # --- Twitter ---
 
-twitter_urls = get_platform_urls("twitter") if FIXTURES_PATH.exists() else []
+twitter_urls = load_verified_urls("twitter")
 
 
-@pytest.mark.skipif(not twitter_urls, reason="No Twitter test URLs in fixture CSV")
+@pytest.mark.skipif(not twitter_urls, reason="No verified Twitter URLs")
 @pytest.mark.parametrize("row", twitter_urls, ids=[make_test_id(r) for r in twitter_urls])
 def test_twitter(twitter_scraper, row):
     result = twitter_scraper.check_url_status(row["url"])
-    assert result.status == row["expected_status"], (
+    assert result.status == row["status"], (
         f"\n  URL:      {row['url']}"
-        f"\n  Expected: {row['expected_status']}"
+        f"\n  Expected: {row['status']}"
         f"\n  Got:      {result.status}"
         f"\n  Info:     {result.info}"
         f"\n  Error:    {result.error_message}"
