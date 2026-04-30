@@ -175,7 +175,7 @@ class BatchProcessor:
             return scraper
 
         if platform == 'youtube':
-            scraper = YouTubeScraper(self.driver_pool)
+            scraper = YouTubeScraper(self.driver_pool, log_callback=self.log_callback)
             scraper.set_pause_event(self.resume_event)
             scraper.set_cancel_event(self.cancel_flag)
             return scraper

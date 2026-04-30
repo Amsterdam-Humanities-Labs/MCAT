@@ -1,6 +1,4 @@
 from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException
 import time
 import random
@@ -21,16 +19,17 @@ class YouTubeScraper(BaseScraper):
 
     # Timeout configuration
     DRIVER_POOL_TIMEOUT = 30   # Max wait for available driver (seconds)
-    PAGE_LOAD_TIMEOUT = 15     # Max wait for page load (seconds)
-    SPA_RENDER_WAIT = 10       # Max wait for SPA to render (seconds)
+    SIGNAL_TIMEOUT = 15        # Max wait for any detection signal after page load (seconds)
+    SIGNAL_POLL_INTERVAL = 0.5 # How often to check for signals (seconds)
 
     # Retry configuration
     MAX_RETRIES = 2            # Number of retry attempts on errors
     RETRY_DELAY = 2.0          # Delay between retries (seconds)
 
-    def __init__(self, driver_pool):
+    def __init__(self, driver_pool, log_callback=None):
         """Initialize with a WebDriver pool instead of manager."""
         self.driver_pool = driver_pool
+        self._log_callback = log_callback
         # Rate limiting: 1-3 second delay between requests
         self.min_delay = self.RATE_LIMIT_MIN
         self.max_delay = self.RATE_LIMIT_MAX
@@ -71,10 +70,13 @@ class YouTubeScraper(BaseScraper):
         """Set threading event for pause control."""
         self.pause_event = pause_event
 
-    def _log(self, message: str):
-        """Print message only if not cancelled."""
-        if not self.is_cancelled():
-            print(message)
+    def _log(self, message: str, level: str = "info"):
+        """Log message via callback (to UI) and stdout."""
+        if self.is_cancelled():
+            return
+        if self._log_callback:
+            self._log_callback(message, level)
+        print(message)
 
     def enable_screenshots(self, enabled: bool, base_path: str) -> None:
         """
@@ -159,14 +161,15 @@ class YouTubeScraper(BaseScraper):
 
         return result
 
+    @staticmethod
+    def _video_id(url: str) -> str:
+        return url.split('v=')[-1].split('&')[0]
+
     def _check_url_once(self, url: str) -> ScrapingResult:
         """Check the status of a YouTube video using pooled driver."""
-        if not self.is_cancelled():
-            print(f"Checking YouTube URL: {url}")
-
+        vid = self._video_id(url)
         result = ScrapingResult()
         result.url = url
-
 
         # Early cancellation check
         if self.is_cancelled():
@@ -191,116 +194,32 @@ class YouTubeScraper(BaseScraper):
             # Apply rate limiting (only when ready to use driver)
             self._apply_rate_limit()
 
-            # Now make the request
-            driver.get(url)
+            # Load page — if it times out, continue anyway and poll
+            # for whatever content did load (YouTube SPA may partially render)
+            self._log(f"Loading page ({vid})")
+            try:
+                driver.get(url)
+            except TimeoutException:
+                self._log(f"Page load timed out, checking partial content ({vid})", "warning")
 
             # Dismiss cookie consent modal if present
             dismiss_youtube_cookies(driver, timeout=3)
 
-            # Wait for YouTube's JavaScript to render dynamic content (SPA)
-            try:
-                WebDriverWait(driver, self.SPA_RENDER_WAIT).until(
-                    lambda d: d.title != "YouTube" and len(d.title) > 0
-                )
-            except TimeoutException:
-                pass  # Continue anyway, might be error page
+            # Poll for detection signals instead of fixed sleeps.
+            # Returns as soon as any conclusive signal is found.
+            self._log(f"Waiting for signals ({vid})")
+            detection = self._poll_for_signals(driver)
 
-            # Wait for page to load
-            try:
-                WebDriverWait(driver, self.PAGE_LOAD_TIMEOUT).until(
-                    EC.presence_of_element_located((By.TAG_NAME, "body"))
-                )
-            except TimeoutException:
-                result.status = "Error"
-                result.error_message = "Page load timeout (15s exceeded)"
-                if not self.is_cancelled():
-                    self._log(f"Error: {url}: {result.status} - {result.error_message}")
-                return result
-
-            # Check for cancellation after page load (before expensive detection)
-            if self.is_cancelled():
-                result.status = "Cancelled"
-                result.info = "Processing was cancelled"
-                return result
-
-            # Get visible text only (not raw HTML which contains JS templates)
-            try:
-                page_text = driver.find_element(By.TAG_NAME, "body").text.lower()
-            except Exception:
-                page_text = ""
-
-            # Video removed/unavailable
-            if any(phrase in page_text for phrase in [
-                'video unavailable', 'this video is not available',
-                "this video isn't available", "video isn't available anymore",
-                'removed by the user', 'account has been terminated'
-            ]):
-                result.status = "Removed"
-                result.info = "Video unavailable"
-                self._log(f"OK: {url}: {result.status} - {result.info}")
+            if detection is not None:
+                result.status, result.info = detection
                 if self.save_screenshots:
                     result.screenshot_path = self._save_screenshot(driver, url, result.status)
                 return result
 
-            # Age restricted
-            if 'age-restricted' in page_text or 'sign in to confirm your age' in page_text:
-                result.status = "Age-restricted"
-                result.info = "Age verification required"
-                self._log(f"OK: {url}: {result.status} - {result.info}")
-                if self.save_screenshots:
-                    result.screenshot_path = self._save_screenshot(driver, url, result.status)
-                return result
-
-            # Geo-blocked
-            if 'not available in your country' in page_text:
-                result.status = "Geo-blocked"
-                result.info = "Not available in your region"
-                self._log(f"OK: {url}: {result.status} - {result.info}")
-                if self.save_screenshots:
-                    result.screenshot_path = self._save_screenshot(driver, url, result.status)
-                return result
-
-            # Private video
-            if 'private video' in page_text:
-                result.status = "Private"
-                result.info = "Video is private"
-                self._log(f"OK: {url}: {result.status} - {result.info}")
-                if self.save_screenshots:
-                    result.screenshot_path = self._save_screenshot(driver, url, result.status)
-                return result
-
-            # Check for content warning panels
-            try:
-                warning_elements = driver.find_elements(By.CSS_SELECTOR, '[class*="warning"], [class*="restricted"]')
-                for el in warning_elements:
-                    text = el.text.strip()
-                    if text:
-                        result.status = "Restricted"
-                        result.info = f"Warning: {text[:100]}"
-                        self._log(f"OK: {url}: {result.status} - {result.info}")
-                        if self.save_screenshots:
-                            result.screenshot_path = self._save_screenshot(driver, url, result.status)
-                        return result
-            except Exception:
-                pass
-
-            # Positive check: video player with title present → Live
-            try:
-                title_el = driver.find_element(By.CSS_SELECTOR, 'h1.ytd-watch-metadata, h1.title')
-                if title_el.text.strip():
-                    result.status = "Live"
-                    result.info = "Video available"
-                    self._log(f"OK: {url}: {result.status} - {result.info}")
-                    if self.save_screenshots:
-                        result.screenshot_path = self._save_screenshot(driver, url, result.status)
-                    return result
-            except Exception:
-                pass
-
-            # No positive Live indicator, no known error pattern → Unknown
+            # No signal after full timeout
             result.status = "Unknown"
             result.info = ""
-            self._log(f"OK: {url}: {result.status} - {result.info}")
+            self._log(f"No signal after {self.SIGNAL_TIMEOUT}s ({vid})", "warning")
             if self.save_screenshots:
                 result.screenshot_path = self._save_screenshot(driver, url, result.status)
             return result
@@ -312,7 +231,7 @@ class YouTubeScraper(BaseScraper):
             else:
                 result.status = "Error"
                 result.error_message = str(e)
-                self._log(f"Error: {url}: {result.status} - {result.error_message}")
+                self._log(f"Error: {result.error_message} ({vid})", "error")
             return result
         finally:
             if driver:
@@ -324,6 +243,99 @@ class YouTubeScraper(BaseScraper):
                         self.driver_pool.return_driver(driver)
                     except Exception as e:
                         print(f"Warning: Driver unresponsive, discarding: {e}")
+
+    REMOVAL_PHRASES = (
+        'video unavailable', 'this video is not available',
+        "this video isn't available", "video isn't available anymore",
+        'removed by the user', 'account has been terminated',
+    )
+
+    def _detect_status(self, driver):
+        """
+        Check all detection signals on the current page state.
+
+        Returns (status, info) if a conclusive signal is found, or None
+        if no signal is present yet (keep polling).
+
+        Triage order matters: negative signals (removal/restriction) are
+        checked before positive signals (Live) so we never conclude Live
+        before a removal notice has had a chance to appear.
+        """
+        # Get visible text (not raw HTML which contains JS template strings)
+        try:
+            page_text = driver.find_element(By.TAG_NAME, "body").text.lower()
+        except Exception:
+            return None  # Page not ready yet
+
+        # --- Negative signals (positive evidence of removal/restriction) ---
+
+        if any(phrase in page_text for phrase in self.REMOVAL_PHRASES):
+            return ("Removed", "Video unavailable")
+
+        if 'age-restricted' in page_text or 'sign in to confirm your age' in page_text:
+            return ("Age-restricted", "Age verification required")
+
+        if 'not available in your country' in page_text:
+            return ("Geo-blocked", "Not available in your region")
+
+        if 'private video' in page_text:
+            return ("Private", "Video is private")
+
+        # Warning/restricted elements
+        try:
+            warning_elements = driver.find_elements(
+                By.CSS_SELECTOR, '[class*="warning"], [class*="restricted"]'
+            )
+            for el in warning_elements:
+                text = el.text.strip()
+                if text:
+                    return ("Restricted", f"Warning: {text[:100]}")
+        except Exception:
+            pass
+
+        # --- Positive signals (evidence the video is live) ---
+
+        # Primary: h1 title element rendered by SPA
+        try:
+            title_el = driver.find_element(
+                By.CSS_SELECTOR, 'h1.ytd-watch-metadata, h1.title'
+            )
+            if title_el.text.strip():
+                return ("Live", "Video available")
+        except Exception:
+            pass
+
+        # Fallback: page title set to "<Video Title> - YouTube"
+        # This updates from server-rendered HTML before SPA components mount,
+        # so it works even when the h1 element never renders (slow connections).
+        # Removed videos keep the bare title "YouTube".
+        try:
+            title = driver.title
+            if title and title != "YouTube" and " - YouTube" in title:
+                return ("Live", "Video available")
+        except Exception:
+            pass
+
+        return None
+
+    def _poll_for_signals(self, driver):
+        """
+        Poll _detect_status until a conclusive signal is found or timeout.
+
+        Returns (status, info) or None if timeout expired with no signal.
+        """
+        start = time.time()
+        while (time.time() - start) < self.SIGNAL_TIMEOUT:
+            if self.is_cancelled():
+                return ("Cancelled", "Processing was cancelled")
+
+            detection = self._detect_status(driver)
+            if detection is not None:
+                return detection
+
+            time.sleep(self.SIGNAL_POLL_INTERVAL)
+
+        return None
 
     def cleanup(self):
         """Clean up scraper resources."""

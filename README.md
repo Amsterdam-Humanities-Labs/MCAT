@@ -55,6 +55,34 @@ MCAT/
     └── test_scrapers_live.py  # Live integration tests
 ```
 
+## Scraping Approach
+
+Each scraper uses a headless Chrome browser (via Selenium) to load the URL and inspect the rendered page for status signals. No platform APIs or authentication required. A pool of 3 browser instances processes URLs in parallel.
+
+`driver.get()` blocks until page load completes (30s timeout). On timeout, the scraper checks whatever partial content rendered. After loading, detection signals are polled every 0.5s (up to 15s) instead of a fixed delay.
+
+Detection uses `body.text` (visible text only, not `page_source`) to avoid false positives from JS template strings. Triage order:
+
+1. **Negative signals**: removal/restriction evidence (text patterns, DOM elements)
+2. **Positive signals**: evidence content is live (title element, article container)
+3. **Unknown**: no signal found, reported as-is rather than guessing
+
+A page is never classified as "Live" until all negative checks pass. Both "Live" and "Removed" require affirmative evidence.
+
+### YouTube
+
+Detected statuses:
+
+| Status | Signal |
+|--------|--------|
+| Removed | Text: "video unavailable", "this video isn't available", "removed by the user", "account has been terminated" |
+| Age-restricted | Text: "age-restricted", "sign in to confirm your age" |
+| Geo-blocked | Text: "not available in your country" |
+| Private | Text: "private video" |
+| Restricted | DOM: elements with `warning` or `restricted` in class name |
+| Live | DOM: `h1.ytd-watch-metadata` with text; fallback: page title matches `"<Title> - YouTube"` |
+| Unknown | No signal found after timeout |
+
 ## Architecture
 
 See `architecture.md` for diagrams covering the full data flow, API endpoints, SSE events, scraper detection strategies, and component tree.
