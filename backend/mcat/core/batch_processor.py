@@ -180,7 +180,7 @@ class BatchProcessor:
             scraper.set_cancel_event(self.cancel_flag)
             return scraper
         elif platform == 'instagram':
-            scraper = InstagramScraper(self.driver_pool)
+            scraper = InstagramScraper(self.driver_pool, log_callback=self.log_callback)
             scraper.set_pause_event(self.resume_event)
             scraper.set_cancel_event(self.cancel_flag)
             return scraper
