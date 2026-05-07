@@ -1,6 +1,6 @@
 """API route definitions."""
 
-from api.handlers import health, project, processing, run, csv, tracking, dialog
+from api.handlers import health, project, processing, run, csv, tracking, dialog, auth
 
 
 def get_routes():
@@ -34,4 +34,9 @@ def post_routes():
         "/dialog/open-file": dialog.open_file,
         "/dialog/open-folder": dialog.open_folder,
         "/dialog/open-external": dialog.open_external,
+        "/auth/start-login": auth.start_login,
+        "/auth/check-login": auth.check_login,
+        "/auth/complete-login": auth.complete_login,
+        "/auth/cancel-login": auth.cancel_login,
+        "/auth/logout": auth.logout,
     }

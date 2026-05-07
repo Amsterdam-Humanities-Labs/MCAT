@@ -9,14 +9,26 @@ from selenium.webdriver.chrome.options import Options
 import chromedriver_autoinstaller
 
 
+PLATFORM_DOMAINS = {
+    "instagram": "https://www.instagram.com",
+    "facebook": "https://www.facebook.com",
+    "tiktok": "https://www.tiktok.com",
+    "youtube": "https://www.youtube.com",
+    "twitter": "https://x.com",
+}
+
+
 class WebDriverPool:
     """Thread-safe WebDriver pool for reusing browser instances."""
 
-    def __init__(self, pool_size: int, headless: bool = True, log_callback=None):
+    def __init__(self, pool_size: int, headless: bool = True, log_callback=None,
+                 cookies: list[dict] = None, platform: str = None):
         self.pool_size = pool_size
         self.headless = headless
         self.chromedriver_path = None
         self._log_callback = log_callback
+        self._cookies = cookies
+        self._platform = platform
         self._setup_chromedriver()
 
         # Thread-safe driver pool
@@ -72,7 +84,8 @@ class WebDriverPool:
         chrome_options.add_argument("--disable-images")
         chrome_options.add_argument("--disable-popup-blocking")
         chrome_options.add_argument("--ignore-certificate-errors")
-        chrome_options.add_argument("--incognito")
+        if not self._cookies:
+            chrome_options.add_argument("--incognito")
 
         # Disable audio/video to prevent YouTube sound and reduce CPU usage
         chrome_options.add_argument("--mute-audio")
@@ -94,6 +107,18 @@ class WebDriverPool:
 
         return chrome_options
 
+    def _inject_cookies(self, driver):
+        """Inject saved cookies into a driver. Requires navigating to the domain first."""
+        domain = PLATFORM_DOMAINS.get(self._platform)
+        if not domain:
+            return
+        driver.get(domain)
+        for cookie in self._cookies:
+            try:
+                driver.add_cookie(cookie)
+            except Exception:
+                pass
+
     def _initialize_pool(self):
         """Initialize the driver pool with browser instances."""
         self._log(f"Initializing WebDriver pool with {self.pool_size} instances...")
@@ -104,12 +129,17 @@ class WebDriverPool:
             try:
                 driver = webdriver.Chrome(service=service, options=chrome_options)
                 driver.set_page_load_timeout(30)
+                if self._cookies:
+                    self._inject_cookies(driver)
                 self.all_drivers.append(driver)
                 self.available_drivers.put(driver)
                 self._log(f"WebDriver {i+1}/{self.pool_size} initialized")
             except Exception as e:
                 self._log(f"Failed to create WebDriver {i+1}: {e}", "error")
                 break
+
+        if self._cookies:
+            self._log(f"Injected {len(self._cookies)} cookies for {self._platform}")
 
     def get_driver(self, timeout: int = 30) -> webdriver.Chrome:
         """Get a driver from the pool (blocks if none available)."""
@@ -123,11 +153,15 @@ class WebDriverPool:
     def return_driver(self, driver: webdriver.Chrome):
         """Return a driver to the pool."""
         if driver and driver in self.all_drivers:
-            # Clear any leftover state
             try:
-                driver.delete_all_cookies()
-                driver.execute_script("window.localStorage.clear();")
-                driver.execute_script("window.sessionStorage.clear();")
+                if self._cookies:
+                    # Authenticated mode: re-inject session cookies
+                    self._inject_cookies(driver)
+                else:
+                    # Default: wipe all state
+                    driver.delete_all_cookies()
+                    driver.execute_script("window.localStorage.clear();")
+                    driver.execute_script("window.sessionStorage.clear();")
             except:
                 pass
 

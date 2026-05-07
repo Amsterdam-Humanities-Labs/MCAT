@@ -13,11 +13,12 @@ class CookieStore:
     def _path(self, platform: str) -> Path:
         return self._dir / f"{platform}.json"
 
-    def save_cookies(self, platform: str, cookies: list[dict]) -> Path:
+    def save_cookies(self, platform: str, cookies: list[dict], username: str = "") -> Path:
         self._dir.mkdir(parents=True, exist_ok=True)
         path = self._path(platform)
         data = {
             "platform": platform,
+            "username": username,
             "captured_at": datetime.now().isoformat(),
             "cookies": cookies,
         }
@@ -52,6 +53,7 @@ class CookieStore:
             data = json.loads(path.read_text())
             return {
                 "platform": data["platform"],
+                "username": data.get("username", ""),
                 "captured_at": data["captured_at"],
                 "cookie_count": len(data.get("cookies", [])),
             }

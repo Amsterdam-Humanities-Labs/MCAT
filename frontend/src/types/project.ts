@@ -36,6 +36,12 @@ export interface TrackingConfig {
   next_check: string | null;
 }
 
+export interface AuthInfo {
+  has_cookies: boolean;
+  username: string;
+  captured_at: string | null;
+}
+
 export interface Project {
   name: string;
   platform: Platform;
@@ -46,6 +52,7 @@ export interface Project {
   screenshots_enabled: boolean;
   runs: Run[];
   tracking: TrackingConfig;
+  auth?: AuthInfo;
 }
 
 export interface CreateProjectRequest {

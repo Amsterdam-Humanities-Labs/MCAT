@@ -2,6 +2,7 @@
 
 from pathlib import Path
 from api.context import app_context, event_bus
+from cookies.cookie_store import CookieStore
 
 
 def _build_project_dict() -> dict | None:
@@ -11,6 +12,9 @@ def _build_project_dict() -> dict | None:
         return None
 
     project = ctx.current_project
+    cookie_store = CookieStore(project.project_path)
+    cookie_info = cookie_store.get_cookie_info(project.platform)
+
     return {
         "name": project.name,
         "platform": project.platform,
@@ -20,6 +24,11 @@ def _build_project_dict() -> dict | None:
         "screenshots_enabled": project.config.screenshots_enabled,
         "runs": [run.to_dict() for run in project.config.runs],
         "tracking": project.config.tracking.to_dict(),
+        "auth": {
+            "has_cookies": cookie_info is not None,
+            "username": cookie_info["username"] if cookie_info else "",
+            "captured_at": cookie_info["captured_at"] if cookie_info else None,
+        },
     }
 
 
