@@ -35,8 +35,6 @@ def post_routes():
         "/dialog/open-folder": dialog.open_folder,
         "/dialog/open-external": dialog.open_external,
         "/auth/start-login": auth.start_login,
-        "/auth/check-login": auth.check_login,
-        "/auth/complete-login": auth.complete_login,
-        "/auth/cancel-login": auth.cancel_login,
         "/auth/logout": auth.logout,
+        "/auth/cookie-status": auth.cookie_status,
     }

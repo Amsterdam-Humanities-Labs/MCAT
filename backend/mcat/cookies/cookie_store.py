@@ -1,7 +1,14 @@
 import json
+import time
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
+
+SESSION_COOKIE_NAMES = {
+    "instagram": "sessionid",
+    "facebook": "c_user",
+    "tiktok": "sessionid",
+}
 
 
 class CookieStore:
@@ -12,6 +19,18 @@ class CookieStore:
 
     def _path(self, platform: str) -> Path:
         return self._dir / f"{platform}.json"
+
+    def _is_expired(self, platform: str, cookies: list[dict]) -> bool:
+        cookie_name = SESSION_COOKIE_NAMES.get(platform)
+        if not cookie_name:
+            return False
+        session = next((c for c in cookies if c.get("name") == cookie_name), None)
+        if not session:
+            return True
+        expiry = session.get("expiry")
+        if expiry and expiry < time.time():
+            return True
+        return False
 
     def save_cookies(self, platform: str, cookies: list[dict], username: str = "") -> Path:
         self._dir.mkdir(parents=True, exist_ok=True)
@@ -31,7 +50,10 @@ class CookieStore:
             return None
         try:
             data = json.loads(path.read_text())
-            return data.get("cookies")
+            cookies = data.get("cookies")
+            if cookies and self._is_expired(platform, cookies):
+                return None
+            return cookies
         except (json.JSONDecodeError, KeyError):
             return None
 
@@ -43,7 +65,7 @@ class CookieStore:
         return False
 
     def has_cookies(self, platform: str) -> bool:
-        return self._path(platform).exists()
+        return self.load_cookies(platform) is not None
 
     def get_cookie_info(self, platform: str) -> Optional[dict]:
         path = self._path(platform)
@@ -51,11 +73,14 @@ class CookieStore:
             return None
         try:
             data = json.loads(path.read_text())
+            cookies = data.get("cookies", [])
+            if self._is_expired(platform, cookies):
+                return None
             return {
                 "platform": data["platform"],
                 "username": data.get("username", ""),
                 "captured_at": data["captured_at"],
-                "cookie_count": len(data.get("cookies", [])),
+                "cookie_count": len(cookies),
             }
         except (json.JSONDecodeError, KeyError):
             return None

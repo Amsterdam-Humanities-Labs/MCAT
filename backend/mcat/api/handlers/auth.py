@@ -1,20 +1,31 @@
 """Authentication handlers for platform login."""
 
-from api.context import app_context
+from api.context import app_context, log_buffer, event_bus
 from api.handlers.project import _build_project_dict
 from cookies.cookie_store import CookieStore
 from services.login_service import LoginService
 
 _login_service: LoginService | None = None
+_login_project_path: str | None = None
+
+
+def _publish_project():
+    event_bus.publish({"type": "project", "project": _build_project_dict()})
 
 
 def _get_login_service() -> LoginService:
-    global _login_service
+    global _login_service, _login_project_path
     project = app_context.current_project
     if not project:
         raise ValueError("No project open")
-    if _login_service is None:
-        _login_service = LoginService(CookieStore(project.project_path))
+    project_path = str(project.project_path)
+    if _login_service is None or _login_project_path != project_path:
+        _login_service = LoginService(
+            CookieStore(project.project_path),
+            log_callback=log_buffer.add,
+            on_login=_publish_project,
+        )
+        _login_project_path = project_path
     return _login_service
 
 
@@ -24,21 +35,6 @@ def start_login(body: dict) -> dict:
     return service.start_login(project.platform)
 
 
-def check_login(body: dict) -> dict:
-    service = _get_login_service()
-    return service.check_login()
-
-
-def complete_login(body: dict) -> dict:
-    service = _get_login_service()
-    return service.complete_login()
-
-
-def cancel_login(body: dict) -> dict:
-    service = _get_login_service()
-    return service.cancel_login()
-
-
 def logout(body: dict) -> dict:
     project = app_context.current_project
     if not project:
@@ -46,3 +42,16 @@ def logout(body: dict) -> dict:
     store = CookieStore(project.project_path)
     store.delete_cookies(project.platform)
     return {"success": True, "project": _build_project_dict()}
+
+
+def cookie_status(body: dict) -> dict:
+    project = app_context.current_project
+    if not project:
+        return {"has_cookies": False}
+    store = CookieStore(project.project_path)
+    info = store.get_cookie_info(project.platform)
+    return {
+        "has_cookies": info is not None,
+        "username": info["username"] if info else "",
+        "captured_at": info["captured_at"] if info else None,
+    }

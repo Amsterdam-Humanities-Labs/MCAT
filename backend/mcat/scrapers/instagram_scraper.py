@@ -7,6 +7,7 @@ from datetime import datetime
 from typing import Optional
 
 from scrapers.base_scraper import BaseScraper, ScrapingResult
+from cookies.instagram_cookie_handler import dismiss_instagram_cookies
 
 
 class InstagramScraper(BaseScraper):
@@ -155,6 +156,8 @@ class InstagramScraper(BaseScraper):
             except TimeoutException:
                 self._log(f"Page load timed out, checking partial content ({pid})", "warning")
 
+            dismiss_instagram_cookies(driver, timeout=3)
+
             self._log(f"Waiting for signals ({pid})")
             detection = self._poll_for_signals(driver)
 
@@ -256,6 +259,7 @@ class InstagramScraper(BaseScraper):
         while (time.time() - start) < self.SIGNAL_TIMEOUT:
             if self.is_cancelled():
                 return ("Cancelled", "Processing was cancelled")
+            self._check_pause()
 
             detection = self._detect_status(driver)
             if detection is not None:

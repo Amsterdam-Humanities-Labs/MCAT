@@ -52,8 +52,6 @@
     processing.start();
   }
 
-  let loginInProgress = $state(false);
-
   async function handleOpenFolder() {
     try {
       await api.openExternal(project.path);
@@ -64,34 +62,10 @@
 
   async function handleLogin() {
     try {
-      const result = await api.startLogin();
-      if (!result.success) return;
-      loginInProgress = true;
+      await api.startLogin();
     } catch (e) {
       console.error('Login failed:', e);
     }
-  }
-
-  async function handleLoginDone() {
-    try {
-      const complete = await api.completeLogin();
-      loginInProgress = false;
-      if (complete.success) {
-        const r = await api.openProject(project.path);
-        if (r.project) projectStore.setProject(r.project);
-      }
-    } catch (e) {
-      console.error('Complete login failed:', e);
-    }
-  }
-
-  async function handleLoginCancel() {
-    try {
-      await api.cancelLogin();
-    } catch (e) {
-      console.error('Cancel login failed:', e);
-    }
-    loginInProgress = false;
   }
 
   async function handleLogout() {
@@ -115,12 +89,9 @@
     urlCount={project.url_count}
     projectPath={project.path}
     auth={project.auth}
-    {loginInProgress}
     onOpenFolder={handleOpenFolder}
     onClose={onclose}
     onLogin={handleLogin}
-    onLoginDone={handleLoginDone}
-    onLoginCancel={handleLoginCancel}
     onLogout={handleLogout}
   />
 

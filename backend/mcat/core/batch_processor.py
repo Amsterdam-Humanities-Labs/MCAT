@@ -51,7 +51,8 @@ class BatchProcessor:
         self.progress_callback = None
 
     def process_csv(self, csv_path: str, platform: str, column_mapping: Dict[str, str],
-                   output_folder: str = None, save_screenshots: bool = False) -> ProcessingResult:
+                   output_folder: str = None, save_screenshots: bool = False,
+                   cookies: list = None) -> ProcessingResult:
         """Process a CSV file of URLs with incremental saving."""
         result = ProcessingResult()
         csv_writer = None
@@ -63,7 +64,9 @@ class BatchProcessor:
             self.driver_pool = WebDriverPool(
                 pool_size=self.max_workers,
                 headless=config.scraper_settings['headless'],
-                log_callback=self.log_callback
+                log_callback=self.log_callback,
+                cookies=cookies or None,
+                platform=platform,
             )
 
         try:
@@ -203,13 +206,6 @@ class BatchProcessor:
     def set_log_callback(self, callback):
         """Set callback function for log messages."""
         self.log_callback = callback
-        # Initialize driver pool with log callback
-        if self.driver_pool is None:
-            self.driver_pool = WebDriverPool(
-                pool_size=self.max_workers,
-                headless=config.scraper_settings['headless'],
-                log_callback=callback
-            )
 
     def _log(self, message: str, level: str = "info"):
         """Send log message via callback if available."""

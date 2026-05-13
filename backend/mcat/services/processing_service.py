@@ -310,7 +310,8 @@ class ProcessingService:
                 platform=job.platform,
                 column_mapping={'post': job.column_mapping.post_column},
                 output_folder=job.output_folder,
-                save_screenshots=job.save_screenshots
+                save_screenshots=job.save_screenshots,
+                cookies=job.cookies,
             )
 
             if self._cancel_event.is_set():

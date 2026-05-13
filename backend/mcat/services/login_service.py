@@ -3,111 +3,89 @@ from pathlib import Path
 
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.common.by import By
 import chromedriver_autoinstaller
 import chromedriver_autoinstaller.utils as cdu
 
-from cookies.cookie_store import CookieStore
-from core.driver_manager import PLATFORM_DOMAINS
+from cookies.cookie_store import CookieStore, SESSION_COOKIE_NAMES
 
-PLATFORM_LOGIN_URLS = {
+PLATFORM_URLS = {
     "instagram": "https://www.instagram.com",
     "facebook": "https://www.facebook.com",
     "tiktok": "https://www.tiktok.com",
 }
 
-# Cookie that indicates a successful login per platform
-SESSION_COOKIE_NAMES = {
-    "instagram": "sessionid",
-    "facebook": "c_user",
-    "tiktok": "sessionid",
-}
-
 
 class LoginService:
 
-    def __init__(self, cookie_store: CookieStore):
+    def __init__(self, cookie_store: CookieStore, log_callback=None, on_login=None):
         self._cookie_store = cookie_store
+        self._log_callback = log_callback
+        self._on_login = on_login
         self._driver = None
         self._platform = None
-        self._lock = threading.Lock()
 
     @property
     def is_active(self) -> bool:
         return self._driver is not None
 
+    def _log(self, message: str, level: str = "info"):
+        if self._log_callback:
+            self._log_callback(message, level)
+
     def start_login(self, platform: str) -> dict:
-        with self._lock:
-            if self._driver is not None:
-                return {"success": False, "error": "Login already in progress"}
+        if self._driver is not None:
+            return {"success": False, "error": "Login already in progress"}
 
-            login_url = PLATFORM_LOGIN_URLS.get(platform)
-            if not login_url:
-                return {"success": False, "error": f"Login not supported for {platform}"}
+        url = PLATFORM_URLS.get(platform)
+        if not url:
+            return {"success": False, "error": f"Login not supported for {platform}"}
 
-            self._platform = platform
-            self._driver = self._create_visible_driver()
-            self._driver.get(login_url)
+        self._platform = platform
+        self._driver = self._create_visible_driver()
+        self._driver.get(url)
 
-            return {"success": True, "platform": platform}
+        threading.Thread(target=self._poll_for_login, daemon=True).start()
 
-    def check_login(self) -> dict:
-        if not self._driver or not self._platform:
-            return {"logged_in": False, "error": "No login in progress"}
+        return {"success": True, "platform": platform}
 
-        session_cookie_name = SESSION_COOKIE_NAMES.get(self._platform)
-        cookies = self._driver.get_cookies()
-        session_cookie = next(
-            (c for c in cookies if c["name"] == session_cookie_name), None
-        )
+    def _poll_for_login(self):
+        import time
+        cookie_name = SESSION_COOKIE_NAMES.get(self._platform)
 
-        if session_cookie:
-            username = self._extract_username()
-            return {"logged_in": True, "username": username}
+        while self._driver is not None:
+            try:
+                cookies = self._driver.get_cookies()
+                session = next((c for c in cookies if c["name"] == cookie_name), None)
+                if session:
+                    username = self._extract_username(cookies)
+                    self._cookie_store.save_cookies(self._platform, cookies, username=username)
+                    self._log(f"Logged in as {username}")
+                    if self._on_login:
+                        self._on_login()
+                    return
+            except Exception:
+                # Browser was closed by user or crashed
+                self._driver = None
+                self._platform = None
+                return
 
-        return {"logged_in": False}
+            time.sleep(2)
 
-    def complete_login(self) -> dict:
-        if not self._driver or not self._platform:
-            return {"success": False, "error": "No login in progress"}
+    def logout(self, platform: str) -> bool:
+        return self._cookie_store.delete_cookies(platform)
 
-        status = self.check_login()
-        if not status.get("logged_in"):
-            return {"success": False, "error": "Not logged in yet"}
-
-        cookies = self._driver.get_cookies()
-        username = status.get("username", "")
-
-        self._cookie_store.save_cookies(self._platform, cookies, username=username)
-        self._close_driver()
-
-        return {"success": True, "username": username, "cookie_count": len(cookies)}
-
-    def cancel_login(self) -> dict:
-        self._close_driver()
-        return {"success": True}
-
-    def _extract_username(self) -> str:
+    def _extract_username(self, cookies: list[dict]) -> str:
         if self._platform == "instagram":
-            try:
-                cookies = self._driver.get_cookies()
-                ds_user = next((c for c in cookies if c["name"] == "ds_user_id"), None)
-                if ds_user:
-                    return ds_user["value"]
-            except Exception:
-                pass
+            ds_user = next((c for c in cookies if c["name"] == "ds_user_id"), None)
+            if ds_user:
+                return ds_user["value"]
         elif self._platform == "facebook":
-            try:
-                cookies = self._driver.get_cookies()
-                c_user = next((c for c in cookies if c["name"] == "c_user"), None)
-                if c_user:
-                    return c_user["value"]
-            except Exception:
-                pass
+            c_user = next((c for c in cookies if c["name"] == "c_user"), None)
+            if c_user:
+                return c_user["value"]
         return ""
 
     def _create_visible_driver(self):
-        # Reuse chromedriver path detection from WebDriverPool
         chrome_version = chromedriver_autoinstaller.get_chrome_version()
         chromedriver_path = None
         if chrome_version:
@@ -119,7 +97,6 @@ class LoginService:
             chromedriver_path = chromedriver_autoinstaller.install()
 
         opts = Options()
-        # Visible window — no --headless, no --incognito, no --disable-images
         opts.add_argument("--no-sandbox")
         opts.add_argument("--disable-dev-shm-usage")
         opts.add_argument("--disable-blink-features=AutomationControlled")
@@ -130,13 +107,3 @@ class LoginService:
         driver = webdriver.Chrome(options=opts)
         driver.set_page_load_timeout(30)
         return driver
-
-    def _close_driver(self):
-        with self._lock:
-            if self._driver:
-                try:
-                    self._driver.quit()
-                except Exception:
-                    pass
-                self._driver = None
-                self._platform = None

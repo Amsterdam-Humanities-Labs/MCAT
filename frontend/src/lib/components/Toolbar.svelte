@@ -11,17 +11,14 @@
     urlCount: number;
     projectPath: string;
     auth?: AuthInfo;
-    loginInProgress?: boolean;
     onOpenFolder?: () => void;
     onClose?: () => void;
     onLogin?: () => void;
-    onLoginDone?: () => void;
-    onLoginCancel?: () => void;
     onLogout?: () => void;
     class?: string;
   }
 
-  let { projectName, platform, urlCount, projectPath, auth, loginInProgress = false, onOpenFolder, onClose, onLogin, onLoginDone, onLoginCancel, onLogout, class: className }: Props = $props();
+  let { projectName, platform, urlCount, projectPath, auth, onOpenFolder, onClose, onLogin, onLogout, class: className }: Props = $props();
 
   const needsLogin = $derived(PLATFORMS_NEEDING_LOGIN.includes(platform));
   const isLoggedIn = $derived(auth?.has_cookies ?? false);
@@ -38,15 +35,7 @@
 
   <div class="ml-auto flex items-center gap-2">
     {#if needsLogin}
-      {#if loginInProgress}
-        <span class="text-text-secondary text-base">Log in via the browser window</span>
-        <Button variant="secondary" size="sm" onclick={onLoginDone}>
-          Done
-        </Button>
-        <Button variant="secondary" size="sm" onclick={onLoginCancel}>
-          Cancel
-        </Button>
-      {:else if isLoggedIn}
+      {#if isLoggedIn}
         <span class="text-text-secondary text-base">{auth?.username || 'Logged in'}</span>
         <Button variant="secondary" size="sm" onclick={onLogout}>
           Log out

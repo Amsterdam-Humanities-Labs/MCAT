@@ -30,6 +30,7 @@ class ProcessingJob:
     platform: str = "youtube"
     output_folder: str = ""
     save_screenshots: bool = False
+    cookies: list = field(default_factory=list)
 
     @property
     def is_valid(self) -> bool:

@@ -328,6 +328,7 @@ class YouTubeScraper(BaseScraper):
         while (time.time() - start) < self.SIGNAL_TIMEOUT:
             if self.is_cancelled():
                 return ("Cancelled", "Processing was cancelled")
+            self._check_pause()
 
             detection = self._detect_status(driver)
             if detection is not None:

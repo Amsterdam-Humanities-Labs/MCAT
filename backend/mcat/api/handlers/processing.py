@@ -4,6 +4,7 @@ import polars as pl
 
 from api.context import app_context, log_buffer, event_bus
 from api.handlers.project import _publish_project
+from cookies.cookie_store import CookieStore
 from models.processing_models import ProcessingJob
 from models.project_models import RunStatus
 from models.file_models import FileInfo, ColumnMapping
@@ -134,12 +135,16 @@ def start(body: dict) -> dict:
     column_mapping = ColumnMapping()
     column_mapping.post_column = project.url_column
 
+    cookie_store = CookieStore(project.project_path)
+    cookies = cookie_store.load_cookies(project.platform) or []
+
     job = ProcessingJob(
         file_info=file_info,
         column_mapping=column_mapping,
         platform=project.platform,
         output_folder=output_folder,
-        save_screenshots=screenshots
+        save_screenshots=screenshots,
+        cookies=cookies,
     )
 
     url_count = len(urls) if urls else len(df)
