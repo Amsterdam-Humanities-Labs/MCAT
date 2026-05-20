@@ -24,12 +24,10 @@ jobs:
         node-version: '22'
 
     - name: Install pnpm
-      run: npm install -g pnpm
+      run: npm install -g pnpm@9
 
     - name: Install frontend dependencies
       run: pnpm install --frozen-lockfile
-      env:
-        COREPACK_ENABLE_STRICT: 0
 
     - name: Build frontend
       run: pnpm --filter frontend build
