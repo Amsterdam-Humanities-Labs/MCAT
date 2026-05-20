@@ -28,7 +28,17 @@ a = Analysis(
     datas=[(str(FRONTEND_DIST), "frontend/dist")],
     hiddenimports=[],
     hookspath=[str(SPEC_DIR / "hooks")],
-    excludes=["PyQt5", "PyQt6", "PySide2", "PySide6", "tkinter"],
+    excludes=[
+        "PyQt5", "PyQt6", "PySide2", "PySide6", "tkinter",
+        "unittest", "test", "tests",
+        "email", "html", "http.server", "xmlrpc",
+        "pydoc", "doctest", "argparse",
+        "ftplib", "imaplib", "smtplib", "poplib", "nntplib", "telnetlib",
+        "turtle", "turtledemo",
+        "idlelib", "lib2to3",
+        "distutils", "setuptools", "pip", "pkg_resources",
+        "multiprocessing",
+    ],
     noarchive=False,
 )
 
@@ -48,7 +58,7 @@ coll = COLLECT(
     exe,
     a.binaries,
     a.datas,
-    strip=False,
+    strip=True,
     upx=False,
     upx_exclude=[],
     name="mcat",
