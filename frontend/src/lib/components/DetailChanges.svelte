@@ -17,18 +17,19 @@
   let { run, columns, rows, loading, error, onOpenScreenshot, class: className }: Props = $props();
 
   const INTERNAL_COLUMNS = ['previous_status'];
+  const HIDDEN_COLUMNS = ['mcat_screenshot'];
 
-  const urlColumn = $derived(columns.find(c => !INTERNAL_COLUMNS.includes(c) && c !== 'status'));
+  const urlColumn = $derived(columns.find(c => !INTERNAL_COLUMNS.includes(c) && c !== 'mcat_status'));
 
   const tableColumns = $derived.by(() => {
     if (!urlColumn) return [];
-    const rest = columns.filter(c => c !== urlColumn && c !== 'status' && !INTERNAL_COLUMNS.includes(c));
-    const ordered = [urlColumn, 'status', ...rest];
+    const rest = columns.filter(c => c !== urlColumn && c !== 'mcat_status' && !INTERNAL_COLUMNS.includes(c) && !HIDDEN_COLUMNS.includes(c));
+    const ordered = [urlColumn, 'mcat_status', ...rest];
 
     return ordered.map((col) => ({
       key: col,
-      header: col === 'status' ? 'change' : col,
-      type: col === 'status' ? 'transition' as const : col === urlColumn ? 'link' as const : col === 'status_screenshot' ? 'file' as const : 'text' as const,
+      header: col === 'mcat_status' ? 'change' : col,
+      type: col === 'mcat_status' ? 'transition' as const : col === urlColumn ? 'link' as const : col === 'mcat_screenshot' ? 'file' as const : 'text' as const,
     }));
   });
 </script>

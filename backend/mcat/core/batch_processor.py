@@ -52,7 +52,7 @@ class BatchProcessor:
 
     def process_csv(self, csv_path: str, platform: str, column_mapping: Dict[str, str],
                    output_folder: str = None, save_screenshots: bool = False,
-                   cookies: list = None) -> ProcessingResult:
+                   cookies: list = None, auth_user: str = "anonymous") -> ProcessingResult:
         """Process a CSV file of URLs with incremental saving."""
         result = ProcessingResult()
         csv_writer = None
@@ -87,8 +87,8 @@ class BatchProcessor:
                 output_csv_path = Path(output_folder) / "results.csv"
                 # Include all original columns plus result columns
                 url_col = column_mapping.get('post', df.columns[0])
-                result_columns = ['status', 'status_detail', 'status_screenshot', 'status_timestamp', 'status_error']
-                other_columns = [c for c in df.columns if c != url_col]
+                result_columns = ['mcat_status', 'mcat_detail', 'mcat_screenshot', 'mcat_timestamp', 'mcat_error', 'mcat_user']
+                other_columns = [c for c in df.columns if c != url_col and c not in result_columns]
                 all_columns = [url_col, *result_columns, *other_columns]
                 csv_writer = IncrementalCSVWriter(
                     output_path=str(output_csv_path),
@@ -117,7 +117,7 @@ class BatchProcessor:
 
             # Step 6: Process URLs with incremental writing
             self._log(f"Starting batch processing of {len(urls)} URLs...")
-            self._process_batch(urls, scraper, csv_writer, df, url_column)
+            self._process_batch(urls, scraper, csv_writer, df, url_column, auth_user)
             self._log(f"Batch processing completed", "success")
 
             if self.cancel_flag.is_set():
@@ -136,14 +136,16 @@ class BatchProcessor:
 
             # Calculate final stats from loaded DataFrame
             if result.dataframe is not None:
-                status_counts = result.dataframe.group_by('status').len().to_dicts()
-                counts_dict = {row['status']: row['len'] for row in status_counts}
+                status_counts = result.dataframe.group_by('mcat_status').len().to_dicts()
+                counts_dict = {row['mcat_status']: row['len'] for row in status_counts}
                 result.stats = {
                     'live': counts_dict.get('Live', 0),
                     'removed': counts_dict.get('Removed', 0),
                     'restricted': counts_dict.get('Restricted', 0) + counts_dict.get('Age-restricted', 0) +
                                   counts_dict.get('Geo-blocked', 0) + counts_dict.get('Private', 0),
-                    'errors': counts_dict.get('Error', 0)
+                    'errors': counts_dict.get('Error', 0),
+                    'unknown': counts_dict.get('Unknown', 0),
+                    'login_required': counts_dict.get('Login Required', 0),
                 }
                 result.processed_count = len(result.dataframe)
 
@@ -215,14 +217,15 @@ class BatchProcessor:
     def _process_batch(self, urls: List[str], scraper,
                       csv_writer: Optional[IncrementalCSVWriter] = None,
                       original_df: Optional[pl.DataFrame] = None,
-                      url_column: str = None) -> None:
+                      url_column: str = None,
+                      auth_user: str = "anonymous") -> None:
         """Process URLs in parallel batches with incremental CSV writing."""
         processed = 0
         total = len(urls)
 
         # Thread-safe counters
         stats_lock = threading.Lock()
-        stats = {'live': 0, 'removed': 0, 'restricted': 0, 'errors': 0, 'skipped': 0}
+        stats = {'live': 0, 'removed': 0, 'restricted': 0, 'errors': 0, 'unknown': 0, 'login_required': 0, 'skipped': 0}
 
         # Convert dataframe to list of dicts for easier row access
         original_rows = original_df.to_dicts() if original_df is not None else []
@@ -246,11 +249,12 @@ class BatchProcessor:
                     original_row = original_rows[row_index].copy()
                     # Add scraping results
                     original_row.update({
-                        'status': result.status,
-                        'status_detail': result.info,
-                        'status_screenshot': result.screenshot_path or '',
-                        'status_timestamp': result.timestamp,
-                        'status_error': result.error_message,
+                        'mcat_status': result.status,
+                        'mcat_detail': result.info,
+                        'mcat_screenshot': result.screenshot_path or '',
+                        'mcat_timestamp': result.timestamp,
+                        'mcat_error': result.error_message,
+                        'mcat_user': auth_user,
                     })
                     csv_writer.append_row(original_row)
 
@@ -263,6 +267,10 @@ class BatchProcessor:
                         stats['removed'] += 1
                     elif status in ['restricted', 'age-restricted', 'geo-blocked', 'private']:
                         stats['restricted'] += 1
+                    elif status == 'unknown':
+                        stats['unknown'] += 1
+                    elif status == 'login required':
+                        stats['login_required'] += 1
                     else:
                         stats['errors'] += 1
 

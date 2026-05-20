@@ -137,6 +137,8 @@ def start(body: dict) -> dict:
 
     cookie_store = CookieStore(project.project_path)
     cookies = cookie_store.load_cookies(project.platform) or []
+    cookie_info = cookie_store.get_cookie_info(project.platform)
+    auth_user = cookie_info["username"] if cookie_info else "anonymous"
 
     job = ProcessingJob(
         file_info=file_info,
@@ -145,6 +147,7 @@ def start(body: dict) -> dict:
         output_folder=output_folder,
         save_screenshots=screenshots,
         cookies=cookies,
+        auth_user=auth_user,
     )
 
     url_count = len(urls) if urls else len(df)

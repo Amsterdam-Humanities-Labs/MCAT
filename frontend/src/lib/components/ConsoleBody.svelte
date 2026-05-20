@@ -32,9 +32,7 @@
   class={cn("overflow-auto p-3 bg-bg-timeline flex-1", className)}
   style="max-height: 300px"
 >
-  {#if entries.length === 0}
-    <div class="text-text-secondary italic">No messages yet...</div>
-  {:else}
+  {#if entries.length > 0}
     {#each entries as msg (msg.id)}
       <ConsoleEntry
         timestamp={msg.timestamp}

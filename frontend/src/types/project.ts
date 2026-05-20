@@ -7,6 +7,8 @@ export interface RunStatusSummary {
   removed: number;
   restricted: number;
   error: number;
+  unknown: number;
+  login_required: number;
 }
 
 export interface RunChangesSummary {

@@ -312,6 +312,7 @@ class ProcessingService:
                 output_folder=job.output_folder,
                 save_screenshots=job.save_screenshots,
                 cookies=job.cookies,
+                auth_user=job.auth_user,
             )
 
             if self._cancel_event.is_set():

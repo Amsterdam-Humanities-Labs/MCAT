@@ -167,16 +167,16 @@ class RunService:
     ) -> dict:
         """Compute status breakdown from a run's results.csv."""
         results_path = project_state.get_run_results_path(run.id)
-        summary = {"live": 0, "removed": 0, "restricted": 0, "error": 0}
+        summary = {"live": 0, "removed": 0, "restricted": 0, "error": 0, "unknown": 0, "login_required": 0}
 
         if not results_path.exists():
             return summary
 
         try:
             df = pl.read_csv(results_path)
-            if "status" in df.columns:
-                status_counts = df.group_by("status").len().to_dicts()
-                counts = {row["status"]: row["len"] for row in status_counts}
+            if "mcat_status" in df.columns:
+                status_counts = df.group_by("mcat_status").len().to_dicts()
+                counts = {row["mcat_status"]: row["len"] for row in status_counts}
                 summary["live"] = counts.get("Live", 0)
                 summary["removed"] = counts.get("Removed", 0)
                 summary["restricted"] = (
@@ -186,6 +186,8 @@ class RunService:
                     + counts.get("Private", 0)
                 )
                 summary["error"] = counts.get("Error", 0)
+                summary["unknown"] = counts.get("Unknown", 0)
+                summary["login_required"] = counts.get("Login Required", 0)
         except Exception as e:
             self._log(f"Failed to compute status summary for run {run.id}: {e}", "warning")
 
@@ -211,17 +213,17 @@ class RunService:
 
             if url_col not in prev_df.columns or url_col not in curr_df.columns:
                 return []
-            if "status" not in prev_df.columns or "status" not in curr_df.columns:
+            if "mcat_status" not in prev_df.columns or "mcat_status" not in curr_df.columns:
                 return []
 
             # Build url -> status maps
             prev_map = dict(zip(
                 prev_df[url_col].cast(pl.Utf8).to_list(),
-                prev_df["status"].cast(pl.Utf8).to_list()
+                prev_df["mcat_status"].cast(pl.Utf8).to_list()
             ))
             curr_map = dict(zip(
                 curr_df[url_col].cast(pl.Utf8).to_list(),
-                curr_df["status"].cast(pl.Utf8).to_list()
+                curr_df["mcat_status"].cast(pl.Utf8).to_list()
             ))
 
             changes = []
@@ -280,16 +282,16 @@ class RunService:
             Dictionary with stats (live, removed, restricted, errors counts)
         """
         results_path = project_state.get_run_results_path(run.id)
-        stats = {'live': 0, 'removed': 0, 'restricted': 0, 'errors': 0}
+        stats = {'live': 0, 'removed': 0, 'restricted': 0, 'errors': 0, 'unknown': 0, 'login_required': 0}
 
         if not results_path.exists():
             return stats
 
         try:
             df = pl.read_csv(results_path)
-            if 'status' in df.columns:
-                status_counts = df.group_by('status').len().to_dicts()
-                counts_dict = {row['status']: row['len'] for row in status_counts}
+            if 'mcat_status' in df.columns:
+                status_counts = df.group_by('mcat_status').len().to_dicts()
+                counts_dict = {row['mcat_status']: row['len'] for row in status_counts}
                 stats['live'] = counts_dict.get('Live', 0)
                 stats['removed'] = counts_dict.get('Removed', 0)
                 stats['restricted'] = (
@@ -299,6 +301,8 @@ class RunService:
                     counts_dict.get('Private', 0)
                 )
                 stats['errors'] = counts_dict.get('Error', 0)
+                stats['unknown'] = counts_dict.get('Unknown', 0)
+                stats['login_required'] = counts_dict.get('Login Required', 0)
         except Exception as e:
             self._log(f"Failed to read run stats for {run.id}: {e}", "warning")
 
