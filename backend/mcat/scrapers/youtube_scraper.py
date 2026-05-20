@@ -269,7 +269,7 @@ class YouTubeScraper(BaseScraper):
         # --- Negative signals (positive evidence of removal/restriction) ---
 
         if any(phrase in page_text for phrase in self.REMOVAL_PHRASES):
-            return ("Removed", "Video unavailable")
+            return ("Removed", "Unavailable")
 
         if 'age-restricted' in page_text or 'sign in to confirm your age' in page_text:
             return ("Age-restricted", "Age verification required")
@@ -301,7 +301,7 @@ class YouTubeScraper(BaseScraper):
             )
             h1_text = driver.execute_script('return arguments[0].innerText', title_el)
             if h1_text and h1_text.strip():
-                return ("Live", "Video available")
+                return ("Live", "Available")
         except Exception:
             pass
 
@@ -312,7 +312,7 @@ class YouTubeScraper(BaseScraper):
         try:
             title = driver.title
             if title and title != "YouTube" and " - YouTube" in title:
-                return ("Live", "Video available")
+                return ("Live", "Available")
         except Exception:
             pass
 

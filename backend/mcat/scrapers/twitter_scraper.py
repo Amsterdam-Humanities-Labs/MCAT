@@ -314,7 +314,7 @@ class TwitterScraper(BaseScraper):
                 article = driver.find_element(By.CSS_SELECTOR, 'article[data-testid="tweet"], article[role="article"]')
                 if article:
                     result.status = "Live"
-                    result.info = "Post available"
+                    result.info = "Available"
                     self._log(f"OK: {url}: {result.status} - {result.info}")
                     if self.save_screenshots:
                         result.screenshot_path = self._save_screenshot(driver, url, result.status)

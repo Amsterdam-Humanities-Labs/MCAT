@@ -212,20 +212,20 @@ class InstagramScraper(BaseScraper):
         try:
             title = driver.title
             if title and "isn't available" in title.lower():
-                return ("Removed", "Post unavailable")
+                return ("Removed", "Unavailable")
         except Exception:
             pass
 
         # Error SVG icon
         try:
             driver.find_element(By.CSS_SELECTOR, 'svg[aria-label="error"]')
-            return ("Removed", "Post unavailable")
+            return ("Removed", "Unavailable")
         except Exception:
             pass
 
         # Error text in body
         if any(phrase in page_text for phrase in self.REMOVAL_PHRASES):
-            return ("Removed", "Post unavailable")
+            return ("Removed", "Unavailable")
 
         # --- Positive signals ---
 
@@ -235,14 +235,14 @@ class InstagramScraper(BaseScraper):
             meta = driver.find_element(By.CSS_SELECTOR, 'meta[property="og:title"]')
             content = meta.get_attribute("content")
             if content and " on Instagram:" in content:
-                return ("Live", "Post available")
+                return ("Live", "Available")
         except Exception:
             pass
 
         # article element — works when logged in
         try:
             driver.find_element(By.CSS_SELECTOR, 'article[role="presentation"]')
-            return ("Live", "Post available")
+            return ("Live", "Available")
         except Exception:
             pass
 
