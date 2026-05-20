@@ -1,9 +1,6 @@
 {
   "name": "mcat",
   "private": true,
-  "pnpm": {
-    "onlyBuiltDependencies": ["esbuild"]
-  },
   "scripts": {
     "dev": "cd backend && venv/bin/python mcat/app.py",
     "dev:mock": "cd backend && MCAT_MOCK=1 venv/bin/python mcat/app.py",
