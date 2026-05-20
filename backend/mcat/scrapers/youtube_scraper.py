@@ -202,7 +202,6 @@ class YouTubeScraper(BaseScraper):
             except TimeoutException:
                 self._log(f"Page load timed out, checking partial content ({vid})", "warning")
 
-            # Dismiss cookie consent modal if present
             dismiss_youtube_cookies(driver, timeout=3)
 
             # Poll for detection signals instead of fixed sleeps.
@@ -300,7 +299,8 @@ class YouTubeScraper(BaseScraper):
             title_el = driver.find_element(
                 By.CSS_SELECTOR, 'h1.ytd-watch-metadata, h1.title'
             )
-            if title_el.text.strip():
+            h1_text = driver.execute_script('return arguments[0].innerText', title_el)
+            if h1_text and h1_text.strip():
                 return ("Live", "Video available")
         except Exception:
             pass
