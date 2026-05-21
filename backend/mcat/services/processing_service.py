@@ -7,13 +7,12 @@ Coordinates background processing with threading and progress reporting.
 import threading
 import logging
 import os
-from typing import Optional, Set
-import polars as pl
+from collections.abc import Callable
 
 from models.processing_models import ProcessingJob, ProcessingStatus, ProcessingState, ProcessingResult
 from models.file_models import ValidationResult
 from core.batch_processor import BatchProcessor
-from utils.csv_handler import CSVHandler
+from utils.csv_handler import load_csv, save_csv
 from events import dispatcher, ProcessingEvents
 from services.processing_validator import validate_job
 from services.progress_queue import ProgressQueue
@@ -22,38 +21,38 @@ from services.progress_queue import ProgressQueue
 class ProcessingService:
     """Unified service for coordinating URL processing operations with threading."""
 
-    _all_instances: Set['ProcessingService'] = set()
-    _instances_lock = threading.Lock()
+    _all_instances: set['ProcessingService'] = set()
+    _instances_lock: threading.Lock = threading.Lock()
 
-    def __init__(self, platform: str = "", log_callback=None):
-        self.platform = platform
-        self._log_callback = log_callback
+    def __init__(self, platform: str = "", log_callback: Callable | None = None):
+        self.platform: str = platform
+        self._log_callback: Callable | None = log_callback
 
         # State management
-        self._state_lock = threading.RLock()
-        self._processing_state = ProcessingState.IDLE
+        self._state_lock: threading.RLock = threading.RLock()
+        self._processing_state: ProcessingState = ProcessingState.IDLE
 
         # Current processing data
-        self.current_job: Optional[ProcessingJob] = None
-        self.current_status = ProcessingStatus()
-        self._custom_urls: Optional[list] = None
+        self.current_job: ProcessingJob | None = None
+        self.current_status: ProcessingStatus = ProcessingStatus()
+        self._custom_urls: list[str] | None = None
 
         # Threading components
-        self._processing_thread: Optional[threading.Thread] = None
-        self._batch_processor: Optional[BatchProcessor] = None
+        self._processing_thread: threading.Thread | None = None
+        self._batch_processor: BatchProcessor | None = None
 
         # Thread synchronization
-        self._cancel_event = threading.Event()
-        self._pause_event = threading.Event()
+        self._cancel_event: threading.Event = threading.Event()
+        self._pause_event: threading.Event = threading.Event()
         self._pause_event.set()
 
         # Progress tracking
-        self._progress_queue = ProgressQueue()
+        self._progress_queue: ProgressQueue = ProgressQueue()
 
         with ProcessingService._instances_lock:
             ProcessingService._all_instances.add(self)
 
-    def set_log_callback(self, callback):
+    def set_log_callback(self, callback: Callable) -> None:
         """Set the log callback for sending messages."""
         self._log_callback = callback
 
@@ -75,7 +74,7 @@ class ProcessingService:
         with self._state_lock:
             return validate_job(job, self._processing_state)
 
-    def start_processing(self, job: ProcessingJob, urls: list = None) -> bool:
+    def start_processing(self, job: ProcessingJob, urls: list[str] | None = None) -> bool:
         """Start a processing job with proper threading."""
         if ProcessingService.is_any_processing():
             self._log_error("Cannot start: another processing instance is still running")
@@ -203,7 +202,7 @@ class ProcessingService:
         with self._state_lock:
             return self._processing_state == ProcessingState.IDLE
 
-    def get_results(self) -> Optional[pl.DataFrame]:
+    def get_results(self) -> list[dict] | None:
         """Get processing results if available."""
         if self._batch_processor:
             return self._batch_processor.get_results()
@@ -214,16 +213,16 @@ class ProcessingService:
         if not self._batch_processor:
             return False
         try:
-            results_df = self._batch_processor.get_results()
-            if results_df is not None:
-                CSVHandler.save_csv(results_df, output_path)
+            results = self._batch_processor.get_results()
+            if results:
+                save_csv(results, output_path)
                 return True
             return False
         except Exception as e:
             logging.error(f"Failed to export results: {e}")
             return False
 
-    def cleanup(self):
+    def cleanup(self) -> None:
         """Clean up resources and threads."""
         self._cancel_event.set()
         self._pause_event.set()
@@ -250,21 +249,21 @@ class ProcessingService:
 
     # Internal methods
 
-    def _log_error(self, message: str):
+    def _log_error(self, message: str) -> None:
         """Log error via callback so it surfaces in the activity log."""
         if self._log_callback:
             self._log_callback(message, "error")
 
-    def _set_error_state(self, message: str):
+    def _set_error_state(self, message: str) -> None:
         """Set error state with message."""
         with self._state_lock:
             self._processing_state = ProcessingState.ERROR
         self.current_status.state = ProcessingState.ERROR
         self.current_status.error_message = message
 
-    def _process_progress_updates(self):
+    def _process_progress_updates(self) -> None:
         """Process queued progress updates (called from main thread)."""
-        def handle_update(data: dict):
+        def handle_update(data: dict) -> None:
             with self._state_lock:
                 self.current_status.stats = data.get('stats', {})
                 self.current_status.total_count = data.get('total', 0)
@@ -274,7 +273,7 @@ class ProcessingService:
 
         self._progress_queue.drain(handle_update)
 
-    def _queue_progress_update(self, stats: dict, total: int, processed: int, action: str = ""):
+    def _queue_progress_update(self, stats: dict, total: int, processed: int, action: str = "") -> None:
         """Queue progress update from background thread and dispatch event."""
         self._progress_queue.push(stats, total, processed, action)
         # Update status and dispatch event immediately for SSE
@@ -285,7 +284,7 @@ class ProcessingService:
             self.current_status.current_action = action
         dispatcher.send(ProcessingEvents.PROGRESS, sender=self, status=self.current_status)
 
-    def _processing_worker(self, job: ProcessingJob):
+    def _processing_worker(self, job: ProcessingJob) -> None:
         """Main processing worker thread."""
         temp_csv_path = "/tmp/mcat_processing_temp.csv"
 
@@ -296,14 +295,12 @@ class ProcessingService:
                 self._batch_processor.set_log_callback(self._log_callback)
 
             if self._custom_urls:
-                # Filter the original dataframe to only include custom URLs (preserves all columns)
                 url_column = job.column_mapping.post_column
-                temp_df = job.file_info.dataframe.filter(
-                    pl.col(url_column).is_in(self._custom_urls)
-                )
-                temp_df.write_csv(temp_csv_path)
+                custom_set = set(self._custom_urls)
+                filtered = [r for r in job.file_info.rows if r.get(url_column) in custom_set]
+                save_csv(filtered, temp_csv_path)
             else:
-                CSVHandler.save_csv(job.file_info.dataframe, temp_csv_path)
+                save_csv(job.file_info.rows, temp_csv_path)
 
             result = self._batch_processor.process_csv(
                 csv_path=temp_csv_path,
@@ -337,7 +334,7 @@ class ProcessingService:
             except Exception:
                 pass
 
-    def _handle_completion(self, result):
+    def _handle_completion(self, result: "ProcessingResult") -> None:
         """Handle processing completion."""
         with self._state_lock:
             if self._processing_state == ProcessingState.CANCELLED:

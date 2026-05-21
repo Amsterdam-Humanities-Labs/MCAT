@@ -40,7 +40,7 @@ JS_DISMISS = """
 """
 
 
-def _find_cookie_dialog(driver, timeout):
+def _find_cookie_dialog(driver: object, timeout: int) -> object | None:
     """Find the dialog element containing cookie consent text."""
     try:
         dialogs = WebDriverWait(driver, timeout).until(
@@ -57,7 +57,7 @@ def _find_cookie_dialog(driver, timeout):
     return None
 
 
-def dismiss_instagram_cookies(driver, timeout: int = 3, wait_after: float = 1.0) -> bool:
+def dismiss_instagram_cookies(driver: object, timeout: int = 3, wait_after: float = 1.0) -> bool:
     dialog = _find_cookie_dialog(driver, timeout)
     if not dialog:
         return True

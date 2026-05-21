@@ -4,7 +4,6 @@ import threading
 from collections import deque
 from datetime import datetime
 from queue import Queue, Empty
-from typing import Optional, Set
 
 from services.project_service import ProjectService
 from services.run_service import RunService
@@ -19,22 +18,22 @@ class EventBus:
     """Thread-safe event bus for SSE broadcasting."""
 
     def __init__(self):
-        self._subscribers: Set[Queue] = set()
-        self._lock = threading.Lock()
+        self._subscribers: set[Queue] = set()
+        self._lock: threading.Lock = threading.Lock()
 
-    def subscribe(self) -> Queue:
+    def subscribe(self) -> Queue[dict]:
         """Subscribe to events. Returns a queue to receive events."""
-        queue: Queue = Queue()
+        queue: Queue[dict] = Queue()
         with self._lock:
             self._subscribers.add(queue)
         return queue
 
-    def unsubscribe(self, queue: Queue):
+    def unsubscribe(self, queue: Queue[dict]) -> None:
         """Unsubscribe from events."""
         with self._lock:
             self._subscribers.discard(queue)
 
-    def publish(self, event: dict):
+    def publish(self, event: dict) -> None:
         """Publish an event to all subscribers."""
         with self._lock:
             dead_queues = []
@@ -47,7 +46,7 @@ class EventBus:
             for q in dead_queues:
                 self._subscribers.discard(q)
 
-    def get_event(self, queue: Queue, timeout: float = None) -> Optional[dict]:
+    def get_event(self, queue: Queue[dict], timeout: float | None = None) -> dict | None:
         """Get an event from a subscription queue."""
         try:
             return queue.get(timeout=timeout)
@@ -63,7 +62,7 @@ class LogBuffer:
         self._lock = threading.Lock()
         self._next_id = 0
 
-    def add(self, text: str, level: str = "info"):
+    def add(self, text: str, level: str = "info") -> None:
         with self._lock:
             log_entry = {
                 "id": self._next_id,
@@ -80,22 +79,22 @@ class LogBuffer:
             "log": log_entry,
         })
 
-    def debug(self, text: str):
+    def debug(self, text: str) -> None:
         self.add(text, "debug")
 
-    def info(self, text: str):
+    def info(self, text: str) -> None:
         self.add(text, "info")
 
-    def warning(self, text: str):
+    def warning(self, text: str) -> None:
         self.add(text, "warning")
 
-    def error(self, text: str):
+    def error(self, text: str) -> None:
         self.add(text, "error")
 
-    def success(self, text: str):
+    def success(self, text: str) -> None:
         self.add(text, "success")
 
-    def clear(self):
+    def clear(self) -> None:
         with self._lock:
             self._logs.clear()
 
@@ -103,10 +102,10 @@ class LogBuffer:
 class AppContext:
     """Application context holding services and state."""
 
-    _instance: Optional["AppContext"] = None
-    _lock = threading.Lock()
+    _instance: "AppContext | None" = None
+    _lock: threading.Lock = threading.Lock()
 
-    def __new__(cls):
+    def __new__(cls) -> "AppContext":
         if cls._instance is None:
             with cls._lock:
                 if cls._instance is None:
@@ -118,15 +117,15 @@ class AppContext:
         if self._initialized:
             return
 
-        self.project_service = ProjectService()
-        self.run_service = RunService(log_callback=log_buffer.add)
-        self.processing_service: Optional[ProcessingService] = None
-        self.tracking_service = TrackingService()
-        self.current_project: Optional[ProjectState] = None
-        self._pending_import = None
-        self._initialized = True
+        self.project_service: ProjectService = ProjectService()
+        self.run_service: RunService = RunService(log_callback=log_buffer.add)
+        self.processing_service: ProcessingService | None = None
+        self.tracking_service: TrackingService = TrackingService()
+        self.current_project: ProjectState | None = None
+        self._pending_import: object | None = None
+        self._initialized: bool = True
 
-    def set_project(self, project: ProjectState):
+    def set_project(self, project: ProjectState) -> None:
         """Set current project and initialize processing service."""
         self.current_project = project
         if self.processing_service:
@@ -143,7 +142,7 @@ class AppContext:
             event_bus=event_bus
         )
 
-    def close_project(self):
+    def close_project(self) -> None:
         """Close current project and cleanup."""
         if self.current_project and self.tracking_service:
             self.tracking_service.stop_tracking(self.current_project)

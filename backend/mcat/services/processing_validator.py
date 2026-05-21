@@ -33,10 +33,10 @@ def validate_job(job: ProcessingJob, current_state: ProcessingState) -> Validati
     if not job.platform:
         result.add_error("Platform must be specified")
 
-    if job.file_info.dataframe is not None:
+    if job.file_info.rows is not None:
         post_column = job.column_mapping.post_column
-        if post_column in job.file_info.dataframe.columns:
-            non_empty_count = job.file_info.dataframe[post_column].drop_nulls().len()
+        if post_column in job.file_info.columns:
+            non_empty_count = sum(1 for r in job.file_info.rows if r.get(post_column))
             if non_empty_count == 0:
                 result.add_error(f"Post column '{post_column}' contains no valid URLs")
 

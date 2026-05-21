@@ -1,12 +1,13 @@
 from selenium.webdriver.common.by import By
 from selenium.common.exceptions import TimeoutException
+import threading
 import time
 import random
 from pathlib import Path
 from datetime import datetime
-from typing import Optional
 
 from scrapers.base_scraper import BaseScraper, ScrapingResult
+from core.driver_manager import WebDriverPool
 from cookies.youtube_cookie_handler import dismiss_youtube_cookies
 
 
@@ -26,27 +27,27 @@ class YouTubeScraper(BaseScraper):
     MAX_RETRIES = 2            # Number of retry attempts on errors
     RETRY_DELAY = 2.0          # Delay between retries (seconds)
 
-    def __init__(self, driver_pool, log_callback=None):
+    def __init__(self, driver_pool: WebDriverPool, log_callback: object | None = None):
         """Initialize with a WebDriver pool instead of manager."""
-        self.driver_pool = driver_pool
-        self._log_callback = log_callback
+        self.driver_pool: WebDriverPool = driver_pool
+        self._log_callback: object | None = log_callback
         # Rate limiting: 1-3 second delay between requests
-        self.min_delay = self.RATE_LIMIT_MIN
-        self.max_delay = self.RATE_LIMIT_MAX
-        self.last_request_time = 0
+        self.min_delay: float = self.RATE_LIMIT_MIN
+        self.max_delay: float = self.RATE_LIMIT_MAX
+        self.last_request_time: float = 0
 
         # Pause control - event-based instead of polling
-        self.pause_event = None
+        self.pause_event: threading.Event | None = None
 
         # Screenshot configuration
         self.save_screenshots: bool = False
-        self.screenshot_base_path: Optional[Path] = None
+        self.screenshot_base_path: Path | None = None
 
     def get_platform_name(self) -> str:
         """Return the platform name for this scraper."""
         return "youtube"
 
-    def _apply_rate_limit(self):
+    def _apply_rate_limit(self) -> None:
         """Apply rate limiting between requests."""
         current_time = time.time()
         time_since_last = current_time - self.last_request_time
@@ -60,17 +61,17 @@ class YouTubeScraper(BaseScraper):
 
         self.last_request_time = time.time()
 
-    def _check_pause(self):
+    def _check_pause(self) -> None:
         """Check if processing is paused and wait efficiently."""
         if self.pause_event:
             # Block until pause event is cleared (much more efficient than polling)
             self.pause_event.wait()
 
-    def set_pause_event(self, pause_event):
+    def set_pause_event(self, pause_event: threading.Event) -> None:
         """Set threading event for pause control."""
         self.pause_event = pause_event
 
-    def _log(self, message: str, level: str = "info"):
+    def _log(self, message: str, level: str = "info") -> None:
         """Log message via callback (to UI) and stdout."""
         if self.is_cancelled():
             return
@@ -90,7 +91,7 @@ class YouTubeScraper(BaseScraper):
         if enabled:
             self.screenshot_base_path = Path(base_path) / "screenshots"
 
-    def _save_screenshot(self, driver, url: str, status: str) -> str:
+    def _save_screenshot(self, driver: object, url: str, status: str) -> str:
         """
         Save screenshot for evidence.
 
@@ -202,12 +203,20 @@ class YouTubeScraper(BaseScraper):
             except TimeoutException:
                 self._log(f"Page load timed out, checking partial content ({vid})", "warning")
 
+            # Capture title immediately — YouTube redirects incognito browsers
+            # to consent.youtube.com after ~1s, losing the original title.
+            initial_title = ""
+            try:
+                initial_title = driver.title or ""
+            except Exception:
+                pass
+
             dismiss_youtube_cookies(driver, timeout=3)
 
             # Poll for detection signals instead of fixed sleeps.
             # Returns as soon as any conclusive signal is found.
             self._log(f"Waiting for signals ({vid})")
-            detection = self._poll_for_signals(driver)
+            detection = self._poll_for_signals(driver, initial_title=initial_title)
 
             if detection is not None:
                 result.status, result.info = detection
@@ -217,7 +226,7 @@ class YouTubeScraper(BaseScraper):
 
             # No signal after full timeout
             result.status = "Unknown"
-            result.info = ""
+            result.info = "N/A"
             self._log(f"No signal after {self.SIGNAL_TIMEOUT}s ({vid})", "warning")
             if self.save_screenshots:
                 result.screenshot_path = self._save_screenshot(driver, url, result.status)
@@ -249,7 +258,7 @@ class YouTubeScraper(BaseScraper):
         'removed by the user', 'account has been terminated',
     )
 
-    def _detect_status(self, driver):
+    def _detect_status(self, driver: object, initial_title: str = "") -> tuple[str, str] | None:
         """
         Check all detection signals on the current page state.
 
@@ -268,17 +277,20 @@ class YouTubeScraper(BaseScraper):
 
         # --- Negative signals (positive evidence of removal/restriction) ---
 
-        if any(phrase in page_text for phrase in self.REMOVAL_PHRASES):
-            return ("Removed", "Unavailable")
+        for phrase in self.REMOVAL_PHRASES:
+            if phrase in page_text:
+                return ("Removed", phrase)
 
-        if 'age-restricted' in page_text or 'sign in to confirm your age' in page_text:
-            return ("Age-restricted", "Age verification required")
+        if 'age-restricted' in page_text:
+            return ("Age-restricted", "age-restricted")
+        if 'sign in to confirm your age' in page_text:
+            return ("Age-restricted", "sign in to confirm your age")
 
         if 'not available in your country' in page_text:
-            return ("Geo-blocked", "Not available in your region")
+            return ("Geo-blocked", "not available in your country")
 
         if 'private video' in page_text:
-            return ("Private", "Video is private")
+            return ("Private", "private video")
 
         # Warning/restricted elements
         try:
@@ -288,7 +300,7 @@ class YouTubeScraper(BaseScraper):
             for el in warning_elements:
                 text = el.text.strip()
                 if text:
-                    return ("Restricted", f"Warning: {text[:100]}")
+                    return ("Restricted", text[:200])
         except Exception:
             pass
 
@@ -301,24 +313,23 @@ class YouTubeScraper(BaseScraper):
             )
             h1_text = driver.execute_script('return arguments[0].innerText', title_el)
             if h1_text and h1_text.strip():
-                return ("Live", "Available")
+                return ("Live", "N/A")
         except Exception:
             pass
 
         # Fallback: page title set to "<Video Title> - YouTube"
-        # This updates from server-rendered HTML before SPA components mount,
-        # so it works even when the h1 element never renders (slow connections).
-        # Removed videos keep the bare title "YouTube".
-        try:
-            title = driver.title
-            if title and title != "YouTube" and " - YouTube" in title:
-                return ("Live", "Available")
-        except Exception:
-            pass
+        # Check both current title and initial_title (captured before YouTube
+        # redirects incognito browsers to the consent page).
+        for title in (driver.title, initial_title):
+            try:
+                if title and title != "YouTube" and " - YouTube" in title:
+                    return ("Live", "N/A")
+            except Exception:
+                pass
 
         return None
 
-    def _poll_for_signals(self, driver):
+    def _poll_for_signals(self, driver: object, initial_title: str = "") -> tuple[str, str] | None:
         """
         Poll _detect_status until a conclusive signal is found or timeout.
 
@@ -330,7 +341,7 @@ class YouTubeScraper(BaseScraper):
                 return ("Cancelled", "Processing was cancelled")
             self._check_pause()
 
-            detection = self._detect_status(driver)
+            detection = self._detect_status(driver, initial_title)
             if detection is not None:
                 return detection
 
@@ -338,7 +349,7 @@ class YouTubeScraper(BaseScraper):
 
         return None
 
-    def cleanup(self):
+    def cleanup(self) -> None:
         """Clean up scraper resources."""
         # Pool cleanup is handled by the pool itself
         pass

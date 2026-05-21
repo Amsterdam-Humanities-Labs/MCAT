@@ -12,7 +12,7 @@ import subprocess
 
 # --- Linux (portal via zenity) ---
 
-def _pick_file_zenity(filters=None):
+def _pick_file_zenity(filters: list[dict] | None = None) -> str | None:
     cmd = ["zenity", "--file-selection"]
     if filters:
         for f in filters:
@@ -25,7 +25,7 @@ def _pick_file_zenity(filters=None):
     return result.stdout.strip() or None
 
 
-def _pick_folder_zenity():
+def _pick_folder_zenity() -> str | None:
     result = subprocess.run(
         ["zenity", "--file-selection", "--directory"],
         capture_output=True, text=True,
@@ -35,7 +35,7 @@ def _pick_folder_zenity():
 
 # --- macOS ---
 
-def _pick_file_macos(filters=None):
+def _pick_file_macos(filters: list[dict] | None = None) -> str | None:
     ext_list = []
     if filters:
         for f in filters:
@@ -49,7 +49,7 @@ def _pick_file_macos(filters=None):
     return result.stdout.strip() or None
 
 
-def _pick_folder_macos():
+def _pick_folder_macos() -> str | None:
     result = subprocess.run(
         ["osascript", "-e", 'POSIX path of (choose folder)'],
         capture_output=True, text=True,
@@ -59,7 +59,7 @@ def _pick_folder_macos():
 
 # --- Dispatch ---
 
-def _pick_file(filters=None):
+def _pick_file(filters: list[dict] | None = None) -> str | None:
     system = platform.system()
     if system == "Darwin":
         return _pick_file_macos(filters)
@@ -69,7 +69,7 @@ def _pick_file(filters=None):
     return None
 
 
-def _pick_folder():
+def _pick_folder() -> str | None:
     system = platform.system()
     if system == "Darwin":
         return _pick_folder_macos()

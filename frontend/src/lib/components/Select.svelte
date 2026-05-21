@@ -71,18 +71,25 @@
     class="absolute z-50 mt-1 w-full bg-bg-primary border border-border-mid rounded shadow-[0_4px_12px_-2px_rgba(0,0,0,0.25)] max-h-60 overflow-auto divide-y divide-border-light"
   >
     {#each options as opt}
-      <div
-        {...select.getOption(opt.value, opt.label)}
-        class={cn(
-          'px-3 py-2 text-base cursor-pointer',
-          select.isSelected(opt.value)
-            ? 'bg-interactive-active text-bg-primary hover:bg-accent-primary'
-            : 'text-text-body hover:bg-interactive-hover',
-          opt.disabled && 'opacity-50 cursor-not-allowed pointer-events-none'
-        )}
-      >
-        {opt.label}
-      </div>
+      {#if opt.disabled}
+        <div
+          class="px-3 py-2 text-base text-text-secondary opacity-50 cursor-not-allowed"
+        >
+          {opt.label}
+        </div>
+      {:else}
+        <div
+          {...select.getOption(opt.value, opt.label)}
+          class={cn(
+            'px-3 py-2 text-base cursor-pointer',
+            select.isSelected(opt.value)
+              ? 'bg-interactive-active text-bg-primary hover:bg-accent-primary'
+              : 'text-text-body hover:bg-interactive-hover',
+          )}
+        >
+          {opt.label}
+        </div>
+      {/if}
     {/each}
   </div>
 

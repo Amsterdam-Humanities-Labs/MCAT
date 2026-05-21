@@ -57,21 +57,28 @@ MCAT/
 
 ## Scraping Approach
 
-Each scraper uses a headless Chrome browser (via Selenium) to load the URL and inspect the rendered page for status signals. No platform APIs or authentication required. A pool of 3 browser instances processes URLs in parallel.
+Each scraper uses a headless Chrome browser (via Selenium) to load the URL and inspect the rendered page for status signals. A pool of 3 browser instances processes URLs in parallel.
 
 `driver.get()` blocks until page load completes (30s timeout). On timeout, the scraper checks whatever partial content rendered. After loading, detection signals are polled every 0.5s (up to 15s) instead of a fixed delay.
 
 Detection uses `body.text` (visible text only, not `page_source`) to avoid false positives from JS template strings. Triage order:
 
 1. **Negative signals**: removal/restriction evidence (text patterns, DOM elements)
-2. **Positive signals**: evidence content is live (title element, article container)
-3. **Unknown**: no signal found, reported as-is rather than guessing
+2. **Positive signals**: evidence content is live (title element, meta tags)
+3. **Login Required**: platform demands authentication, content status indeterminate
+4. **Unknown**: no signal found, reported as-is rather than guessing
 
 A page is never classified as "Live" until all negative checks pass. Both "Live" and "Removed" require affirmative evidence.
 
+Cookie consent modals are dismissed automatically before detection. Each handler finds the consent dialog by its text content, then clicks the decline/reject button scoped within that dialog.
+
+### Authentication
+
+Some platforms (Instagram, Facebook, TikTok) may require login to view content. The app supports optional cookie-based authentication: the user logs in through a visible Chrome window, session cookies are captured and stored per-project in `<project>/cookies/<platform>.json`. No passwords are stored. Cookies are injected into the headless browser pool at scrape time. If cookies expire, the scraper reports "Login Required" and the user can re-authenticate. YouTube and Twitter work without login.
+
 ### YouTube
 
-Detected statuses:
+The page title is captured immediately after `driver.get()` returns, before YouTube redirects incognito browsers to its consent page. This initial title serves as a fallback Live signal when the SPA doesn't fully render.
 
 | Status | Signal |
 |--------|--------|
@@ -80,7 +87,18 @@ Detected statuses:
 | Geo-blocked | Text: "not available in your country" |
 | Private | Text: "private video" |
 | Restricted | DOM: elements with `warning` or `restricted` in class name |
-| Live | DOM: `h1.ytd-watch-metadata` with text; fallback: page title matches `"<Title> - YouTube"` |
+| Live | DOM: `h1.ytd-watch-metadata` via `innerText` (handles hashtag-only titles); fallback: page title matches `"<Title> - YouTube"` |
+| Unknown | No signal found after timeout |
+
+### Instagram
+
+Works without login (Instagram shows post previews to anonymous visitors). With authentication, the scraper gets a full view of the content.
+
+| Status | Signal |
+|--------|--------|
+| Removed | Page title contains "isn't available"; error SVG `svg[aria-label="error"]`; text: "post isn't available", "sorry, this page isn't available", "page not found" |
+| Live | Meta tag `og:title` contains `" on Instagram:"`; fallback: `article[role="presentation"]` (logged-in view) |
+| Login Required | Login wall detected ("log in" + "sign up" in body text) with no other signal |
 | Unknown | No signal found after timeout |
 
 ## Architecture

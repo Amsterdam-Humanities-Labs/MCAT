@@ -5,10 +5,10 @@ Tracks URLs periodically to detect status changes while app is running.
 """
 
 import threading
+from collections.abc import Callable
 from datetime import datetime, timedelta
-from typing import Optional
 
-import polars as pl
+from utils.csv_handler import load_csv, get_columns, get_urls_from_column
 
 from models.project_state import ProjectState
 from models.project_models import RunStatus
@@ -18,15 +18,15 @@ class TrackingService:
     """Manages scheduled tracking runs for URL status monitoring."""
 
     def __init__(self):
-        self._timer: Optional[threading.Timer] = None
-        self._stop_event = threading.Event()
-        self._project_state: Optional[ProjectState] = None
-        self._processing_service = None
-        self._run_service = None
-        self._log_callback = None
-        self._event_bus = None
+        self._timer: threading.Timer | None = None
+        self._stop_event: threading.Event = threading.Event()
+        self._project_state: ProjectState | None = None
+        self._processing_service: object | None = None
+        self._run_service: object | None = None
+        self._log_callback: Callable | None = None
+        self._event_bus: object | None = None
 
-    def initialize(self, processing_service, run_service, log_callback, event_bus):
+    def initialize(self, processing_service: object, run_service: object, log_callback: Callable, event_bus: object) -> None:
         """Initialize tracking service with dependencies."""
         self._processing_service = processing_service
         self._run_service = run_service
@@ -116,7 +116,7 @@ class TrackingService:
             "next_check": config.next_check.isoformat() if config.next_check else None,
         }
 
-    def _schedule_next_check(self):
+    def _schedule_next_check(self) -> None:
         """Schedule next check using threading.Timer."""
         if self._stop_event.is_set():
             return
@@ -138,7 +138,7 @@ class TrackingService:
         self._timer.daemon = True
         self._timer.start()
 
-    def _execute_tracking_run(self):
+    def _execute_tracking_run(self) -> None:
         """Execute a tracking run."""
         if not self._project_state or self._stop_event.is_set():
             return
@@ -169,10 +169,8 @@ class TrackingService:
                     self._log_callback("Tracking started", "info")
 
                 # Read URLs from urls.csv
-                all_urls_df = pl.read_csv(self._project_state.urls_csv_path)
-                urls = all_urls_df.select(
-                    pl.col(self._project_state.url_column).drop_nulls().cast(pl.Utf8)
-                ).to_series().to_list()
+                all_rows = load_csv(str(self._project_state.urls_csv_path))
+                urls = get_urls_from_column(all_rows, self._project_state.url_column)
 
                 # Start processing
                 if self._processing_service:
@@ -180,9 +178,9 @@ class TrackingService:
                     from models.processing_models import ProcessingJob
 
                     file_info = FileInfo(path=str(self._project_state.urls_csv_path))
-                    file_info.dataframe = all_urls_df
-                    file_info.row_count = len(all_urls_df)
-                    file_info.columns = all_urls_df.columns
+                    file_info.rows = all_rows
+                    file_info.row_count = len(all_rows)
+                    file_info.columns = get_columns(all_rows)
                     file_info.valid = True
 
                     column_mapping = ColumnMapping()

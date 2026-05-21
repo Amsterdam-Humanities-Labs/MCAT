@@ -9,7 +9,7 @@ _login_service: LoginService | None = None
 _login_project_path: str | None = None
 
 
-def _publish_project():
+def _publish_project() -> None:
     event_bus.publish({"type": "project", "project": _build_project_dict()})
 
 

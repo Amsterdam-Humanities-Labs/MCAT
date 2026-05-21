@@ -4,7 +4,6 @@ version = "0.1.0"
 description = "MCAT - Moderation Content Analysis Tool"
 requires-python = ">=3.10"
 dependencies = [
-    "polars>=1.0.0",
     "selenium>=4.0.0",
     "chromedriver-autoinstaller>=0.6.0",
     "pydispatcher>=2.0.0",

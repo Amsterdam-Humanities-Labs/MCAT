@@ -1,6 +1,7 @@
 import os
 import threading
 import time
+from collections.abc import Callable
 from pathlib import Path
 from queue import Queue
 from selenium import webdriver
@@ -21,25 +22,25 @@ PLATFORM_DOMAINS = {
 class WebDriverPool:
     """Thread-safe WebDriver pool for reusing browser instances."""
 
-    def __init__(self, pool_size: int, headless: bool = True, log_callback=None,
-                 cookies: list[dict] = None, platform: str = None):
-        self.pool_size = pool_size
-        self.headless = headless
-        self.chromedriver_path = None
-        self._log_callback = log_callback
-        self._cookies = cookies
-        self._platform = platform
+    def __init__(self, pool_size: int, headless: bool = True, log_callback: Callable | None = None,
+                 cookies: list[dict] | None = None, platform: str | None = None):
+        self.pool_size: int = pool_size
+        self.headless: bool = headless
+        self.chromedriver_path: str | None = None
+        self._log_callback: Callable | None = log_callback
+        self._cookies: list[dict] | None = cookies
+        self._platform: str | None = platform
         self._setup_chromedriver()
 
         # Thread-safe driver pool
-        self.available_drivers = Queue()
-        self.all_drivers = []
-        self.lock = threading.Lock()
+        self.available_drivers: Queue[webdriver.Chrome] = Queue()
+        self.all_drivers: list[webdriver.Chrome] = []
+        self.lock: threading.Lock = threading.Lock()
 
         # Initialize the pool
         self._initialize_pool()
 
-    def _log(self, message: str, level: str = "info"):
+    def _log(self, message: str, level: str = "info") -> None:
         """Log message via callback or print."""
         if self._log_callback:
             self._log_callback(message, level)
@@ -52,7 +53,7 @@ class WebDriverPool:
         except:
             pass
 
-    def _setup_chromedriver(self):
+    def _setup_chromedriver(self) -> None:
         """Install and setup ChromeDriver automatically."""
         import chromedriver_autoinstaller.utils as cdu
         # Check if chromedriver is already installed at the expected path
@@ -107,7 +108,7 @@ class WebDriverPool:
 
         return chrome_options
 
-    def _inject_cookies(self, driver):
+    def _inject_cookies(self, driver: webdriver.Chrome) -> None:
         """Inject saved cookies into a driver. Requires navigating to the domain first."""
         domain = PLATFORM_DOMAINS.get(self._platform)
         if not domain:
@@ -119,7 +120,7 @@ class WebDriverPool:
             except Exception:
                 pass
 
-    def _initialize_pool(self):
+    def _initialize_pool(self) -> None:
         """Initialize the driver pool with browser instances."""
         self._log(f"Initializing WebDriver pool with {self.pool_size} instances...")
         chrome_options = self._create_driver_options()
@@ -150,7 +151,7 @@ class WebDriverPool:
         except:
             raise Exception("No WebDriver available in pool (timeout)")
 
-    def return_driver(self, driver: webdriver.Chrome):
+    def return_driver(self, driver: webdriver.Chrome) -> None:
         """Return a driver to the pool."""
         if driver and driver in self.all_drivers:
             try:
@@ -173,7 +174,7 @@ class WebDriverPool:
             except:
                 pass
 
-    def cleanup(self):
+    def cleanup(self) -> None:
         """Clean up all drivers in the pool."""
         self._log("Cleaning up WebDriver pool...", "debug")
 

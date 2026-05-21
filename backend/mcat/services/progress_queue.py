@@ -1,8 +1,8 @@
 """Thread-safe progress queue for background processing."""
 
 import logging
+from collections.abc import Callable
 from queue import Queue, Empty, Full
-from typing import Callable, Optional
 
 
 class ProgressQueue:
@@ -46,7 +46,7 @@ class ProgressQueue:
             logging.error(f"Failed to queue progress update: {e}")
             return False
 
-    def pop(self) -> Optional[dict]:
+    def pop(self) -> dict | None:
         """
         Pop a progress update (called from main thread).
 
@@ -58,7 +58,7 @@ class ProgressQueue:
         except Empty:
             return None
 
-    def drain(self, callback: Callable[[dict], None]):
+    def drain(self, callback: Callable[[dict], None]) -> None:
         """
         Drain all queued updates, calling callback for each.
 
@@ -74,7 +74,7 @@ class ProgressQueue:
             except Exception as e:
                 logging.error(f"Progress callback error: {e}")
 
-    def clear(self):
+    def clear(self) -> None:
         """Clear all queued updates."""
         while self.pop() is not None:
             pass

@@ -3,7 +3,7 @@ Data models for URL import operations.
 """
 
 from dataclasses import dataclass, field
-from typing import Dict, List
+from typing import Any
 
 
 @dataclass
@@ -18,7 +18,7 @@ class UrlImportResult:
     total_in_file: int = 0
     new_urls: int = 0
     duplicates_skipped: int = 0
-    rows_to_add: List[Dict] = field(default_factory=list)
+    rows_to_add: list[dict[str, Any]] = field(default_factory=list)
     error_message: str = ""
 
     @property

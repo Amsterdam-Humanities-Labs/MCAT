@@ -1,7 +1,5 @@
 """Processing handlers."""
 
-import polars as pl
-
 from api.context import app_context, log_buffer, event_bus
 from api.handlers.project import _publish_project
 from cookies.cookie_store import CookieStore
@@ -39,7 +37,7 @@ def _build_status_dict() -> dict:
     }
 
 
-def _publish_status():
+def _publish_status() -> None:
     """Publish processing status via SSE."""
     event_bus.publish({
         "type": "processing",
@@ -47,18 +45,18 @@ def _publish_status():
     })
 
 
-def _is_stale(sender) -> bool:
+def _is_stale(sender: object) -> bool:
     """Check if signal came from an orphaned processing service."""
     return sender is not app_context.processing_service
 
 
-def _on_processing_progress(sender, **kwargs):
+def _on_processing_progress(sender: object, **kwargs: object) -> None:
     if _is_stale(sender):
         return
     _publish_status()
 
 
-def _on_processing_completed(sender, **kwargs):
+def _on_processing_completed(sender: object, **kwargs: object) -> None:
     if _is_stale(sender):
         return
     ctx = app_context
@@ -70,7 +68,7 @@ def _on_processing_completed(sender, **kwargs):
     _publish_project()
 
 
-def _on_processing_error(sender, **kwargs):
+def _on_processing_error(sender: object, **kwargs: object) -> None:
     if _is_stale(sender):
         return
     ctx = app_context
@@ -82,13 +80,13 @@ def _on_processing_error(sender, **kwargs):
     _publish_status()
 
 
-def _on_processing_paused(sender, **kwargs):
+def _on_processing_paused(sender: object, **kwargs: object) -> None:
     if _is_stale(sender):
         return
     _publish_status()
 
 
-def _on_processing_resumed(sender, **kwargs):
+def _on_processing_resumed(sender: object, **kwargs: object) -> None:
     if _is_stale(sender):
         return
     _publish_status()
@@ -124,12 +122,13 @@ def start(body: dict) -> dict:
     if os.environ.get("MCAT_MOCK"):
         os.environ["MCAT_MOCK_RUN"] = str(len(project.config.runs))
 
-    df = pl.read_csv(project.urls_csv_path)
+    from utils.csv_handler import load_csv, get_columns
+    rows = load_csv(str(project.urls_csv_path))
 
     file_info = FileInfo(path=str(project.urls_csv_path))
-    file_info.dataframe = df
-    file_info.row_count = len(df)
-    file_info.columns = df.columns
+    file_info.rows = rows
+    file_info.row_count = len(rows)
+    file_info.columns = get_columns(rows)
     file_info.valid = True
 
     column_mapping = ColumnMapping()
@@ -150,7 +149,7 @@ def start(body: dict) -> dict:
         auth_user=auth_user,
     )
 
-    url_count = len(urls) if urls else len(df)
+    url_count = len(urls) if urls else len(rows)
     log_buffer.info(f"Starting run: {url_count} URLs on {project.platform}")
 
     success = ctx.processing_service.start_processing(job, urls=urls)

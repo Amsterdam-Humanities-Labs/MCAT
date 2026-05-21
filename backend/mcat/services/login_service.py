@@ -1,4 +1,5 @@
 import threading
+from collections.abc import Callable
 from pathlib import Path
 
 from selenium import webdriver
@@ -17,18 +18,18 @@ PLATFORM_URLS = {
 
 class LoginService:
 
-    def __init__(self, cookie_store: CookieStore, log_callback=None, on_login=None):
-        self._cookie_store = cookie_store
-        self._log_callback = log_callback
-        self._on_login = on_login
-        self._driver = None
-        self._platform = None
+    def __init__(self, cookie_store: CookieStore, log_callback: Callable | None = None, on_login: Callable | None = None):
+        self._cookie_store: CookieStore = cookie_store
+        self._log_callback: Callable | None = log_callback
+        self._on_login: Callable | None = on_login
+        self._driver: webdriver.Chrome | None = None
+        self._platform: str | None = None
 
     @property
     def is_active(self) -> bool:
         return self._driver is not None
 
-    def _log(self, message: str, level: str = "info"):
+    def _log(self, message: str, level: str = "info") -> None:
         if self._log_callback:
             self._log_callback(message, level)
 
@@ -48,7 +49,7 @@ class LoginService:
 
         return {"success": True, "platform": platform}
 
-    def _poll_for_login(self):
+    def _poll_for_login(self) -> None:
         import time
         cookie_name = SESSION_COOKIE_NAMES.get(self._platform)
 
@@ -85,7 +86,7 @@ class LoginService:
                 return c_user["value"]
         return ""
 
-    def _create_visible_driver(self):
+    def _create_visible_driver(self) -> webdriver.Chrome:
         chrome_version = chromedriver_autoinstaller.get_chrome_version()
         chromedriver_path = None
         if chrome_version:

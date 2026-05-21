@@ -2,7 +2,6 @@ import json
 import time
 from datetime import datetime
 from pathlib import Path
-from typing import Optional
 
 SESSION_COOKIE_NAMES = {
     "instagram": "sessionid",
@@ -44,7 +43,7 @@ class CookieStore:
         path.write_text(json.dumps(data, indent=2))
         return path
 
-    def load_cookies(self, platform: str) -> Optional[list[dict]]:
+    def load_cookies(self, platform: str) -> list[dict] | None:
         path = self._path(platform)
         if not path.exists():
             return None
@@ -67,7 +66,7 @@ class CookieStore:
     def has_cookies(self, platform: str) -> bool:
         return self.load_cookies(platform) is not None
 
-    def get_cookie_info(self, platform: str) -> Optional[dict]:
+    def get_cookie_info(self, platform: str) -> dict | None:
         path = self._path(platform)
         if not path.exists():
             return None

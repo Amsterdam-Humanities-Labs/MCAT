@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from datetime import datetime
-from typing import List, Dict, Any
 from dataclasses import dataclass, field
+import threading
 
 
 @dataclass
@@ -19,9 +19,9 @@ class ScrapingResult:
 class BaseScraper(ABC):
     """Abstract base class for all platform scrapers."""
 
-    def __init__(self, driver_manager):
-        self.driver_manager = driver_manager
-        self.cancel_event = None
+    def __init__(self, driver_manager: object):
+        self.driver_manager: object = driver_manager
+        self.cancel_event: threading.Event | None = None
 
     @abstractmethod
     def check_url_status(self, url: str) -> ScrapingResult:
@@ -33,7 +33,7 @@ class BaseScraper(ABC):
         """Return the platform name for this scraper."""
         pass
 
-    def set_cancel_event(self, cancel_event):
+    def set_cancel_event(self, cancel_event: threading.Event) -> None:
         """Set threading event for cancellation control."""
         self.cancel_event = cancel_event
 
@@ -41,7 +41,7 @@ class BaseScraper(ABC):
         """Check if processing has been cancelled."""
         return self.cancel_event is not None and self.cancel_event.is_set()
 
-    def batch_check(self, urls: List[str]) -> List[ScrapingResult]:
+    def batch_check(self, urls: list[str]) -> list[ScrapingResult]:
         """Check multiple URLs in batch."""
         results = []
         for url in urls:
@@ -49,6 +49,6 @@ class BaseScraper(ABC):
             results.append(result)
         return results
 
-    def cleanup(self):
+    def cleanup(self) -> None:
         """Clean up any resources used by the scraper."""
         pass

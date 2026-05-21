@@ -222,7 +222,7 @@ class FacebookScraper(BaseScraper):
                 article = driver.find_element(By.CSS_SELECTOR, 'div[role="article"]')
                 if article:
                     result.status = "Live"
-                    result.info = "Available"
+                    result.info = "N/A"
                     self._log(f"OK: {url}: {result.status} - {result.info}")
                     if self.save_screenshots:
                         result.screenshot_path = self._save_screenshot(driver, url, result.status)
@@ -232,7 +232,7 @@ class FacebookScraper(BaseScraper):
 
             # No positive Live indicator, no known error pattern → Unknown
             result.status = "Unknown"
-            result.info = ""
+            result.info = "N/A"
             self._log(f"OK: {url}: {result.status} - {result.info}")
             if self.save_screenshots:
                 result.screenshot_path = self._save_screenshot(driver, url, result.status)
@@ -279,7 +279,7 @@ class FacebookScraper(BaseScraper):
             for keyword in self.UNAVAILABLE_KEYWORDS:
                 if keyword in page_text:
                     result.status = "Removed"
-                    result.info = keyword.capitalize()
+                    result.info = keyword
                     self._log(f"OK: {result.url}: {result.status} - {result.info}")
                     return True
             return False

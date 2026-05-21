@@ -32,7 +32,7 @@ def _build_project_dict() -> dict | None:
     }
 
 
-def _publish_project():
+def _publish_project() -> None:
     """Publish project status via SSE (for background events only)."""
     event_bus.publish({
         "type": "project",

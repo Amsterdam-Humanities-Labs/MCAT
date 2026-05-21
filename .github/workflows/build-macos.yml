@@ -37,7 +37,7 @@ jobs:
         cd backend
         python -m venv venv
         venv/bin/pip install --upgrade pip
-        venv/bin/pip install pywebview polars selenium chromedriver-autoinstaller pydispatcher pyinstaller pyobjc-framework-WebKit
+        venv/bin/pip install pywebview selenium chromedriver-autoinstaller pydispatcher pyinstaller pyobjc-framework-WebKit
 
     - name: Build with PyInstaller
       run: |

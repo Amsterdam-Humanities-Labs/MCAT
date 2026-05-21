@@ -1,12 +1,13 @@
 from selenium.webdriver.common.by import By
 from selenium.common.exceptions import TimeoutException
+import threading
 import time
 import random
 from pathlib import Path
 from datetime import datetime
-from typing import Optional
 
 from scrapers.base_scraper import BaseScraper, ScrapingResult
+from core.driver_manager import WebDriverPool
 from cookies.instagram_cookie_handler import dismiss_instagram_cookies
 
 
@@ -34,20 +35,20 @@ class InstagramScraper(BaseScraper):
         "content isn't available",
     )
 
-    def __init__(self, driver_pool, log_callback=None):
-        self.driver_pool = driver_pool
-        self._log_callback = log_callback
-        self.min_delay = self.RATE_LIMIT_MIN
-        self.max_delay = self.RATE_LIMIT_MAX
-        self.last_request_time = 0
-        self.pause_event = None
+    def __init__(self, driver_pool: WebDriverPool, log_callback: object | None = None):
+        self.driver_pool: WebDriverPool = driver_pool
+        self._log_callback: object | None = log_callback
+        self.min_delay: float = self.RATE_LIMIT_MIN
+        self.max_delay: float = self.RATE_LIMIT_MAX
+        self.last_request_time: float = 0
+        self.pause_event: threading.Event | None = None
         self.save_screenshots: bool = False
-        self.screenshot_base_path: Optional[Path] = None
+        self.screenshot_base_path: Path | None = None
 
     def get_platform_name(self) -> str:
         return "instagram"
 
-    def _apply_rate_limit(self):
+    def _apply_rate_limit(self) -> None:
         current_time = time.time()
         time_since_last = current_time - self.last_request_time
         delay = random.uniform(self.min_delay, self.max_delay)
@@ -55,14 +56,14 @@ class InstagramScraper(BaseScraper):
             time.sleep(delay - time_since_last)
         self.last_request_time = time.time()
 
-    def _check_pause(self):
+    def _check_pause(self) -> None:
         if self.pause_event:
             self.pause_event.wait()
 
-    def set_pause_event(self, pause_event):
+    def set_pause_event(self, pause_event: threading.Event) -> None:
         self.pause_event = pause_event
 
-    def _log(self, message: str, level: str = "info"):
+    def _log(self, message: str, level: str = "info") -> None:
         if self.is_cancelled():
             return
         if self._log_callback:
@@ -74,7 +75,7 @@ class InstagramScraper(BaseScraper):
         if enabled:
             self.screenshot_base_path = Path(base_path) / "screenshots"
 
-    def _save_screenshot(self, driver, url: str, status: str) -> str:
+    def _save_screenshot(self, driver: object, url: str, status: str) -> str:
         if not self.screenshot_base_path:
             return ""
         try:
@@ -168,7 +169,7 @@ class InstagramScraper(BaseScraper):
                 return result
 
             result.status = "Unknown"
-            result.info = ""
+            result.info = "N/A"
             self._log(f"No signal after {self.SIGNAL_TIMEOUT}s ({pid})", "warning")
             if self.save_screenshots:
                 result.screenshot_path = self._save_screenshot(driver, url, result.status)
@@ -194,7 +195,7 @@ class InstagramScraper(BaseScraper):
                     except Exception as e:
                         print(f"Warning: Driver unresponsive, discarding: {e}")
 
-    def _detect_status(self, driver):
+    def _detect_status(self, driver: object) -> tuple[str, str] | None:
         """
         Check all detection signals on current page state.
         Returns (status, info) or None if no signal yet.
@@ -212,49 +213,48 @@ class InstagramScraper(BaseScraper):
         try:
             title = driver.title
             if title and "isn't available" in title.lower():
-                return ("Removed", "Unavailable")
+                return ("Removed", title)
         except Exception:
             pass
 
         # Error SVG icon
         try:
             driver.find_element(By.CSS_SELECTOR, 'svg[aria-label="error"]')
-            return ("Removed", "Unavailable")
+            return ("Removed", "error icon displayed")
         except Exception:
             pass
 
         # Error text in body
-        if any(phrase in page_text for phrase in self.REMOVAL_PHRASES):
-            return ("Removed", "Unavailable")
+        for phrase in self.REMOVAL_PHRASES:
+            if phrase in page_text:
+                return ("Removed", phrase)
 
         # --- Positive signals ---
 
         # og:title meta tag — reliable even in logged-out view
-        # Format for real posts: "Username on Instagram: \"caption text\""
         try:
             meta = driver.find_element(By.CSS_SELECTOR, 'meta[property="og:title"]')
             content = meta.get_attribute("content")
             if content and " on Instagram:" in content:
-                return ("Live", "Available")
+                return ("Live", "N/A")
         except Exception:
             pass
 
         # article element — works when logged in
         try:
             driver.find_element(By.CSS_SELECTOR, 'article[role="presentation"]')
-            return ("Live", "Available")
+            return ("Live", "N/A")
         except Exception:
             pass
 
         # --- Login detection ---
 
-        # Login wall present but no conclusive signal above
         if "log in" in page_text and "sign up" in page_text:
-            return ("Login Required", "Login required to view content")
+            return ("Login Required", "N/A")
 
         return None
 
-    def _poll_for_signals(self, driver):
+    def _poll_for_signals(self, driver: object) -> tuple[str, str] | None:
         start = time.time()
         while (time.time() - start) < self.SIGNAL_TIMEOUT:
             if self.is_cancelled():
@@ -269,5 +269,5 @@ class InstagramScraper(BaseScraper):
 
         return None
 
-    def cleanup(self):
+    def cleanup(self) -> None:
         pass

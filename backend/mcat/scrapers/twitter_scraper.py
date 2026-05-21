@@ -314,7 +314,7 @@ class TwitterScraper(BaseScraper):
                 article = driver.find_element(By.CSS_SELECTOR, 'article[data-testid="tweet"], article[role="article"]')
                 if article:
                     result.status = "Live"
-                    result.info = "Available"
+                    result.info = "N/A"
                     self._log(f"OK: {url}: {result.status} - {result.info}")
                     if self.save_screenshots:
                         result.screenshot_path = self._save_screenshot(driver, url, result.status)
@@ -324,7 +324,7 @@ class TwitterScraper(BaseScraper):
 
             # No positive Live indicator, no known notice → Unknown
             result.status = "Unknown"
-            result.info = ""
+            result.info = "N/A"
             self._log(f"OK: {url}: {result.status} - {result.info}")
             if self.save_screenshots:
                 result.screenshot_path = self._save_screenshot(driver, url, result.status)

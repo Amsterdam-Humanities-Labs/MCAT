@@ -1,14 +1,15 @@
-import polars as pl
 import threading
 import time
+from collections import Counter
+from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from typing import Dict, List, Optional, Callable
 from queue import Queue
 from pathlib import Path
 
 from config.settings import config
-from utils.csv_handler import CSVHandler, IncrementalCSVWriter
+from utils.csv_handler import load_csv, get_columns, get_urls_from_column, validate_column_mapping, IncrementalCSVWriter
 from core.driver_manager import WebDriverPool
+from scrapers.base_scraper import BaseScraper
 from scrapers.youtube_scraper import YouTubeScraper
 from scrapers.instagram_scraper import InstagramScraper
 from scrapers.facebook_scraper import FacebookScraper
@@ -20,14 +21,16 @@ class ProcessingResult:
 
     def __init__(self):
         self.success: bool = False
-        self.dataframe: Optional[pl.DataFrame] = None
+        self.rows: list[dict] | None = None
         self.error_message: str = ""
         self.processed_count: int = 0
-        self.stats: Dict[str, int] = {
+        self.stats: dict[str, int] = {
             'live': 0,
             'removed': 0,
             'restricted': 0,
-            'errors': 0
+            'errors': 0,
+            'unknown': 0,
+            'login_required': 0,
         }
 
 
@@ -35,30 +38,23 @@ class BatchProcessor:
     """Main processing pipeline coordinator with WebDriver pooling."""
 
     def __init__(self):
-        # Removed state_manager dependency - now handled by ProcessingCoordinator
-        self.cancel_flag = threading.Event()
-        # For pause: Event that is SET when NOT paused (inverse logic for efficiency)
-        self.resume_event = threading.Event()
-        self.resume_event.set()  # Start in resumed state
-        self.max_workers = config.scraper_settings['max_workers']
-        self.log_callback = None
+        self.cancel_flag: threading.Event = threading.Event()
+        self.resume_event: threading.Event = threading.Event()
+        self.resume_event.set()
+        self.max_workers: int = config.scraper_settings['max_workers']
+        self.log_callback: Callable | None = None
+        self.driver_pool: WebDriverPool | None = None
+        self.progress_queue: Queue[dict] = Queue()
+        self.progress_callback: Callable | None = None
 
-        # WebDriver pool initialized lazily when log_callback is set
-        self.driver_pool = None
-
-        # Thread-safe progress queue for GUI updates
-        self.progress_queue = Queue()
-        self.progress_callback = None
-
-    def process_csv(self, csv_path: str, platform: str, column_mapping: Dict[str, str],
-                   output_folder: str = None, save_screenshots: bool = False,
-                   cookies: list = None, auth_user: str = "anonymous") -> ProcessingResult:
+    def process_csv(self, csv_path: str, platform: str, column_mapping: dict[str, str],
+                   output_folder: str | None = None, save_screenshots: bool = False,
+                   cookies: list[dict] | None = None, auth_user: str = "anonymous") -> ProcessingResult:
         """Process a CSV file of URLs with incremental saving."""
         result = ProcessingResult()
         csv_writer = None
         output_csv_path = None
 
-        # Ensure driver pool is initialized (skip for mock mode)
         import os
         if self.driver_pool is None and not os.environ.get("MCAT_MOCK"):
             self.driver_pool = WebDriverPool(
@@ -70,25 +66,21 @@ class BatchProcessor:
             )
 
         try:
-            # Reset cancel flag
             self.cancel_flag.clear()
 
-            # Step 1: Load CSV
-            df = CSVHandler.load_csv(csv_path)
+            rows = load_csv(csv_path)
+            columns = get_columns(rows)
 
-            # Step 2: Validate data
-            valid, error_msg = CSVHandler.validate_column_mapping(df, column_mapping)
+            valid, error_msg = validate_column_mapping(rows, column_mapping)
             if not valid:
                 result.error_message = error_msg
                 return result
 
-            # Step 3: Setup incremental CSV writer if output folder provided
             if output_folder:
                 output_csv_path = Path(output_folder) / "results.csv"
-                # Include all original columns plus result columns
-                url_col = column_mapping.get('post', df.columns[0])
+                url_col = column_mapping.get('post', columns[0])
                 result_columns = ['mcat_status', 'mcat_detail', 'mcat_screenshot', 'mcat_timestamp', 'mcat_error', 'mcat_user']
-                other_columns = [c for c in df.columns if c != url_col and c not in result_columns]
+                other_columns = [c for c in columns if c != url_col and c not in result_columns]
                 all_columns = [url_col, *result_columns, *other_columns]
                 csv_writer = IncrementalCSVWriter(
                     output_path=str(output_csv_path),
@@ -96,58 +88,49 @@ class BatchProcessor:
                 )
                 csv_writer.write_header()
 
-            # Step 4: Initialize scraper
             scraper = self._create_scraper(platform)
             if not scraper:
                 result.error_message = f"Unsupported platform: {platform}"
                 return result
 
-            # Enable screenshots if requested
             if save_screenshots and output_folder:
                 scraper.enable_screenshots(True, output_folder)
 
-            # Step 5: Extract URLs
             url_column = column_mapping.get('post', '')
-            urls = CSVHandler.get_urls_from_column(df, url_column)
+            urls = get_urls_from_column(rows, url_column)
             self._log(f"Extracted {len(urls)} URLs from column '{url_column}'")
 
             if not urls:
                 result.error_message = f"No URLs found in column '{url_column}'"
                 return result
 
-            # Step 6: Process URLs with incremental writing
             self._log(f"Starting batch processing of {len(urls)} URLs...")
-            self._process_batch(urls, scraper, csv_writer, df, url_column, auth_user)
+            self._process_batch(urls, scraper, csv_writer, rows, url_column, auth_user)
             self._log(f"Batch processing completed", "success")
 
             if self.cancel_flag.is_set():
                 result.error_message = "Processing was cancelled"
-                # Still load partial results from CSV if available
                 if output_csv_path and output_csv_path.exists():
-                    result.dataframe = pl.read_csv(output_csv_path)
+                    result.rows = load_csv(str(output_csv_path))
                 return result
 
-            # Step 7: Load CSV back into memory for GUI table
             if output_csv_path and output_csv_path.exists():
-                result.dataframe = pl.read_csv(output_csv_path)
+                result.rows = load_csv(str(output_csv_path))
             else:
-                # Fallback if no CSV was saved (shouldn't happen)
-                result.dataframe = df
+                result.rows = rows
 
-            # Calculate final stats from loaded DataFrame
-            if result.dataframe is not None:
-                status_counts = result.dataframe.group_by('mcat_status').len().to_dicts()
-                counts_dict = {row['mcat_status']: row['len'] for row in status_counts}
+            if result.rows:
+                counts = Counter(r.get('mcat_status', '') for r in result.rows)
                 result.stats = {
-                    'live': counts_dict.get('Live', 0),
-                    'removed': counts_dict.get('Removed', 0),
-                    'restricted': counts_dict.get('Restricted', 0) + counts_dict.get('Age-restricted', 0) +
-                                  counts_dict.get('Geo-blocked', 0) + counts_dict.get('Private', 0),
-                    'errors': counts_dict.get('Error', 0),
-                    'unknown': counts_dict.get('Unknown', 0),
-                    'login_required': counts_dict.get('Login Required', 0),
+                    'live': counts.get('Live', 0),
+                    'removed': counts.get('Removed', 0),
+                    'restricted': counts.get('Restricted', 0) + counts.get('Age-restricted', 0) +
+                                  counts.get('Geo-blocked', 0) + counts.get('Private', 0),
+                    'errors': counts.get('Error', 0),
+                    'unknown': counts.get('Unknown', 0),
+                    'login_required': counts.get('Login Required', 0),
                 }
-                result.processed_count = len(result.dataframe)
+                result.processed_count = len(result.rows)
 
             result.success = True
 
@@ -155,16 +138,13 @@ class BatchProcessor:
             result.error_message = str(e)
 
         finally:
-            # Cleanup scraper and WebDriver pool
             if 'scraper' in locals():
                 scraper.cleanup()
-
-            # Always cleanup WebDriver pool to close Chrome browsers
             self.cleanup()
 
         return result
 
-    def _create_scraper(self, platform: str):
+    def _create_scraper(self, platform: str) -> BaseScraper | None:
         """Create a scraper instance for the specified platform."""
         import os
         if os.environ.get("MCAT_MOCK"):
@@ -201,34 +181,29 @@ class BatchProcessor:
             return scraper
         return None
 
-    def set_progress_callback(self, callback):
-        """Set callback function for progress updates."""
+    def set_progress_callback(self, callback: Callable) -> None:
         self.progress_callback = callback
 
-    def set_log_callback(self, callback):
-        """Set callback function for log messages."""
+    def set_log_callback(self, callback: Callable) -> None:
         self.log_callback = callback
 
-    def _log(self, message: str, level: str = "info"):
-        """Send log message via callback if available."""
+    def _log(self, message: str, level: str = "info") -> None:
         if hasattr(self, 'log_callback') and self.log_callback:
             self.log_callback(message, level)
 
-    def _process_batch(self, urls: List[str], scraper,
-                      csv_writer: Optional[IncrementalCSVWriter] = None,
-                      original_df: Optional[pl.DataFrame] = None,
-                      url_column: str = None,
+    def _process_batch(self, urls: list[str], scraper: BaseScraper,
+                      csv_writer: IncrementalCSVWriter | None = None,
+                      original_rows: list[dict] | None = None,
+                      url_column: str | None = None,
                       auth_user: str = "anonymous") -> None:
         """Process URLs in parallel batches with incremental CSV writing."""
         processed = 0
         total = len(urls)
 
-        # Thread-safe counters
         stats_lock = threading.Lock()
         stats = {'live': 0, 'removed': 0, 'restricted': 0, 'errors': 0, 'unknown': 0, 'login_required': 0, 'skipped': 0}
 
-        # Convert dataframe to list of dicts for easier row access
-        original_rows = original_df.to_dicts() if original_df is not None else []
+        original_rows = original_rows or []
 
         def process_single_url(url: str, row_index: int) -> None:
             nonlocal processed
@@ -236,18 +211,13 @@ class BatchProcessor:
                 return
 
             try:
-                # Check URL using shared scraper
                 result = scraper.check_url_status(url)
 
-                # Don't process results after cancellation - just exit silently
                 if self.cancel_flag.is_set() or result.status.lower() == 'cancelled':
                     return
 
-                # Write to CSV incrementally if writer provided
                 if csv_writer and original_rows:
-                    # Get original row data
                     original_row = original_rows[row_index].copy()
-                    # Add scraping results
                     original_row.update({
                         'mcat_status': result.status,
                         'mcat_detail': result.info,
@@ -258,7 +228,6 @@ class BatchProcessor:
                     })
                     csv_writer.append_row(original_row)
 
-                # Thread-safe stats update
                 with stats_lock:
                     status = result.status.lower()
                     if status == 'live':
@@ -278,15 +247,12 @@ class BatchProcessor:
                     current_processed = processed
                     current_stats = stats.copy()
 
-                # Log the result
                 short_url = url[:50] + '...' if len(url) > 50 else url
                 self._log(f"[{current_processed}/{total}] {short_url} → {result.status}", "info")
 
-                # Don't send progress updates after cancellation
                 if self.cancel_flag.is_set():
                     return
 
-                # Send progress update via callback or queue
                 current_action = f"Checking: {url[:60]}{'...' if len(url) > 60 else ''}"
                 if self.progress_callback:
                     self.progress_callback(current_stats, total, current_processed, current_action)
@@ -306,64 +272,39 @@ class BatchProcessor:
                     stats['errors'] += 1
                     processed += 1
 
-        # Process URLs with threading - submit in batches for better cancellation
-        self._log(f"Starting ThreadPoolExecutor with {self.max_workers} workers for {len(urls)} URLs", "debug")
         with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
             futures = []
-
-            # Submit all tasks
             for idx, url in enumerate(urls):
                 if self.cancel_flag.is_set():
                     break
                 futures.append(executor.submit(process_single_url, url, idx))
 
-            self._log(f"Submitted {len(futures)} tasks to executor", "debug")
-
-            # Wait for completion, handling cancellation
             cancelled = False
             for future in as_completed(futures):
                 if self.cancel_flag.is_set() and not cancelled:
                     cancelled = True
                     self._log("Cancellation requested - stopping workers...", "info")
-                    # Cancel all pending futures
                     for f in futures:
                         f.cancel()
-                    # Don't break - let already-running futures complete quietly
-                    # They will check cancel_flag and exit early
                 if cancelled:
-                    continue  # Don't process results after cancellation
+                    continue
                 try:
                     future.result()
                 except Exception as e:
                     if not self.cancel_flag.is_set():
                         self._log(f"Error in future result: {e}", "error")
 
-    def get_progress_updates(self):
-        """Get all pending progress updates from queue (non-blocking)."""
-        updates = []
-        while not self.progress_queue.empty():
-            try:
-                update = self.progress_queue.get_nowait()
-                updates.append(update)
-            except:
-                break
-        return updates
+    def pause_processing(self) -> None:
+        self.resume_event.clear()
 
-    def pause_processing(self):
-        """Pause the current batch processing."""
-        self.resume_event.clear()  # Clear event = pause
+    def resume_processing(self) -> None:
+        self.resume_event.set()
 
-    def resume_processing(self):
-        """Resume the paused batch processing."""
-        self.resume_event.set()  # Set event = resume
-
-    def cancel_processing(self):
-        """Cancel the current batch processing."""
+    def cancel_processing(self) -> None:
         self.cancel_flag.set()
-        self.resume_event.set()  # Ensure threads aren't blocked on pause when canceling
+        self.resume_event.set()
 
-    def cleanup(self):
-        """Clean up resources."""
+    def cleanup(self) -> None:
         self.cancel_flag.set()
-        if hasattr(self, 'driver_pool'):
+        if hasattr(self, 'driver_pool') and self.driver_pool:
             self.driver_pool.cleanup()
