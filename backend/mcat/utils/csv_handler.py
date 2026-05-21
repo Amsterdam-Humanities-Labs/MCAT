@@ -42,9 +42,19 @@ def get_columns(rows: list[dict]) -> list[str]:
     return list(rows[0].keys())
 
 
+def normalize_url(url: str) -> str:
+    """Prepend https:// if no scheme is present."""
+    url = url.strip()
+    if not url:
+        return url
+    if "://" not in url:
+        url = "https://" + url
+    return url
+
+
 def get_urls_from_column(rows: list[dict], url_column: str) -> list[str]:
-    """Extract non-empty URLs from the specified column."""
-    urls = [r[url_column] for r in rows if r.get(url_column)]
+    """Extract non-empty URLs from the specified column, normalized."""
+    urls = [normalize_url(r[url_column]) for r in rows if r.get(url_column)]
     if not urls:
         raise ValueError(f"No URLs found in column '{url_column}'")
     return urls
