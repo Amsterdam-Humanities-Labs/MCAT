@@ -19,9 +19,7 @@
   const isAbandoned = $derived(run.status === 'abandoned');
   const isNoChange = $derived(!run.is_baseline && run.changes_count === 0 && !isAbandoned);
   const dotSize = $derived(isAbandoned || isNoChange ? 'text-[7px]' : 'text-[10px]');
-  const dotColor = $derived(
-    isAbandoned || isNoChange ? 'text-text-secondary' : 'text-text-secondary'
-  );
+  const dotColor = 'text-text-secondary';
 
   // Sort order: recoveries (→ live) first, then degradations by severity
   const STATUS_WEIGHT: Record<string, number> = {

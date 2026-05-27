@@ -21,6 +21,7 @@ class ProjectState:
     config: ProjectConfig
     project_path: Path
     current_run: Optional[RunConfig] = None
+    _url_count: int = -1
 
     @property
     def name(self) -> str:

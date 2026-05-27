@@ -87,17 +87,13 @@ class ProcessingResult:
 
     success: bool = False
     rows: list[dict[str, Any]] | None = None
-    stats: dict[str, int] = field(default_factory=dict)
+    stats: dict[str, int] = field(default_factory=lambda: {
+        'live': 0,
+        'removed': 0,
+        'restricted': 0,
+        'errors': 0,
+        'unknown': 0,
+        'login_required': 0,
+    })
     processed_count: int = 0
     error_message: str = ""
-
-    @classmethod
-    def from_batch_result(cls, batch_result: Any) -> "ProcessingResult":
-        """Create ProcessingResult from BatchProcessor result."""
-        return cls(
-            success=batch_result.success,
-            rows=batch_result.rows,
-            stats=batch_result.stats,
-            processed_count=batch_result.processed_count,
-            error_message=batch_result.error_message
-        )

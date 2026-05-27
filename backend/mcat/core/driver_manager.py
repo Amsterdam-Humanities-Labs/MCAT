@@ -50,7 +50,7 @@ class WebDriverPool:
         """Destructor to ensure cleanup on object deletion."""
         try:
             self.cleanup()
-        except:
+        except Exception:
             pass
 
     def _setup_chromedriver(self) -> None:
@@ -148,57 +148,57 @@ class WebDriverPool:
             # Get driver from pool (blocks until available)
             driver = self.available_drivers.get(timeout=timeout)
             return driver
-        except:
+        except Exception:
             raise Exception("No WebDriver available in pool (timeout)")
 
     def return_driver(self, driver: webdriver.Chrome) -> None:
         """Return a driver to the pool."""
         if driver and driver in self.all_drivers:
-            try:
-                if self._cookies:
-                    # Authenticated mode: re-inject session cookies
-                    self._inject_cookies(driver)
-                else:
-                    # Default: wipe all state
+            if not self._cookies:
+                try:
                     driver.delete_all_cookies()
                     driver.execute_script("window.localStorage.clear();")
                     driver.execute_script("window.sessionStorage.clear();")
-            except:
-                pass
+                except Exception:
+                    pass
 
             self.available_drivers.put(driver)
         elif driver:
             # Pool was cleaned up but worker still has driver - quit it
             try:
                 driver.quit()
-            except:
+            except Exception:
                 pass
 
     def cleanup(self) -> None:
         """Clean up all drivers in the pool."""
         self._log("Cleaning up WebDriver pool...", "debug")
 
-        # Suppress urllib3 warnings during cleanup
         import urllib3
         urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
         with self.lock:
-            # Close all drivers gracefully
             for driver in self.all_drivers:
+                process = None
                 try:
-                    # Set a shorter timeout for cleanup
+                    process = driver.service.process
+                except Exception:
+                    pass
+
+                try:
                     driver.implicitly_wait(1)
                     driver.quit()
-                except Exception:
-                    # Ignore all cleanup errors (connection refused, etc.)
-                    pass
+                except Exception as e:
+                    print(f"Warning: driver.quit() failed: {e}", flush=True)
+
+                if process and process.poll() is None:
+                    process.kill()
 
             self.all_drivers.clear()
 
-            # Clear the queue
             while not self.available_drivers.empty():
                 try:
                     self.available_drivers.get_nowait()
-                except:
+                except Exception:
                     break
 

@@ -17,6 +17,8 @@ const defaultStatusCounts: RunStatusSummary = {
   removed: 0,
   restricted: 0,
   error: 0,
+  unknown: 0,
+  login_required: 0,
 };
 
 function createProcessingStore() {

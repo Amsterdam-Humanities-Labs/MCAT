@@ -112,12 +112,6 @@ export const api = {
   // Auth
   startLogin: () =>
     callBackend<{ success: boolean; platform?: string; error?: string }>('/auth/start-login', 'POST'),
-  checkLogin: () =>
-    callBackend<{ logged_in: boolean; username?: string }>('/auth/check-login', 'POST'),
-  completeLogin: () =>
-    callBackend<{ success: boolean; username?: string; cookie_count?: number; error?: string }>('/auth/complete-login', 'POST'),
-  cancelLogin: () =>
-    callBackend<{ success: boolean }>('/auth/cancel-login', 'POST'),
   logout: () =>
     callBackend<{ success: boolean; project?: Project }>('/auth/logout', 'POST'),
 };

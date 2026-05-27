@@ -67,8 +67,10 @@ class ProjectService:
         project_state.save()
 
     def get_url_count(self, project_state: ProjectState) -> int:
-        rows = load_csv(str(project_state.urls_csv_path))
-        return len(rows)
+        if project_state._url_count < 0:
+            rows = load_csv(str(project_state.urls_csv_path))
+            project_state._url_count = len(rows)
+        return project_state._url_count
 
     def get_urls(self, project_state: ProjectState) -> list[str]:
         rows = load_csv(str(project_state.urls_csv_path))
@@ -121,6 +123,7 @@ class ProjectService:
             existing_rows.append(padded)
 
         save_csv(existing_rows, str(project_state.urls_csv_path))
+        project_state._url_count = len(existing_rows)
 
         return len(import_result.rows_to_add)
 

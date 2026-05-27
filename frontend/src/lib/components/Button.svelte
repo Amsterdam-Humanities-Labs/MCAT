@@ -35,7 +35,7 @@
     danger:
       'bg-transparent hover:bg-interactive-danger text-status-removed border border-status-removed focus:ring-status-removed',
     ghost:
-      'bg-transparent hover:bg-interactive-hovertext-text-body focus:ring-border-mid',
+      'bg-transparent hover:bg-interactive-hover text-text-body focus:ring-border-mid',
   };
 
   const sizes = {

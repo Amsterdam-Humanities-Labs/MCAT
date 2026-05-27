@@ -18,11 +18,19 @@ mcat_dir = Path(__file__).parent
 if str(mcat_dir) not in sys.path:
     sys.path.insert(0, str(mcat_dir))
 
-from api.router import get_routes, post_routes
+from api.router import GET_ROUTES, POST_ROUTES
 from api.context import event_bus
 
 DEFAULT_PORT = 9876
 MAX_PORT_ATTEMPTS = 10
+
+def _get_cors_origin(headers: dict | None = None) -> str:
+    """Return the CORS origin. Only allow localhost origins."""
+    if headers:
+        origin = headers.get("Origin", "")
+        if origin and ("127.0.0.1" in origin or "localhost" in origin):
+            return origin
+    return "null"
 
 
 def find_available_port(start_port: int, max_attempts: int = 10) -> int:
@@ -45,7 +53,7 @@ class MCATHandler(BaseHTTPRequestHandler):
         """Send JSON response."""
         self.send_response(status)
         self.send_header("Content-Type", "application/json")
-        self.send_header("Access-Control-Allow-Origin", "*")
+        self.send_header("Access-Control-Allow-Origin", _get_cors_origin(self.headers))
         self.end_headers()
         self.wfile.write(json.dumps(data).encode())
 
@@ -64,7 +72,7 @@ class MCATHandler(BaseHTTPRequestHandler):
     def do_OPTIONS(self):
         """Handle CORS preflight."""
         self.send_response(200)
-        self.send_header("Access-Control-Allow-Origin", "*")
+        self.send_header("Access-Control-Allow-Origin", _get_cors_origin(self.headers))
         self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
         self.send_header("Access-Control-Allow-Headers", "Content-Type")
         self.end_headers()
@@ -78,7 +86,7 @@ class MCATHandler(BaseHTTPRequestHandler):
             self._handle_sse()
             return
 
-        routes = get_routes()
+        routes = GET_ROUTES
 
         handler = routes.get(path)
         if handler:
@@ -97,7 +105,7 @@ class MCATHandler(BaseHTTPRequestHandler):
         self.send_header("Content-Type", "text/event-stream")
         self.send_header("Cache-Control", "no-cache")
         self.send_header("Connection", "keep-alive")
-        self.send_header("Access-Control-Allow-Origin", "*")
+        self.send_header("Access-Control-Allow-Origin", _get_cors_origin(self.headers))
         self.end_headers()
 
         # Subscribe to events
@@ -125,7 +133,7 @@ class MCATHandler(BaseHTTPRequestHandler):
     def do_POST(self):
         """Handle POST requests."""
         path = urlparse(self.path).path
-        routes = post_routes()
+        routes = POST_ROUTES
 
         try:
             body = self._read_json_body()

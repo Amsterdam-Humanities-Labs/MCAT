@@ -5,9 +5,11 @@ giving native dialogs on any desktop (KDE, GNOME, etc.).
 On macOS/Windows, uses osascript/powershell respectively.
 """
 
+import os
 import platform
 import shutil
 import subprocess
+from pathlib import Path
 
 
 # --- Linux (portal via zenity) ---
@@ -92,16 +94,31 @@ def open_folder(body: dict) -> dict:
 
 def open_external(body: dict) -> dict:
     """Open a file or URL in the system default application."""
+    from api.context import app_context
     target = body.get("url", "")
     if not target:
         return {"success": False}
+
+    # Only allow HTTP(S) URLs or paths within the current project
+    is_url = target.startswith("http://") or target.startswith("https://")
+    is_project_path = False
+    if app_context.current_project:
+        try:
+            resolved = Path(target).resolve()
+            project_dir = app_context.current_project.project_path.resolve()
+            is_project_path = str(resolved).startswith(str(project_dir))
+        except Exception:
+            pass
+
+    if not is_url and not is_project_path:
+        return {"success": False, "error": "Path not allowed"}
 
     system = platform.system()
     try:
         if system == "Darwin":
             subprocess.Popen(["open", target])
         elif system == "Windows":
-            subprocess.Popen(["start", "", target], shell=True)
+            os.startfile(target)
         else:
             subprocess.Popen(["xdg-open", target])
         return {"success": True}

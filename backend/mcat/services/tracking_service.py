@@ -90,10 +90,11 @@ class TrackingService:
 
         self._stop_event.set()
 
-        # Log and publish event
+        project_state.config.tracking.enabled = False
+        project_state.save()
+
         if self._log_callback:
             self._log_callback("Tracking stopped", "info")
-
 
         return {"enabled": False}
 

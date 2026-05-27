@@ -3,12 +3,11 @@ Service for managing processing runs within a project.
 """
 
 import csv
-from collections import Counter
 from collections.abc import Callable
 from datetime import datetime
 from pathlib import Path
 
-from utils.csv_handler import load_csv, save_csv
+from utils.csv_handler import load_csv, save_csv, count_statuses
 from models.project_models import RunConfig, RunStatus
 from models.project_state import ProjectState
 
@@ -100,29 +99,15 @@ class RunService:
 
     def _compute_status_summary(self, project_state: ProjectState, run: RunConfig) -> dict[str, int]:
         results_path = project_state.get_run_results_path(run.id)
-        summary = {"live": 0, "removed": 0, "restricted": 0, "error": 0, "unknown": 0, "login_required": 0}
-
         if not results_path.exists():
-            return summary
+            return {"live": 0, "removed": 0, "restricted": 0, "errors": 0, "unknown": 0, "login_required": 0}
 
         try:
             rows = load_csv(str(results_path))
-            counts = Counter(r.get("mcat_status", "") for r in rows)
-            summary["live"] = counts.get("Live", 0)
-            summary["removed"] = counts.get("Removed", 0)
-            summary["restricted"] = (
-                counts.get("Restricted", 0)
-                + counts.get("Age-restricted", 0)
-                + counts.get("Geo-blocked", 0)
-                + counts.get("Private", 0)
-            )
-            summary["error"] = counts.get("Error", 0)
-            summary["unknown"] = counts.get("Unknown", 0)
-            summary["login_required"] = counts.get("Login Required", 0)
+            return count_statuses(rows)
         except Exception as e:
             self._log(f"Failed to compute status summary for run {run.id}: {e}", "warning")
-
-        return summary
+            return {"live": 0, "removed": 0, "restricted": 0, "errors": 0, "unknown": 0, "login_required": 0}
 
     def _compute_changes(self, project_state: ProjectState, previous_run: RunConfig, current_run: RunConfig) -> list[dict]:
         prev_path = project_state.get_run_results_path(previous_run.id)

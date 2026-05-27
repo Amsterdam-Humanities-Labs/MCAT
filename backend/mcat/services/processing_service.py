@@ -4,9 +4,11 @@ Unified processing service with thread-safe GUI communication.
 Coordinates background processing with threading and progress reporting.
 """
 
+import tempfile
 import threading
 import logging
 import os
+import weakref
 from collections.abc import Callable
 
 from models.processing_models import ProcessingJob, ProcessingStatus, ProcessingState, ProcessingResult
@@ -21,7 +23,7 @@ from services.progress_queue import ProgressQueue
 class ProcessingService:
     """Unified service for coordinating URL processing operations with threading."""
 
-    _all_instances: set['ProcessingService'] = set()
+    _all_instances: weakref.WeakSet['ProcessingService'] = weakref.WeakSet()
     _instances_lock: threading.Lock = threading.Lock()
 
     def __init__(self, platform: str = "", log_callback: Callable | None = None):
@@ -202,26 +204,6 @@ class ProcessingService:
         with self._state_lock:
             return self._processing_state == ProcessingState.IDLE
 
-    def get_results(self) -> list[dict] | None:
-        """Get processing results if available."""
-        if self._batch_processor:
-            return self._batch_processor.get_results()
-        return None
-
-    def export_results(self, output_path: str) -> bool:
-        """Export processing results to a file."""
-        if not self._batch_processor:
-            return False
-        try:
-            results = self._batch_processor.get_results()
-            if results:
-                save_csv(results, output_path)
-                return True
-            return False
-        except Exception as e:
-            logging.error(f"Failed to export results: {e}")
-            return False
-
     def cleanup(self) -> None:
         """Clean up resources and threads."""
         self._cancel_event.set()
@@ -243,9 +225,6 @@ class ProcessingService:
 
         self.current_job = None
         self.current_status = ProcessingStatus()
-
-        with ProcessingService._instances_lock:
-            ProcessingService._all_instances.discard(self)
 
     # Internal methods
 
@@ -286,7 +265,8 @@ class ProcessingService:
 
     def _processing_worker(self, job: ProcessingJob) -> None:
         """Main processing worker thread."""
-        temp_csv_path = "/tmp/mcat_processing_temp.csv"
+        _, temp_csv_path = tempfile.mkstemp(suffix='.csv', prefix='mcat_')
+
 
         try:
             self._batch_processor = BatchProcessor()
@@ -344,7 +324,6 @@ class ProcessingService:
         self.current_status.state = ProcessingState.COMPLETED
 
         if result.success:
-            processing_result = ProcessingResult.from_batch_result(result)
             if self._log_callback:
                 stats = result.stats
                 self._log_callback(
@@ -353,7 +332,7 @@ class ProcessingService:
                     "success"
                 )
             dispatcher.send(ProcessingEvents.COMPLETED, sender=self,
-                          result=processing_result, status=self.current_status)
+                          result=result, status=self.current_status)
         else:
             if self._log_callback:
                 self._log_callback(f"Processing failed: {result.error_message}", "error")

@@ -1,12 +1,12 @@
 """
 Data models for project management.
 """
+from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
-from typing import List, Optional
 import json
 
 
@@ -23,7 +23,7 @@ class RunConfig:
 
     id: str
     started_at: datetime
-    completed_at: Optional[datetime] = None
+    completed_at: datetime | None = None
     status: RunStatus = RunStatus.IN_PROGRESS
     screenshots_enabled: bool = False
     run_type: str = "manual"  # "manual" or "tracking"
@@ -91,8 +91,8 @@ class TrackingConfig:
     enabled: bool = False
     interval_value: int = 30
     interval_unit: str = "minutes"  # "minutes", "hours", "days"
-    last_check: Optional[datetime] = None
-    next_check: Optional[datetime] = None
+    last_check: datetime | None = None
+    next_check: datetime | None = None
 
     @property
     def interval_seconds(self) -> int:
@@ -131,7 +131,7 @@ class ProjectConfig:
     created_at: datetime
     url_column: str
     screenshots_enabled: bool = False
-    runs: List[RunConfig] = field(default_factory=list)
+    runs: list[RunConfig] = field(default_factory=list)
     tracking: TrackingConfig = field(default_factory=TrackingConfig)
 
     def to_dict(self) -> dict:
@@ -177,21 +177,21 @@ class ProjectConfig:
         """Add a run to the project."""
         self.runs.append(run)
 
-    def get_run(self, run_id: str) -> Optional[RunConfig]:
+    def get_run(self, run_id: str) -> RunConfig | None:
         """Get a run by ID."""
         for run in self.runs:
             if run.id == run_id:
                 return run
         return None
 
-    def get_interrupted_run(self) -> Optional[RunConfig]:
+    def get_interrupted_run(self) -> RunConfig | None:
         """Get the first interrupted run, if any."""
         for run in self.runs:
             if run.is_interrupted:
                 return run
         return None
 
-    def get_completed_runs(self) -> List[RunConfig]:
+    def get_completed_runs(self) -> list[RunConfig]:
         """Get all completed runs."""
         return [run for run in self.runs if run.is_complete]
 

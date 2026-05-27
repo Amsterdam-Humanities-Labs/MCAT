@@ -56,30 +56,24 @@ def driver_pool():
     pool.cleanup()
 
 
-def _init_scraper(cls, driver_pool):
-    scraper = cls(driver_pool)
-    scraper.cancel_event = None
-    return scraper
-
-
 @pytest.fixture(scope="session")
 def youtube_scraper(driver_pool):
-    return _init_scraper(YouTubeScraper, driver_pool)
+    return YouTubeScraper(driver_pool)
 
 
 @pytest.fixture(scope="session")
 def instagram_scraper(driver_pool):
-    return _init_scraper(InstagramScraper, driver_pool)
+    return InstagramScraper(driver_pool)
 
 
 @pytest.fixture(scope="session")
 def facebook_scraper(driver_pool):
-    return _init_scraper(FacebookScraper, driver_pool)
+    return FacebookScraper(driver_pool)
 
 
 @pytest.fixture(scope="session")
 def twitter_scraper(driver_pool):
-    return _init_scraper(TwitterScraper, driver_pool)
+    return TwitterScraper(driver_pool)
 
 
 # --- YouTube ---

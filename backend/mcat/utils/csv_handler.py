@@ -1,6 +1,7 @@
 import csv
 import os
 import threading
+from collections import Counter
 from typing import Any
 
 
@@ -58,6 +59,24 @@ def get_urls_from_column(rows: list[dict], url_column: str) -> list[str]:
     if not urls:
         raise ValueError(f"No URLs found in column '{url_column}'")
     return urls
+
+
+def count_statuses(rows: list[dict], status_column: str = "mcat_status") -> dict[str, int]:
+    """Count statuses from result rows into standard summary buckets."""
+    counts = Counter(r.get(status_column, "") for r in rows)
+    return {
+        "live": counts.get("Live", 0),
+        "removed": counts.get("Removed", 0),
+        "restricted": (
+            counts.get("Restricted", 0)
+            + counts.get("Age-restricted", 0)
+            + counts.get("Geo-blocked", 0)
+            + counts.get("Private", 0)
+        ),
+        "errors": counts.get("Error", 0),
+        "unknown": counts.get("Unknown", 0),
+        "login_required": counts.get("Login Required", 0),
+    }
 
 
 def validate_column_mapping(rows: list[dict], column_mapping: dict) -> tuple[bool, str]:

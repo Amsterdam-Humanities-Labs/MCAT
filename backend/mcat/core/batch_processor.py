@@ -1,37 +1,19 @@
 import threading
 import time
-from collections import Counter
 from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from queue import Queue
 from pathlib import Path
 
 from config.settings import config
-from utils.csv_handler import load_csv, get_columns, get_urls_from_column, validate_column_mapping, IncrementalCSVWriter
+from models.processing_models import ProcessingResult
+from utils.csv_handler import load_csv, get_columns, get_urls_from_column, validate_column_mapping, count_statuses, IncrementalCSVWriter
 from core.driver_manager import WebDriverPool
 from scrapers.base_scraper import BaseScraper
 from scrapers.youtube_scraper import YouTubeScraper
 from scrapers.instagram_scraper import InstagramScraper
 from scrapers.facebook_scraper import FacebookScraper
 from scrapers.twitter_scraper import TwitterScraper
-
-
-class ProcessingResult:
-    """Result container for batch processing operations."""
-
-    def __init__(self):
-        self.success: bool = False
-        self.rows: list[dict] | None = None
-        self.error_message: str = ""
-        self.processed_count: int = 0
-        self.stats: dict[str, int] = {
-            'live': 0,
-            'removed': 0,
-            'restricted': 0,
-            'errors': 0,
-            'unknown': 0,
-            'login_required': 0,
-        }
 
 
 class BatchProcessor:
@@ -120,16 +102,7 @@ class BatchProcessor:
                 result.rows = rows
 
             if result.rows:
-                counts = Counter(r.get('mcat_status', '') for r in result.rows)
-                result.stats = {
-                    'live': counts.get('Live', 0),
-                    'removed': counts.get('Removed', 0),
-                    'restricted': counts.get('Restricted', 0) + counts.get('Age-restricted', 0) +
-                                  counts.get('Geo-blocked', 0) + counts.get('Private', 0),
-                    'errors': counts.get('Error', 0),
-                    'unknown': counts.get('Unknown', 0),
-                    'login_required': counts.get('Login Required', 0),
-                }
+                result.stats = count_statuses(result.rows)
                 result.processed_count = len(result.rows)
 
             result.success = True
@@ -308,3 +281,4 @@ class BatchProcessor:
         self.cancel_flag.set()
         if hasattr(self, 'driver_pool') and self.driver_pool:
             self.driver_pool.cleanup()
+            self.driver_pool = None

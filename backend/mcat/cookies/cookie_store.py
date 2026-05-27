@@ -1,4 +1,5 @@
 import json
+import os
 import time
 from datetime import datetime
 from pathlib import Path
@@ -41,6 +42,10 @@ class CookieStore:
             "cookies": cookies,
         }
         path.write_text(json.dumps(data, indent=2))
+        try:
+            os.chmod(path, 0o600)
+        except OSError:
+            pass
         return path
 
     def load_cookies(self, platform: str) -> list[dict] | None:
