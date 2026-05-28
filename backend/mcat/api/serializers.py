@@ -4,7 +4,8 @@ These live outside handlers so services can use them without
 importing from the handler layer.
 """
 
-from api.context import app_context, event_bus
+from api.context import app_context
+from events import event_bus
 from cookies.cookie_store import CookieStore
 
 

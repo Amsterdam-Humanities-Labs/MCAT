@@ -14,7 +14,6 @@ from models.project_state import ProjectState
 from models.project_models import RunStatus
 
 if TYPE_CHECKING:
-    from api.context import EventBus
     from services.processing_service import ProcessingService
     from services.run_service import RunService
 
@@ -29,14 +28,14 @@ class TrackingService:
         self._processing_service: ProcessingService | None = None
         self._run_service: RunService | None = None
         self._log_callback: Callable | None = None
-        self._event_bus: EventBus | None = None
+        self._publish_project: Callable | None = None
 
-    def initialize(self, processing_service: ProcessingService, run_service: RunService, log_callback: Callable, event_bus: EventBus) -> None:
+    def initialize(self, processing_service: ProcessingService, run_service: RunService, log_callback: Callable, publish_project: Callable) -> None:
         """Initialize tracking service with dependencies."""
         self._processing_service = processing_service
         self._run_service = run_service
         self._log_callback = log_callback
-        self._event_bus = event_bus
+        self._publish_project = publish_project
 
     def start_tracking(self, project_state: ProjectState, interval_value: int, interval_unit: str = "minutes") -> dict:
         """
@@ -135,9 +134,8 @@ class TrackingService:
             # Update next_check so the frontend can show the countdown
             self._project_state.config.tracking.next_check = datetime.now() + timedelta(seconds=interval_secs)
             self._project_state.save()
-            if self._event_bus:
-                from api.serializers import build_project_dict
-                self._event_bus.publish({"type": "project", "project": build_project_dict()})
+            if self._publish_project:
+                self._publish_project()
         else:
             interval_secs = 1800  # fallback 30 min
         self._timer = threading.Timer(interval_secs, self._execute_tracking_run)
@@ -169,14 +167,35 @@ class TrackingService:
                 if self._log_callback:
                     self._log_callback("Tracking started", "info")
 
-                if self._processing_service:
+                if self._processing_service and self._run_service:
                     from services.job_builder import build_processing_job
 
                     output_folder = str(self._project_state.get_run_path(run.id))
                     job = build_processing_job(self._project_state, output_folder, screenshots)
-
                     urls = get_urls_from_column(job.file_info.rows or [], self._project_state.url_column)
-                    self._processing_service.start_processing(job, urls=urls)
+
+                    project_state = self._project_state
+                    run_service = self._run_service
+                    publish_project = self._publish_project
+
+                    def on_completed(result: object) -> None:
+                        if project_state.current_run:
+                            run_service.complete_run(project_state, project_state.current_run)
+                        if publish_project:
+                            publish_project()
+
+                    def on_error(error_message: str) -> None:
+                        if project_state.current_run:
+                            from models.project_models import RunStatus
+                            project_state.current_run.status = RunStatus.ABANDONED
+                            project_state.current_run = None
+                            project_state.save()
+
+                    self._processing_service.start_processing(
+                        job, urls=urls,
+                        on_completed=on_completed,
+                        on_error=on_error,
+                    )
 
         except Exception as e:
             if self._log_callback:

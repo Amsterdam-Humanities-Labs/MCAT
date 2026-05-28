@@ -1,9 +1,5 @@
-"""Event system for MCAT application using PyDispatcher."""
+"""Event system for MCAT application."""
 
-from pydispatch import dispatcher
-from .event_types import ProcessingEvents
+from .event_bus import EventBus, event_bus
 
-__all__ = [
-    'dispatcher',
-    'ProcessingEvents',
-]
+__all__ = ['EventBus', 'event_bus']

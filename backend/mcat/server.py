@@ -20,7 +20,7 @@ if str(mcat_dir) not in sys.path:
     sys.path.insert(0, str(mcat_dir))
 
 from api.router import GET_ROUTES, POST_ROUTES
-from api.context import event_bus
+from events import event_bus
 
 DEFAULT_PORT = 9876
 MAX_PORT_ATTEMPTS = 10

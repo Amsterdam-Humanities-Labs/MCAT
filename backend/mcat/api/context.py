@@ -5,6 +5,7 @@ from collections import deque
 from datetime import datetime
 from queue import Queue, Empty
 
+from events import event_bus
 from services.project_service import ProjectService
 from services.run_service import RunService
 from services.processing_service import ProcessingService
@@ -13,46 +14,6 @@ from models.project_state import ProjectState
 from models.import_result import UrlImportResult
 
 MAX_LOG_ENTRIES = 100
-
-
-class EventBus:
-    """Thread-safe event bus for SSE broadcasting."""
-
-    def __init__(self):
-        self._subscribers: set[Queue] = set()
-        self._lock: threading.Lock = threading.Lock()
-
-    def subscribe(self) -> Queue[dict]:
-        """Subscribe to events. Returns a queue to receive events."""
-        queue: Queue[dict] = Queue()
-        with self._lock:
-            self._subscribers.add(queue)
-        return queue
-
-    def unsubscribe(self, queue: Queue[dict]) -> None:
-        """Unsubscribe from events."""
-        with self._lock:
-            self._subscribers.discard(queue)
-
-    def publish(self, event: dict) -> None:
-        """Publish an event to all subscribers."""
-        with self._lock:
-            dead_queues = []
-            for queue in self._subscribers:
-                try:
-                    queue.put_nowait(event)
-                except Exception:
-                    dead_queues.append(queue)
-            # Clean up dead queues
-            for q in dead_queues:
-                self._subscribers.discard(q)
-
-    def get_event(self, queue: Queue[dict], timeout: float | None = None) -> dict | None:
-        """Get an event from a subscription queue."""
-        try:
-            return queue.get(timeout=timeout)
-        except Empty:
-            return None
 
 
 class LogBuffer:
@@ -74,7 +35,6 @@ class LogBuffer:
             self._logs.append(log_entry)
             self._next_id += 1
 
-        # Publish log event via SSE
         event_bus.publish({
             "type": "log",
             "log": log_entry,
@@ -143,12 +103,12 @@ class AppContext:
             log_callback=log_buffer.add,
             scraper_factory=scraper_factory,
         )
-        # Initialize tracking service with dependencies
+        from api.serializers import publish_project
         self.tracking_service.initialize(
             processing_service=self.processing_service,
             run_service=self.run_service,
             log_callback=log_buffer.add,
-            event_bus=event_bus
+            publish_project=publish_project,
         )
 
     def close_project(self) -> None:
@@ -165,6 +125,5 @@ class AppContext:
 
 
 # Global instances
-event_bus = EventBus()
 log_buffer = LogBuffer()
 app_context = AppContext()
