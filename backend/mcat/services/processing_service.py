@@ -8,7 +8,6 @@ import tempfile
 import threading
 import logging
 import os
-import weakref
 from collections.abc import Callable
 
 from models.processing_models import ProcessingJob, ProcessingStatus, ProcessingState, ProcessingResult
@@ -23,12 +22,10 @@ from services.progress_queue import ProgressQueue
 class ProcessingService:
     """Unified service for coordinating URL processing operations with threading."""
 
-    _all_instances: weakref.WeakSet['ProcessingService'] = weakref.WeakSet()
-    _instances_lock: threading.Lock = threading.Lock()
-
-    def __init__(self, platform: str = "", log_callback: Callable | None = None):
+    def __init__(self, platform: str = "", log_callback: Callable | None = None, scraper_factory: Callable | None = None):
         self.platform: str = platform
         self._log_callback: Callable | None = log_callback
+        self._scraper_factory: Callable | None = scraper_factory
 
         # State management
         self._state_lock: threading.RLock = threading.RLock()
@@ -51,23 +48,8 @@ class ProcessingService:
         # Progress tracking
         self._progress_queue: ProgressQueue = ProgressQueue()
 
-        with ProcessingService._instances_lock:
-            ProcessingService._all_instances.add(self)
-
     def set_log_callback(self, callback: Callable) -> None:
-        """Set the log callback for sending messages."""
         self._log_callback = callback
-
-    # Class-level processing checks
-
-    @classmethod
-    def is_any_processing(cls) -> bool:
-        """Check if any service instance is currently processing."""
-        with cls._instances_lock:
-            for service in cls._all_instances:
-                if service._processing_state in [ProcessingState.PROCESSING, ProcessingState.PAUSED]:
-                    return True
-        return False
 
     # Public API
 
@@ -78,19 +60,14 @@ class ProcessingService:
 
     def start_processing(self, job: ProcessingJob, urls: list[str] | None = None) -> bool:
         """Start a processing job with proper threading."""
-        if ProcessingService.is_any_processing():
-            self._log_error("Cannot start: another processing instance is still running")
+        if not self.is_idle():
+            self._log_error("Cannot start: processing is already running")
             return False
 
         if urls is None:
             validation = self.validate_processing_request(job)
             if not validation.valid:
                 self._log_error(f"Cannot start: {validation.error_summary}")
-                return False
-
-        with self._state_lock:
-            if self._processing_state != ProcessingState.IDLE:
-                self._log_error(f"Cannot start: processing state is {self._processing_state.value}, expected idle")
                 return False
 
         try:
@@ -269,7 +246,7 @@ class ProcessingService:
 
 
         try:
-            self._batch_processor = BatchProcessor()
+            self._batch_processor = BatchProcessor(scraper_factory=self._scraper_factory)
             self._batch_processor.set_progress_callback(self._queue_progress_update)
             if self._log_callback:
                 self._batch_processor.set_log_callback(self._log_callback)

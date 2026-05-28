@@ -1,12 +1,10 @@
 """Processing handlers."""
 
 from api.context import app_context, log_buffer, event_bus
-from api.handlers.project import _publish_project
-from cookies.cookie_store import CookieStore
-from models.processing_models import ProcessingJob
+from api.serializers import publish_project
 from models.project_models import RunStatus
-from models.file_models import FileInfo, ColumnMapping
 from events import dispatcher, ProcessingEvents
+from services.job_builder import build_processing_job
 
 
 def _build_status_dict() -> dict:
@@ -65,7 +63,7 @@ def _on_processing_completed(sender: object, **kwargs: object) -> None:
         ctx.run_service.complete_run(ctx.current_project, run)
         log_buffer.success("Run completed")
     _publish_status()
-    _publish_project()
+    publish_project()
 
 
 def _on_processing_error(sender: object, **kwargs: object) -> None:
@@ -113,43 +111,12 @@ def start(body: dict) -> dict:
     project = ctx.current_project
     screenshots = project.config.screenshots_enabled
 
-    # Start a new run
     run = ctx.run_service.start_run(project, screenshots_enabled=screenshots)
     output_folder = str(project.get_run_path(run.id))
 
-    # Tell mock scraper which run number this is
-    import os
-    if os.environ.get("MCAT_MOCK"):
-        os.environ["MCAT_MOCK_RUN"] = str(len(project.config.runs))
+    job = build_processing_job(project, output_folder, screenshots)
 
-    from utils.csv_handler import load_csv, get_columns
-    rows = load_csv(str(project.urls_csv_path))
-
-    file_info = FileInfo(path=str(project.urls_csv_path))
-    file_info.rows = rows
-    file_info.row_count = len(rows)
-    file_info.columns = get_columns(rows)
-    file_info.valid = True
-
-    column_mapping = ColumnMapping()
-    column_mapping.post_column = project.url_column
-
-    cookie_store = CookieStore(project.project_path)
-    cookies = cookie_store.load_cookies(project.platform) or []
-    cookie_info = cookie_store.get_cookie_info(project.platform)
-    auth_user = cookie_info["username"] if cookie_info else "anonymous"
-
-    job = ProcessingJob(
-        file_info=file_info,
-        column_mapping=column_mapping,
-        platform=project.platform,
-        output_folder=output_folder,
-        save_screenshots=screenshots,
-        cookies=cookies,
-        auth_user=auth_user,
-    )
-
-    url_count = len(urls) if urls else len(rows)
+    url_count = len(urls) if urls else job.file_info.row_count
     log_buffer.info(f"Starting run: {url_count} URLs on {project.platform}")
 
     success = ctx.processing_service.start_processing(job, urls=urls)

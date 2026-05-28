@@ -128,12 +128,20 @@ class AppContext:
 
     def set_project(self, project: ProjectState) -> None:
         """Set current project and initialize processing service."""
+        import os
         self.current_project = project
         if self.processing_service:
             self.processing_service.cleanup()
+
+        scraper_factory = None
+        if os.environ.get("MCAT_MOCK"):
+            from tests.mock_scraper_factory import create_mock_scraper
+            scraper_factory = create_mock_scraper
+
         self.processing_service = ProcessingService(
             platform=project.platform,
-            log_callback=log_buffer.add
+            log_callback=log_buffer.add,
+            scraper_factory=scraper_factory,
         )
         # Initialize tracking service with dependencies
         self.tracking_service.initialize(

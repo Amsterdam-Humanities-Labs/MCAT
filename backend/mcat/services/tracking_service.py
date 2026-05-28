@@ -8,7 +8,7 @@ from collections.abc import Callable
 from datetime import datetime, timedelta
 from typing import TYPE_CHECKING
 
-from utils.csv_handler import load_csv, get_columns, get_urls_from_column
+from utils.csv_handler import get_urls_from_column
 
 from models.project_state import ProjectState
 from models.project_models import RunStatus
@@ -136,8 +136,8 @@ class TrackingService:
             self._project_state.config.tracking.next_check = datetime.now() + timedelta(seconds=interval_secs)
             self._project_state.save()
             if self._event_bus:
-                from api.handlers.project import _build_project_dict
-                self._event_bus.publish({"type": "project", "project": _build_project_dict()})
+                from api.serializers import build_project_dict
+                self._event_bus.publish({"type": "project", "project": build_project_dict()})
         else:
             interval_secs = 1800  # fallback 30 min
         self._timer = threading.Timer(interval_secs, self._execute_tracking_run)
@@ -166,40 +166,16 @@ class TrackingService:
                     run_type="tracking"
                 )
 
-                # Tell mock scraper which run number this is
-                import os
-                if os.environ.get("MCAT_MOCK"):
-                    os.environ["MCAT_MOCK_RUN"] = str(len(self._project_state.config.runs))
-
                 if self._log_callback:
                     self._log_callback("Tracking started", "info")
 
-                # Read URLs from urls.csv
-                all_rows = load_csv(str(self._project_state.urls_csv_path))
-                urls = get_urls_from_column(all_rows, self._project_state.url_column)
-
-                # Start processing
                 if self._processing_service:
-                    from models.file_models import FileInfo, ColumnMapping
-                    from models.processing_models import ProcessingJob
+                    from services.job_builder import build_processing_job
 
-                    file_info = FileInfo(path=str(self._project_state.urls_csv_path))
-                    file_info.rows = all_rows
-                    file_info.row_count = len(all_rows)
-                    file_info.columns = get_columns(all_rows)
-                    file_info.valid = True
+                    output_folder = str(self._project_state.get_run_path(run.id))
+                    job = build_processing_job(self._project_state, output_folder, screenshots)
 
-                    column_mapping = ColumnMapping()
-                    column_mapping.post_column = self._project_state.url_column
-
-                    job = ProcessingJob(
-                        file_info=file_info,
-                        column_mapping=column_mapping,
-                        platform=self._project_state.platform,
-                        output_folder=str(self._project_state.get_run_path(run.id)),
-                        save_screenshots=screenshots
-                    )
-
+                    urls = get_urls_from_column(job.file_info.rows or [], self._project_state.url_column)
                     self._processing_service.start_processing(job, urls=urls)
 
         except Exception as e:

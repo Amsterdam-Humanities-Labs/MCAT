@@ -19,7 +19,7 @@ from scrapers.twitter_scraper import TwitterScraper
 class BatchProcessor:
     """Main processing pipeline coordinator with WebDriver pooling."""
 
-    def __init__(self):
+    def __init__(self, scraper_factory: Callable | None = None):
         self.cancel_flag: threading.Event = threading.Event()
         self.resume_event: threading.Event = threading.Event()
         self.resume_event.set()
@@ -28,6 +28,7 @@ class BatchProcessor:
         self.driver_pool: WebDriverPool | None = None
         self.progress_queue: Queue[dict] = Queue()
         self.progress_callback: Callable | None = None
+        self._scraper_factory: Callable | None = scraper_factory
 
     def process_csv(self, csv_path: str, platform: str, column_mapping: dict[str, str],
                    output_folder: str | None = None, save_screenshots: bool = False,
@@ -38,8 +39,7 @@ class BatchProcessor:
         output_csv_path = None
         scraper: BaseScraper | None = None
 
-        import os
-        if self.driver_pool is None and not os.environ.get("MCAT_MOCK"):
+        if self.driver_pool is None and not self._scraper_factory:
             self.driver_pool = WebDriverPool(
                 pool_size=self.max_workers,
                 headless=config.scraper_settings['headless'],
@@ -120,41 +120,27 @@ class BatchProcessor:
 
     def _create_scraper(self, platform: str) -> BaseScraper | None:
         """Create a scraper instance for the specified platform."""
-        import os
-        if os.environ.get("MCAT_MOCK"):
-            import sys
-            tests_dir = str(Path(__file__).parent.parent.parent.parent / "tests")
-            if tests_dir not in sys.path:
-                sys.path.insert(0, tests_dir)
-            from mock_scraper import MockScraper
-            scraper = MockScraper()
+        if self._scraper_factory:
+            scraper = self._scraper_factory(platform)
             scraper.set_pause_event(self.resume_event)
             scraper.set_cancel_event(self.cancel_flag)
-            self._log("Using mock scraper (MCAT_MOCK=1)", "info")
             return scraper
 
         assert self.driver_pool is not None
-        if platform == 'youtube':
-            scraper = YouTubeScraper(self.driver_pool, log_callback=self.log_callback)
-            scraper.set_pause_event(self.resume_event)
-            scraper.set_cancel_event(self.cancel_flag)
-            return scraper
-        elif platform == 'instagram':
-            scraper = InstagramScraper(self.driver_pool, log_callback=self.log_callback)
-            scraper.set_pause_event(self.resume_event)
-            scraper.set_cancel_event(self.cancel_flag)
-            return scraper
-        elif platform == 'facebook':
-            scraper = FacebookScraper(self.driver_pool)
-            scraper.set_pause_event(self.resume_event)
-            scraper.set_cancel_event(self.cancel_flag)
-            return scraper
-        elif platform == 'twitter':
-            scraper = TwitterScraper(self.driver_pool)
-            scraper.set_pause_event(self.resume_event)
-            scraper.set_cancel_event(self.cancel_flag)
-            return scraper
-        return None
+        scrapers: dict[str, type] = {
+            'youtube': YouTubeScraper,
+            'instagram': InstagramScraper,
+            'facebook': FacebookScraper,
+            'twitter': TwitterScraper,
+        }
+        cls = scrapers.get(platform)
+        if not cls:
+            return None
+
+        scraper = cls(self.driver_pool, log_callback=self.log_callback)
+        scraper.set_pause_event(self.resume_event)
+        scraper.set_cancel_event(self.cancel_flag)
+        return scraper
 
     def set_progress_callback(self, callback: Callable) -> None:
         self.progress_callback = callback

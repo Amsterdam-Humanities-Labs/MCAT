@@ -1,16 +1,12 @@
 """Authentication handlers for platform login."""
 
-from api.context import app_context, log_buffer, event_bus
-from api.handlers.project import _build_project_dict
+from api.context import app_context, log_buffer
+from api.serializers import build_project_dict, publish_project
 from cookies.cookie_store import CookieStore
 from services.login_service import LoginService
 
 _login_service: LoginService | None = None
 _login_project_path: str | None = None
-
-
-def _publish_project() -> None:
-    event_bus.publish({"type": "project", "project": _build_project_dict()})
 
 
 def _get_login_service() -> LoginService:
@@ -23,7 +19,7 @@ def _get_login_service() -> LoginService:
         _login_service = LoginService(
             CookieStore(project.project_path),
             log_callback=log_buffer.add,
-            on_login=_publish_project,
+            on_login=publish_project,
         )
         _login_project_path = project_path
     return _login_service
@@ -43,7 +39,7 @@ def logout(body: dict) -> dict:
         return {"success": False, "error": "No project open"}
     store = CookieStore(project.project_path)
     store.delete_cookies(project.platform)
-    return {"success": True, "project": _build_project_dict()}
+    return {"success": True, "project": build_project_dict()}
 
 
 def cookie_status(body: dict) -> dict:

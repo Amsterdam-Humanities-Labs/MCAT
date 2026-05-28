@@ -1,43 +1,8 @@
 """Project management handlers."""
 
 from pathlib import Path
-from api.context import app_context, event_bus
-from cookies.cookie_store import CookieStore
-
-
-def _build_project_dict() -> dict | None:
-    """Build project data dictionary."""
-    ctx = app_context
-    if not ctx.current_project:
-        return None
-
-    project = ctx.current_project
-    cookie_store = CookieStore(project.project_path)
-    cookie_info = cookie_store.get_cookie_info(project.platform)
-
-    return {
-        "name": project.name,
-        "platform": project.platform,
-        "path": str(project.project_path),
-        "url_count": ctx.project_service.get_url_count(project),
-        "url_column": project.url_column,
-        "screenshots_enabled": project.config.screenshots_enabled,
-        "runs": [run.to_dict() for run in project.config.runs],
-        "tracking": project.config.tracking.to_dict(),
-        "auth": {
-            "has_cookies": cookie_info is not None,
-            "username": cookie_info["username"] if cookie_info else "",
-            "captured_at": cookie_info["captured_at"] if cookie_info else None,
-        },
-    }
-
-
-def _publish_project() -> None:
-    """Publish project status via SSE (for background events only)."""
-    event_bus.publish({
-        "type": "project",
-        "project": _build_project_dict(),
-    })
+from api.context import app_context
+from api.serializers import build_project_dict
 
 
 def create(body: dict) -> dict:
@@ -56,7 +21,7 @@ def create(body: dict) -> dict:
         url_column=body["url_column"],
     )
     ctx.set_project(project)
-    return {"success": True, "project": _build_project_dict()}
+    return {"success": True, "project": build_project_dict()}
 
 
 def open_project(body: dict) -> dict:
@@ -70,18 +35,16 @@ def open_project(body: dict) -> dict:
         path = path.parent
     project = ctx.project_service.open_project(path)
 
-    # Auto-abandon any interrupted runs
     interrupted = project.config.get_interrupted_run()
     if interrupted:
         ctx.run_service.abandon_run(project, interrupted)
 
-    # Clear stale scheduler timestamp — user must click Start to resume
     if project.config.tracking.next_check:
         project.config.tracking.next_check = None
         project.save()
 
     ctx.set_project(project)
-    return {"success": True, "project": _build_project_dict()}
+    return {"success": True, "project": build_project_dict()}
 
 
 def set_screenshots(body: dict) -> dict:
@@ -92,7 +55,7 @@ def set_screenshots(body: dict) -> dict:
 
     ctx.current_project.config.screenshots_enabled = body.get("enabled", False)
     ctx.current_project.save()
-    return {"success": True, "project": _build_project_dict()}
+    return {"success": True, "project": build_project_dict()}
 
 
 def set_tracking_config(body: dict) -> dict:
@@ -114,7 +77,7 @@ def set_tracking_config(body: dict) -> dict:
         tracking.interval_unit = body["interval_unit"]
 
     ctx.current_project.save()
-    return {"success": True, "project": _build_project_dict()}
+    return {"success": True, "project": build_project_dict()}
 
 
 def close() -> dict:
@@ -168,4 +131,4 @@ def confirm_import(body: dict) -> dict:
         ctx._pending_import
     )
     ctx._pending_import = None
-    return {"added": added, "project": _build_project_dict()}
+    return {"added": added, "project": build_project_dict()}
