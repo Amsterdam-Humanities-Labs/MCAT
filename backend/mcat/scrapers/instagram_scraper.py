@@ -1,4 +1,6 @@
+from collections.abc import Callable
 from selenium.webdriver.common.by import By
+from selenium.webdriver.remote.webdriver import WebDriver
 from selenium.common.exceptions import TimeoutException
 import threading
 import time
@@ -35,9 +37,9 @@ class InstagramScraper(BaseScraper):
         "content isn't available",
     )
 
-    def __init__(self, driver_pool: WebDriverPool, log_callback: object | None = None):
+    def __init__(self, driver_pool: WebDriverPool, log_callback: Callable | None = None):
         self.driver_pool: WebDriverPool = driver_pool
-        self._log_callback: object | None = log_callback
+        self._log_callback: Callable | None = log_callback
         self.min_delay: float = self.RATE_LIMIT_MIN
         self.max_delay: float = self.RATE_LIMIT_MAX
         self.last_request_time: float = 0
@@ -75,7 +77,7 @@ class InstagramScraper(BaseScraper):
         if enabled:
             self.screenshot_base_path = Path(base_path) / "screenshots"
 
-    def _save_screenshot(self, driver: object, url: str, status: str) -> str:
+    def _save_screenshot(self, driver: WebDriver, url: str, status: str) -> str:
         if not self.screenshot_base_path:
             return ""
         try:
@@ -103,6 +105,7 @@ class InstagramScraper(BaseScraper):
             return "unknown"
 
     def check_url_status(self, url: str) -> ScrapingResult:
+        result = ScrapingResult(url=url)
         for attempt in range(self.MAX_RETRIES + 1):
             if self.is_cancelled():
                 result = ScrapingResult()
@@ -195,7 +198,7 @@ class InstagramScraper(BaseScraper):
                     except Exception as e:
                         print(f"Warning: Driver unresponsive, discarding: {e}")
 
-    def _detect_status(self, driver: object) -> tuple[str, str] | None:
+    def _detect_status(self, driver: WebDriver) -> tuple[str, str] | None:
         """
         Check all detection signals on current page state.
         Returns (status, info) or None if no signal yet.
@@ -254,7 +257,7 @@ class InstagramScraper(BaseScraper):
 
         return None
 
-    def _poll_for_signals(self, driver: object) -> tuple[str, str] | None:
+    def _poll_for_signals(self, driver: WebDriver) -> tuple[str, str] | None:
         start = time.time()
         while (time.time() - start) < self.SIGNAL_TIMEOUT:
             if self.is_cancelled():

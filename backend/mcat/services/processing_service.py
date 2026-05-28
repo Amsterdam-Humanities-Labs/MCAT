@@ -274,13 +274,14 @@ class ProcessingService:
             if self._log_callback:
                 self._batch_processor.set_log_callback(self._log_callback)
 
+            rows = job.file_info.rows or []
             if self._custom_urls:
                 url_column = job.column_mapping.post_column
                 custom_set = set(self._custom_urls)
-                filtered = [r for r in job.file_info.rows if r.get(url_column) in custom_set]
+                filtered = [r for r in rows if r.get(url_column) in custom_set]
                 save_csv(filtered, temp_csv_path)
             else:
-                save_csv(job.file_info.rows, temp_csv_path)
+                save_csv(rows, temp_csv_path)
 
             result = self._batch_processor.process_csv(
                 csv_path=temp_csv_path,

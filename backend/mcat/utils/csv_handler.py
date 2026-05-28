@@ -2,7 +2,6 @@ import csv
 import os
 import threading
 from collections import Counter
-from typing import Any
 
 
 def load_csv(file_path: str) -> list[dict]:
@@ -15,7 +14,7 @@ def load_csv(file_path: str) -> list[dict]:
             with open(file_path, newline='', encoding='utf-8-sig') as f:
                 reader = csv.DictReader(f, delimiter=separator)
                 rows = list(reader)
-                if len(reader.fieldnames) > 1 or separator == ',':
+                if reader.fieldnames and (len(reader.fieldnames) > 1 or separator == ','):
                     return rows
         except Exception:
             continue
@@ -109,7 +108,7 @@ class IncrementalCSVWriter:
                 writer.writerow(self.columns)
             self.initialized = True
 
-    def append_row(self, row_data: dict[str, Any]) -> None:
+    def append_row(self, row_data: dict[str, str]) -> None:
         if not self.initialized:
             raise Exception("Must call write_header() first")
         with self.lock:

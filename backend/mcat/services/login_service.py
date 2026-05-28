@@ -51,7 +51,10 @@ class LoginService:
 
     def _poll_for_login(self) -> None:
         import time
+        if not self._platform:
+            return
         cookie_name = SESSION_COOKIE_NAMES.get(self._platform)
+        platform = self._platform
 
         while self._driver is not None:
             try:
@@ -59,7 +62,7 @@ class LoginService:
                 session = next((c for c in cookies if c["name"] == cookie_name), None)
                 if session:
                     username = self._extract_username(cookies)
-                    self._cookie_store.save_cookies(self._platform, cookies, username=username)
+                    self._cookie_store.save_cookies(platform, cookies, username=username)
                     self._log(f"Logged in as {username}")
                     if self._on_login:
                         self._on_login()

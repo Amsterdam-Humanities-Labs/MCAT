@@ -118,7 +118,7 @@ def open_external(body: dict) -> dict:
         if system == "Darwin":
             subprocess.Popen(["open", target])
         elif system == "Windows":
-            os.startfile(target)
+            os.startfile(target)  # type: ignore[attr-defined]  # Windows only
         else:
             subprocess.Popen(["xdg-open", target])
         return {"success": True}

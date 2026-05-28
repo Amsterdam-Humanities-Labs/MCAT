@@ -20,6 +20,7 @@ class BaseScraper(ABC):
     """Abstract base class for all platform scrapers."""
 
     cancel_event: threading.Event | None = None
+    pause_event: threading.Event | None = None
 
     @abstractmethod
     def check_url_status(self, url: str) -> ScrapingResult:
@@ -32,8 +33,14 @@ class BaseScraper(ABC):
     def set_cancel_event(self, cancel_event: threading.Event) -> None:
         self.cancel_event = cancel_event
 
+    def set_pause_event(self, pause_event: threading.Event) -> None:
+        self.pause_event = pause_event
+
     def is_cancelled(self) -> bool:
         return self.cancel_event is not None and self.cancel_event.is_set()
+
+    def enable_screenshots(self, enabled: bool, base_path: str) -> None:
+        pass
 
     def cleanup(self) -> None:
         pass

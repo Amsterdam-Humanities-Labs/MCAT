@@ -4,6 +4,7 @@ MCAT Backend Server for Tauri.
 Lean HTTP server entry point. Business logic is in api/handlers/.
 """
 
+import http.client
 import json
 import socket
 import sys
@@ -24,10 +25,10 @@ from api.context import event_bus
 DEFAULT_PORT = 9876
 MAX_PORT_ATTEMPTS = 10
 
-def _get_cors_origin(headers: dict | None = None) -> str:
+def _get_cors_origin(headers: object = None) -> str:
     """Return the CORS origin. Only allow localhost origins."""
-    if headers:
-        origin = headers.get("Origin", "")
+    if headers and hasattr(headers, "get"):
+        origin: str = headers.get("Origin", "")  # type: ignore[union-attr]
         if origin and ("127.0.0.1" in origin or "localhost" in origin):
             return origin
     return "null"

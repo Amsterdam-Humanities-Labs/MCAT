@@ -6,6 +6,8 @@ Last updated: 2026-05-13
 """
 
 from selenium.webdriver.common.by import By
+from selenium.webdriver.remote.webdriver import WebDriver
+from selenium.webdriver.remote.webelement import WebElement
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException, NoSuchElementException
@@ -40,7 +42,7 @@ JS_DISMISS = """
 """
 
 
-def _find_cookie_dialog(driver: object, timeout: int) -> object | None:
+def _find_cookie_dialog(driver: WebDriver, timeout: int) -> WebElement | None:
     """Find the dialog element containing cookie consent text."""
     try:
         dialogs = WebDriverWait(driver, timeout).until(
@@ -57,7 +59,7 @@ def _find_cookie_dialog(driver: object, timeout: int) -> object | None:
     return None
 
 
-def dismiss_instagram_cookies(driver: object, timeout: int = 3, wait_after: float = 1.0) -> bool:
+def dismiss_instagram_cookies(driver: WebDriver, timeout: int = 3, wait_after: float = 1.0) -> bool:
     dialog = _find_cookie_dialog(driver, timeout)
     if not dialog:
         return True

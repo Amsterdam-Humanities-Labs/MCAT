@@ -1,4 +1,6 @@
+from collections.abc import Callable
 from selenium.webdriver.common.by import By
+from selenium.webdriver.remote.webdriver import WebDriver
 from selenium.common.exceptions import TimeoutException
 import threading
 import time
@@ -27,10 +29,10 @@ class YouTubeScraper(BaseScraper):
     MAX_RETRIES = 2            # Number of retry attempts on errors
     RETRY_DELAY = 2.0          # Delay between retries (seconds)
 
-    def __init__(self, driver_pool: WebDriverPool, log_callback: object | None = None):
+    def __init__(self, driver_pool: WebDriverPool, log_callback: Callable | None = None):
         """Initialize with a WebDriver pool instead of manager."""
         self.driver_pool: WebDriverPool = driver_pool
-        self._log_callback: object | None = log_callback
+        self._log_callback: Callable | None = log_callback
         # Rate limiting: 1-3 second delay between requests
         self.min_delay: float = self.RATE_LIMIT_MIN
         self.max_delay: float = self.RATE_LIMIT_MAX
@@ -91,7 +93,7 @@ class YouTubeScraper(BaseScraper):
         if enabled:
             self.screenshot_base_path = Path(base_path) / "screenshots"
 
-    def _save_screenshot(self, driver: object, url: str, status: str) -> str:
+    def _save_screenshot(self, driver: WebDriver, url: str, status: str) -> str:
         """
         Save screenshot for evidence.
 
@@ -130,6 +132,7 @@ class YouTubeScraper(BaseScraper):
 
     def check_url_status(self, url: str) -> ScrapingResult:
         """Check URL status with automatic retries on transient failures."""
+        result = ScrapingResult(url=url)
         for attempt in range(self.MAX_RETRIES + 1):
             # Check for cancellation before each attempt
             if self.is_cancelled():
@@ -258,7 +261,7 @@ class YouTubeScraper(BaseScraper):
         'removed by the user', 'account has been terminated',
     )
 
-    def _detect_status(self, driver: object, initial_title: str = "") -> tuple[str, str] | None:
+    def _detect_status(self, driver: WebDriver, initial_title: str = "") -> tuple[str, str] | None:
         """
         Check all detection signals on the current page state.
 
@@ -329,7 +332,7 @@ class YouTubeScraper(BaseScraper):
 
         return None
 
-    def _poll_for_signals(self, driver: object, initial_title: str = "") -> tuple[str, str] | None:
+    def _poll_for_signals(self, driver: WebDriver, initial_title: str = "") -> tuple[str, str] | None:
         """
         Poll _detect_status until a conclusive signal is found or timeout.
 

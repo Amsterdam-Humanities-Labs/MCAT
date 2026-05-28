@@ -132,6 +132,7 @@ class FacebookScraper(BaseScraper):
 
     def check_url_status(self, url: str) -> ScrapingResult:
         """Check URL status with automatic retries on transient failures."""
+        result = ScrapingResult(url=url)
         for attempt in range(self.MAX_RETRIES + 1):
             if self.is_cancelled():
                 result = ScrapingResult()

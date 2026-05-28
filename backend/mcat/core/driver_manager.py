@@ -110,6 +110,8 @@ class WebDriverPool:
 
     def _inject_cookies(self, driver: webdriver.Chrome) -> None:
         """Inject saved cookies into a driver. Requires navigating to the domain first."""
+        if not self._platform or not self._cookies:
+            return
         domain = PLATFORM_DOMAINS.get(self._platform)
         if not domain:
             return

@@ -206,6 +206,7 @@ class TwitterScraper(BaseScraper):
             last_height = new_height
 
     def check_url_status(self, url: str) -> ScrapingResult:
+        result = ScrapingResult(url=url)
         for attempt in range(self.MAX_RETRIES + 1):
             if self.is_cancelled():
                 result = ScrapingResult()

@@ -10,6 +10,7 @@ from services.run_service import RunService
 from services.processing_service import ProcessingService
 from services.tracking_service import TrackingService
 from models.project_state import ProjectState
+from models.import_result import UrlImportResult
 
 MAX_LOG_ENTRIES = 100
 
@@ -122,7 +123,7 @@ class AppContext:
         self.processing_service: ProcessingService | None = None
         self.tracking_service: TrackingService = TrackingService()
         self.current_project: ProjectState | None = None
-        self._pending_import: object | None = None
+        self._pending_import: "UrlImportResult | None" = None
         self._initialized: bool = True
 
     def set_project(self, project: ProjectState) -> None:

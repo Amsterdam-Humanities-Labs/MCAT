@@ -32,6 +32,8 @@ def _get_login_service() -> LoginService:
 def start_login(body: dict) -> dict:
     service = _get_login_service()
     project = app_context.current_project
+    if not project:
+        return {"success": False, "error": "No project open"}
     return service.start_login(project.platform)
 
 

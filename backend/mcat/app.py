@@ -25,7 +25,7 @@ from server import find_available_port, MCATHandler, DEFAULT_PORT, MAX_PORT_ATTE
 # Resolve paths. When frozen (PyInstaller bundle), files live under sys._MEIPASS.
 # In dev, walk up from backend/mcat/app.py to the project root.
 if getattr(sys, "frozen", False):
-    PROJECT_ROOT = Path(sys._MEIPASS)
+    PROJECT_ROOT = Path(sys._MEIPASS)  # type: ignore[attr-defined]  # PyInstaller runtime
     FRONTEND_DIR = PROJECT_ROOT / "frontend"
     DIST_DIR = FRONTEND_DIR / "dist"
 else:

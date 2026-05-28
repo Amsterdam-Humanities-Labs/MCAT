@@ -1,17 +1,22 @@
 """
 Service for managing scheduled URL tracking.
-
-Tracks URLs periodically to detect status changes while app is running.
 """
+from __future__ import annotations
 
 import threading
 from collections.abc import Callable
 from datetime import datetime, timedelta
+from typing import TYPE_CHECKING
 
 from utils.csv_handler import load_csv, get_columns, get_urls_from_column
 
 from models.project_state import ProjectState
 from models.project_models import RunStatus
+
+if TYPE_CHECKING:
+    from api.context import EventBus
+    from services.processing_service import ProcessingService
+    from services.run_service import RunService
 
 
 class TrackingService:
@@ -21,12 +26,12 @@ class TrackingService:
         self._timer: threading.Timer | None = None
         self._stop_event: threading.Event = threading.Event()
         self._project_state: ProjectState | None = None
-        self._processing_service: object | None = None
-        self._run_service: object | None = None
+        self._processing_service: ProcessingService | None = None
+        self._run_service: RunService | None = None
         self._log_callback: Callable | None = None
-        self._event_bus: object | None = None
+        self._event_bus: EventBus | None = None
 
-    def initialize(self, processing_service: object, run_service: object, log_callback: Callable, event_bus: object) -> None:
+    def initialize(self, processing_service: ProcessingService, run_service: RunService, log_callback: Callable, event_bus: EventBus) -> None:
         """Initialize tracking service with dependencies."""
         self._processing_service = processing_service
         self._run_service = run_service

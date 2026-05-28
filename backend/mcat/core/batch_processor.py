@@ -36,6 +36,7 @@ class BatchProcessor:
         result = ProcessingResult()
         csv_writer = None
         output_csv_path = None
+        scraper: BaseScraper | None = None
 
         import os
         if self.driver_pool is None and not os.environ.get("MCAT_MOCK"):
@@ -111,7 +112,7 @@ class BatchProcessor:
             result.error_message = str(e)
 
         finally:
-            if 'scraper' in locals():
+            if scraper is not None:
                 scraper.cleanup()
             self.cleanup()
 
@@ -132,6 +133,7 @@ class BatchProcessor:
             self._log("Using mock scraper (MCAT_MOCK=1)", "info")
             return scraper
 
+        assert self.driver_pool is not None
         if platform == 'youtube':
             scraper = YouTubeScraper(self.driver_pool, log_callback=self.log_callback)
             scraper.set_pause_event(self.resume_event)
