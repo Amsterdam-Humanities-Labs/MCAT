@@ -101,6 +101,17 @@ Works without login (Instagram shows post previews to anonymous visitors). With 
 | Login Required | Login wall detected ("log in" + "sign up" in body text) with no other signal |
 | Unknown | No signal found after timeout |
 
+### Facebook
+
+Posts are partially visible without login. Removed posts load fast (~0.7s) with a clear error message; live posts take longer (~4-9s) as the SPA renders.
+
+| Status | Signal |
+|--------|--------|
+| Removed | Text: "this content isn't available", "this page isn't available", "this content has been removed", "the link you followed may be broken", "page not found" |
+| Live | DOM: `div[role="article"]`; fallback: `og:title` meta tag present; fallback: page title matches `"... \| Facebook"` |
+| Login Required | Login wall detected ("log in" + "create new account" in body text) with no other signal |
+| Unknown | No signal found after timeout |
+
 ## Architecture
 
 See `architecture.md` for diagrams covering the full data flow, API endpoints, SSE events, scraper detection strategies, and component tree.
