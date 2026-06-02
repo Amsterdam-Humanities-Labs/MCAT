@@ -70,15 +70,17 @@ Detection uses `body.text` (visible text only, not `page_source`) to avoid false
 
 A page is never classified as "Live" until all negative checks pass. Both "Live" and "Removed" require affirmative evidence.
 
-Cookie consent modals are dismissed automatically before detection. Each handler finds the consent dialog by its text content, then clicks the decline/reject button scoped within that dialog.
+Cookie consent modals are handled two ways. The durable path: running **Set up browser** once captures the platform's consent cookie, which is injected on every request so the modal never renders. As a fallback for projects with no browser setup, each scraper also carries an automatic handler that finds the consent dialog by its text content and clicks the decline/reject button scoped within it.
 
 ### Authentication
 
-Some platforms (Instagram, Facebook, TikTok) may require login to view content. The app supports optional cookie-based authentication: the user logs in through a visible Chrome window, session cookies are captured and stored per-project in `<project>/cookies/<platform>.json`. No passwords are stored. Cookies are injected into the headless browser pool at scrape time. If cookies expire, the scraper reports "Login Required" and the user can re-authenticate. YouTube and Twitter work without login.
+The **Set up browser** action opens a visible Chrome window on the platform so the user can dismiss the cookie consent modal and, where needed, log in. Whatever cookies result (consent cookies, plus session cookies if the user logged in) are captured and stored per-project in `<project>/cookies/<platform>.json`, then injected into the headless pool at scrape time and re-injected per request. No passwords are stored. The set is saved when a session cookie appears (login) or when the user closes the window (consent-only).
+
+Instagram, Facebook, and TikTok may need login to view content; if their session cookies expire the scraper reports "Login Required" and the user re-runs Set up browser. YouTube needs no login but shows a consent modal: running Set up browser once captures its `SOCS` consent cookie (~13-month lifetime) so the modal never renders during scraping. This is recommended in the EU, where an un-set-up YouTube project gets redirected to the consent page and detection degrades. Twitter needs no setup.
 
 ### YouTube
 
-The page title is captured immediately after `driver.get()` returns, before YouTube redirects incognito browsers to its consent page. This initial title serves as a fallback Live signal when the SPA doesn't fully render.
+The page title is captured immediately after `driver.get()` returns, before YouTube redirects incognito browsers to its consent page. This initial title serves as a fallback Live signal when the SPA doesn't fully render. Running Set up browser injects the consent cookie and prevents the redirect entirely.
 
 | Status | Signal |
 |--------|--------|

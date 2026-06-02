@@ -19,9 +19,12 @@
   let { projectName, platform, urlCount, projectPath, auth, onOpenFolder, onClose, onSetupBrowser, onResetBrowser, class: className }: Props = $props();
 
   const hasSetup = $derived(auth?.has_cookies ?? false);
+  const identityLabel = $derived(auth?.username ? `Logged in: ${auth.username}` : 'Anonymous');
+  const consentLabel = $derived(hasSetup ? 'Consent saved' : 'Consent not set');
 
-  const setupLabel = $derived.by(() => {
-    if (!auth?.captured_at) return '';
+  // Capture date lives in a tooltip rather than a visible label.
+  const captureTooltip = $derived.by(() => {
+    if (!auth?.captured_at) return undefined;
     const days = Math.floor((Date.now() - new Date(auth.captured_at).getTime()) / 86400000);
     if (days === 0) return 'Set up today';
     if (days === 1) return 'Set up yesterday';
@@ -39,10 +42,12 @@
   <span class="text-text-secondary">{projectPath}</span>
 
   <div class="ml-auto flex items-center gap-2">
+    <span class="text-text-secondary">{identityLabel}</span>
+    <span class="text-border-mid">|</span>
+    <span class="text-text-secondary" title={captureTooltip}>{consentLabel}</span>
     {#if hasSetup}
-      <span class="text-text-secondary text-base">{setupLabel}</span>
       <Button variant="secondary" size="sm" onclick={onResetBrowser}>
-        Reset
+        Reset browser
       </Button>
     {:else}
       <Button variant="secondary" size="sm" onclick={onSetupBrowser}>
