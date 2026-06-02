@@ -79,6 +79,15 @@ class ProcessingService:
             self._cancel_event.clear()
             self._pause_event.set()
 
+            # Build the batch processor on the calling thread, before the worker
+            # starts, so a cancel/cleanup arriving during startup can reach it via
+            # self._batch_processor instead of being dropped. Construction is cheap;
+            # the driver pool is created lazily inside process_csv.
+            self._batch_processor = BatchProcessor(scraper_factory=self._scraper_factory)
+            self._batch_processor.set_progress_callback(self._queue_progress_update)
+            if self._log_callback:
+                self._batch_processor.set_log_callback(self._log_callback)
+
             self._processing_thread = threading.Thread(
                 target=self._processing_worker,
                 args=(job,),
@@ -235,10 +244,9 @@ class ProcessingService:
         _, temp_csv_path = tempfile.mkstemp(suffix='.csv', prefix='mcat_')
 
         try:
-            self._batch_processor = BatchProcessor(scraper_factory=self._scraper_factory)
-            self._batch_processor.set_progress_callback(self._queue_progress_update)
-            if self._log_callback:
-                self._batch_processor.set_log_callback(self._log_callback)
+            processor = self._batch_processor
+            if processor is None or self._cancel_event.is_set():
+                return
 
             rows = job.file_info.rows or []
             if self._custom_urls:
@@ -249,7 +257,12 @@ class ProcessingService:
             else:
                 save_csv(rows, temp_csv_path)
 
-            result = self._batch_processor.process_csv(
+            # Cancel/cleanup may have fired during startup or the save above; bail
+            # before running the batch so we don't leave an orphan results.csv.
+            if self._cancel_event.is_set():
+                return
+
+            result = processor.process_csv(
                 csv_path=temp_csv_path,
                 platform=job.platform,
                 column_mapping={'post': job.column_mapping.post_column},

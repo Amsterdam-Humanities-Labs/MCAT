@@ -1,7 +1,9 @@
-from abc import ABC, abstractmethod
-from datetime import datetime
-from dataclasses import dataclass, field
+import random
 import threading
+import time
+from abc import ABC, abstractmethod
+from dataclasses import dataclass, field
+from datetime import datetime
 
 
 @dataclass
@@ -21,6 +23,30 @@ class BaseScraper(ABC):
 
     cancel_event: threading.Event | None = None
     pause_event: threading.Event | None = None
+
+    # Rate limiting bounds in seconds (subclasses override).
+    RATE_LIMIT_MIN: float = 1.0
+    RATE_LIMIT_MAX: float = 3.0
+
+    def __init__(self) -> None:
+        self.min_delay: float = self.RATE_LIMIT_MIN
+        self.max_delay: float = self.RATE_LIMIT_MAX
+        self.last_request_time: float = 0.0
+        self._rate_lock: threading.Lock = threading.Lock()
+
+    def _apply_rate_limit(self) -> None:
+        """Throttle requests across all worker threads sharing this scraper.
+
+        A single scraper instance is shared by every worker, so the lock is held
+        through the sleep: the shared timestamp acts as a true global spacer
+        rather than letting workers read it together and fire in a burst.
+        """
+        with self._rate_lock:
+            delay = random.uniform(self.min_delay, self.max_delay)
+            wait = delay - (time.time() - self.last_request_time)
+            if wait > 0:
+                time.sleep(wait)
+            self.last_request_time = time.time()
 
     @abstractmethod
     def check_url_status(self, url: str) -> ScrapingResult:

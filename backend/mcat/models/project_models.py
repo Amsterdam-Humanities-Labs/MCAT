@@ -112,9 +112,16 @@ class TrackingConfig:
 
     @classmethod
     def from_dict(cls, data: dict) -> "TrackingConfig":
-        """Create TrackingConfig from dictionary."""
+        """Create TrackingConfig from dictionary.
+
+        enabled is intentionally NOT restored from disk. Scheduled monitoring is
+        a live, in-session state, not a persisted preference: restoring it on
+        reopen would either silently run unattended or show the toggle on while
+        nothing is actually armed. The user re-enables each session. The cadence
+        (interval_value/unit) is still restored.
+        """
         return cls(
-            enabled=data.get("enabled", False),
+            enabled=False,
             interval_value=data.get("interval_value", 30),
             interval_unit=data.get("interval_unit", "minutes"),
             last_check=datetime.fromisoformat(data["last_check"]) if data.get("last_check") else None,

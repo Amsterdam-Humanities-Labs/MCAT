@@ -3,8 +3,6 @@
   import Button from './Button.svelte';
   import type { AuthInfo } from '$types/project';
 
-  const PLATFORMS_NEEDING_LOGIN = ['instagram', 'facebook', 'tiktok'];
-
   interface Props {
     projectName: string;
     platform: string;
@@ -13,15 +11,22 @@
     auth?: AuthInfo;
     onOpenFolder?: () => void;
     onClose?: () => void;
-    onLogin?: () => void;
-    onLogout?: () => void;
+    onSetupBrowser?: () => void;
+    onResetBrowser?: () => void;
     class?: string;
   }
 
-  let { projectName, platform, urlCount, projectPath, auth, onOpenFolder, onClose, onLogin, onLogout, class: className }: Props = $props();
+  let { projectName, platform, urlCount, projectPath, auth, onOpenFolder, onClose, onSetupBrowser, onResetBrowser, class: className }: Props = $props();
 
-  const needsLogin = $derived(PLATFORMS_NEEDING_LOGIN.includes(platform));
-  const isLoggedIn = $derived(auth?.has_cookies ?? false);
+  const hasSetup = $derived(auth?.has_cookies ?? false);
+
+  const setupLabel = $derived.by(() => {
+    if (!auth?.captured_at) return '';
+    const days = Math.floor((Date.now() - new Date(auth.captured_at).getTime()) / 86400000);
+    if (days === 0) return 'Set up today';
+    if (days === 1) return 'Set up yesterday';
+    return `Set up ${days} days ago`;
+  });
 </script>
 
 <div class={cn("h-14 px-4 flex items-center gap-4 bg-bg-toolbar border-b border-border-mid", className)}>
@@ -34,18 +39,15 @@
   <span class="text-text-secondary">{projectPath}</span>
 
   <div class="ml-auto flex items-center gap-2">
-    {#if needsLogin}
-      {#if isLoggedIn}
-        <span class="text-text-secondary text-base">{auth?.username || 'Logged in'}</span>
-        <Button variant="secondary" size="sm" onclick={onLogout}>
-          Log out
-        </Button>
-      {:else}
-        <span class="text-text-secondary text-base">Anonymous</span>
-        <Button variant="secondary" size="sm" onclick={onLogin}>
-          Log in
-        </Button>
-      {/if}
+    {#if hasSetup}
+      <span class="text-text-secondary text-base">{setupLabel}</span>
+      <Button variant="secondary" size="sm" onclick={onResetBrowser}>
+        Reset
+      </Button>
+    {:else}
+      <Button variant="secondary" size="sm" onclick={onSetupBrowser}>
+        Set up browser
+      </Button>
     {/if}
     <Button variant="secondary" size="sm" onclick={onOpenFolder}>
       Project Folder

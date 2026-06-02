@@ -4,7 +4,6 @@ from selenium.webdriver.remote.webdriver import WebDriver
 from selenium.common.exceptions import TimeoutException
 import threading
 import time
-import random
 from pathlib import Path
 from datetime import datetime
 
@@ -31,12 +30,9 @@ class YouTubeScraper(BaseScraper):
 
     def __init__(self, driver_pool: WebDriverPool, log_callback: Callable | None = None):
         """Initialize with a WebDriver pool instead of manager."""
+        super().__init__()
         self.driver_pool: WebDriverPool = driver_pool
         self._log_callback: Callable | None = log_callback
-        # Rate limiting: 1-3 second delay between requests
-        self.min_delay: float = self.RATE_LIMIT_MIN
-        self.max_delay: float = self.RATE_LIMIT_MAX
-        self.last_request_time: float = 0
 
         # Pause control - event-based instead of polling
         self.pause_event: threading.Event | None = None
@@ -48,20 +44,6 @@ class YouTubeScraper(BaseScraper):
     def get_platform_name(self) -> str:
         """Return the platform name for this scraper."""
         return "youtube"
-
-    def _apply_rate_limit(self) -> None:
-        """Apply rate limiting between requests."""
-        current_time = time.time()
-        time_since_last = current_time - self.last_request_time
-
-        # Random delay between min_delay and max_delay
-        delay = random.uniform(self.min_delay, self.max_delay)
-
-        if time_since_last < delay:
-            sleep_time = delay - time_since_last
-            time.sleep(sleep_time)
-
-        self.last_request_time = time.time()
 
     def _check_pause(self) -> None:
         """Check if processing is paused and wait efficiently."""

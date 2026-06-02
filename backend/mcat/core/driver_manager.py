@@ -154,15 +154,38 @@ class WebDriverPool:
             raise Exception("No WebDriver available in pool (timeout)")
 
     def return_driver(self, driver: webdriver.Chrome) -> None:
-        """Return a driver to the pool."""
+        """Return a driver to the pool, resetting state for per-request isolation.
+
+        Each scrape must look like a fresh session to the platform, so we wipe
+        cookies + storage and re-inject the canonical set (consent + optional
+        login) on every return. add_cookie only applies on the matching domain
+        and delete_all_cookies only clears the current domain, so if the driver
+        drifted off-platform (consent subdomain, external redirect, about:blank)
+        we navigate back first; otherwise the wipe hits the wrong store and the
+        re-injection is silently dropped, leaving the driver logged-out or
+        consent-less for the rest of the batch.
+        """
         if driver and driver in self.all_drivers:
-            if not self._cookies:
-                try:
+            try:
+                if self._cookies and self._platform:
+                    domain = PLATFORM_DOMAINS.get(self._platform, "")
+                    host = domain.split("://")[-1]
+                    if host and host not in (driver.current_url or ""):
+                        driver.get(domain)  # only navigate when drifted off-domain
                     driver.delete_all_cookies()
                     driver.execute_script("window.localStorage.clear();")
                     driver.execute_script("window.sessionStorage.clear();")
-                except Exception:
-                    pass
+                    for cookie in self._cookies:
+                        try:
+                            driver.add_cookie(cookie)
+                        except Exception:
+                            pass
+                else:
+                    driver.delete_all_cookies()
+                    driver.execute_script("window.localStorage.clear();")
+                    driver.execute_script("window.sessionStorage.clear();")
+            except Exception as e:
+                self._log(f"Driver reset on return failed: {e}", "warning")
 
             self.available_drivers.put(driver)
         elif driver:

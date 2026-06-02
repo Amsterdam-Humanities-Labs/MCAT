@@ -2,7 +2,6 @@
 
 from api.context import app_context, log_buffer
 from api.serializers import publish_project
-from models.project_models import RunStatus
 from services.job_builder import build_processing_job
 
 
@@ -31,10 +30,13 @@ def start(body: dict) -> dict:
         publish_project()
 
     def on_error(error_message: str) -> None:
+        # Delegate to the canonical lifecycle method so the failed run still gets
+        # completed_at / total_checked and reappears in the timeline, then surface
+        # the reason. Hand-rolling abandonment here skipped all of that.
         if ctx.current_project and ctx.current_project.current_run:
-            ctx.current_project.current_run.status = RunStatus.ABANDONED
-            ctx.current_project.current_run = None
-            ctx.current_project.save()
+            ctx.run_service.abandon_run(ctx.current_project, ctx.current_project.current_run)
+        log_buffer.error(error_message)
+        publish_project()
 
     url_count = len(urls) if urls else job.file_info.row_count
     log_buffer.info(f"Starting run: {url_count} URLs on {project.platform}")

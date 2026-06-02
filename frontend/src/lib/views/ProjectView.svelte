@@ -60,20 +60,20 @@
     }
   }
 
-  async function handleLogin() {
+  async function handleSetupBrowser() {
     try {
       await api.startLogin();
     } catch (e) {
-      console.error('Login failed:', e);
+      console.error('Browser setup failed:', e);
     }
   }
 
-  async function handleLogout() {
+  async function handleResetBrowser() {
     try {
       const r = await api.logout();
       if (r.project) projectStore.setProject(r.project);
     } catch (e) {
-      console.error('Logout failed:', e);
+      console.error('Reset failed:', e);
     }
   }
 
@@ -91,8 +91,8 @@
     auth={project.auth}
     onOpenFolder={handleOpenFolder}
     onClose={onclose}
-    onLogin={handleLogin}
-    onLogout={handleLogout}
+    onSetupBrowser={handleSetupBrowser}
+    onResetBrowser={handleResetBrowser}
   />
 
   <Controls

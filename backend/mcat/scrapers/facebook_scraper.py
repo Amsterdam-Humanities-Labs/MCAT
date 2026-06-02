@@ -3,7 +3,6 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.remote.webdriver import WebDriver
 from selenium.common.exceptions import TimeoutException
 import time
-import random
 from pathlib import Path
 from datetime import datetime
 
@@ -36,24 +35,14 @@ class FacebookScraper(BaseScraper):
     )
 
     def __init__(self, driver_pool: WebDriverPool, log_callback: Callable | None = None):
+        super().__init__()
         self.driver_pool = driver_pool
         self._log_callback: Callable | None = log_callback
-        self.min_delay: float = self.RATE_LIMIT_MIN
-        self.max_delay: float = self.RATE_LIMIT_MAX
-        self.last_request_time: float = 0
         self.save_screenshots: bool = False
         self.screenshot_base_path: Path | None = None
 
     def get_platform_name(self) -> str:
         return "facebook"
-
-    def _apply_rate_limit(self) -> None:
-        current_time = time.time()
-        time_since_last = current_time - self.last_request_time
-        delay = random.uniform(self.min_delay, self.max_delay)
-        if time_since_last < delay:
-            time.sleep(delay - time_since_last)
-        self.last_request_time = time.time()
 
     def _check_pause(self) -> None:
         if self.pause_event:

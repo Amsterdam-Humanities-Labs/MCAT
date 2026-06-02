@@ -186,20 +186,29 @@ class TrackingService:
 
                     def on_error(error_message: str) -> None:
                         if project_state.current_run:
-                            from models.project_models import RunStatus
-                            project_state.current_run.status = RunStatus.ABANDONED
-                            project_state.current_run = None
-                            project_state.save()
+                            run_service.abandon_run(project_state, project_state.current_run)
+                        if self._log_callback:
+                            self._log_callback(error_message, "error")
+                        if publish_project:
+                            publish_project()
 
-                    self._processing_service.start_processing(
+                    started = self._processing_service.start_processing(
                         job, urls=urls,
                         on_completed=on_completed,
                         on_error=on_error,
                     )
+                    if not started and project_state.current_run:
+                        run_service.abandon_run(project_state, project_state.current_run)
 
         except Exception as e:
             if self._log_callback:
                 self._log_callback(f"Tracking error: {str(e)}", "error")
+            # A run created before the failure (e.g. job setup raised) would
+            # otherwise leave current_run set forever, short-circuiting every
+            # future tick and silently killing monitoring. Abandon it so the
+            # next tick can proceed.
+            if self._run_service and self._project_state and self._project_state.current_run:
+                self._run_service.abandon_run(self._project_state, self._project_state.current_run)
         finally:
             # Schedule next check
             if not self._stop_event.is_set():

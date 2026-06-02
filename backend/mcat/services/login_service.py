@@ -55,10 +55,14 @@ class LoginService:
             return
         cookie_name = SESSION_COOKIE_NAMES.get(self._platform)
         platform = self._platform
+        last_cookies: list[dict] = []
 
         while self._driver is not None:
             try:
                 cookies = self._driver.get_cookies()
+                if cookies:
+                    last_cookies = cookies
+
                 session = next((c for c in cookies if c["name"] == cookie_name), None)
                 if session:
                     username = self._extract_username(cookies)
@@ -68,7 +72,13 @@ class LoginService:
                         self._on_login()
                     return
             except Exception:
-                # Browser was closed by user or crashed
+                # Browser was closed by user — save whatever cookies we captured
+                if last_cookies:
+                    username = self._extract_username(last_cookies)
+                    self._cookie_store.save_cookies(platform, last_cookies, username=username)
+                    self._log("Browser setup saved")
+                    if self._on_login:
+                        self._on_login()
                 self._driver = None
                 self._platform = None
                 return
