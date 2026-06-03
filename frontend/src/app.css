@@ -1,5 +1,5 @@
 @import "tailwindcss";
-@import "./themes/noctua.css";
+@import "./themes/noctua-hc.css";
 
 @font-face {
   font-family: 'General Sans';

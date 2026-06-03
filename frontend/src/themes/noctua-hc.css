@@ -1,0 +1,70 @@
+/* Noctua, higher-contrast variant. Same warm palette as noctua.css, with the
+   muted text, status, and console colors darkened and borders strengthened so
+   type reads clearly against its background. Backgrounds are unchanged.
+   To revert: point app.css back at "./themes/noctua.css". */
+@theme {
+  /* Background colors (unchanged from noctua) */
+  --color-bg-primary: #FAF6F0;
+  --color-bg-timeline: #E0D1BC;
+  --color-bg-controls: #EAE0CE;
+  --color-bg-toolbar: #F5EDE0;
+  --color-bg-detail: #F3EDE4;
+
+  /* Border colors (darkened for definition) */
+  --color-border-light: #D6C7AE;
+  --color-border-mid: #C5B28C;
+  --color-border-input: #AC9468;
+
+  /* Text colors (muted tones darkened; primary/body already near-black) */
+  --color-text-primary: #1A1209;
+  --color-text-body: #2A1E0E;
+  --color-text-secondary: #46341F;
+  --color-text-hint: #574230;
+
+  /* Accent colors */
+  --color-accent-primary: #5E3F20;
+  --color-accent-secondary: #C9A96E;
+  --color-accent-tab-active: #E8DCC8;
+  --color-accent-secondary-bg: #EDE5D8;
+
+  /* Status colors (darkened, hue preserved, for readable status text + badges) */
+  --color-status-live: #2F6B22;
+  --color-status-removed: #A52727;
+  --color-status-restricted: #A85E08;
+  --color-status-error: #6B472A;
+
+  /* Status badge backgrounds (unchanged) */
+  --color-badge-live-bg: #E5F2E0;
+  --color-badge-live-border: #B8D8AD;
+  --color-badge-removed-bg: #F8E5E5;
+  --color-badge-removed-border: #E8B8B8;
+  --color-badge-restricted-bg: #FDF0DD;
+  --color-badge-restricted-border: #F0D4A0;
+  --color-badge-error-bg: #F2EAE4;
+  --color-badge-error-border: #DCC8B4;
+
+  /* Link */
+  --color-link: #234E76;
+
+  /* Console */
+  --color-console-timestamp: #46341F;
+  --color-console-warning-count: #8A4422;
+
+  /* Timeline */
+  --color-timeline-dot: #5A3F22;
+  --color-timeline-dot-muted: #AC9468;
+  --color-timeline-dot-abandoned: #C5B28C;
+  --color-timeline-axis: #C4AD8A;
+  --color-timeline-selection: rgba(90, 63, 34, 0.40);
+
+  /* Interactive states */
+  --color-interactive-hover: #EDE5D8;
+  --color-interactive-active: #5A3E20;
+  --color-interactive-input: #F0E8DA;
+  --color-interactive-primary: #5F4325;
+  --color-interactive-danger: #F5E8E8;
+  --color-interactive-row: #F0EAE0;
+
+  /* Progress track */
+  --color-progress-track: #E8DCC8;
+}

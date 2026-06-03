@@ -14,7 +14,7 @@ export const colors = {
     primary: '#222222',
     body: '#333333',
     secondary: '#5C4A32',
-    muted: '#998060',
+    muted: '#6E5840',
     hint: '#7A6240',
   },
   accent: {
@@ -22,10 +22,10 @@ export const colors = {
     secondary: '#B07840',
   },
   status: {
-    live: '#4A8C3A',
-    removed: '#C43838',
-    restricted: '#E0820A',
-    error: '#8C6240',
+    live: '#2F6B22',
+    removed: '#A52727',
+    restricted: '#A85E08',
+    error: '#6B472A',
   },
   link: '#3A7A4A',
   progress: {

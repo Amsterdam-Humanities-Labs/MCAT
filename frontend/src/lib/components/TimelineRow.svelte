@@ -60,9 +60,9 @@
       <span class="absolute inset-0 rounded-full border-2 border-timeline-selection"></span>
     {/if}
     {#if isAbandoned}
-      <CircleDashedIcon size={14} class={dotColor} />
+      <CircleDashedIcon size={16} class={dotColor} />
     {:else}
-      <CheckCircleIcon size={14} weight="fill" class={dotColor} />
+      <CheckCircleIcon size={16}  class={dotColor} />
     {/if}
   </span>
 

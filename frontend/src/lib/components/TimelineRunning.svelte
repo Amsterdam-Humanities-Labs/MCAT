@@ -18,9 +18,9 @@
 >
   <span class="inline-flex items-center justify-center w-5 h-5 shrink-0">
     {#if paused}
-      <StopIcon size={16} weight="bold" class="text-timeline-dot" />
+      <StopIcon size={16} class="text-timeline-dot" />
     {:else}
-      <HourglassIcon size={16} weight="bold" class="text-timeline-dot" />
+      <HourglassIcon size={16} class="text-timeline-dot" />
     {/if}
   </span>
   <span class="flex items-center gap-2">
