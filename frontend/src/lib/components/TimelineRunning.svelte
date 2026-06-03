@@ -1,24 +1,46 @@
 <script lang="ts">
   import { cn } from '$lib/utils';
   import { formatTimestamp } from '$lib/utils/format';
-  import { SpinnerGap } from 'phosphor-svelte';
+  import { HourglassIcon, StopIcon } from 'phosphor-svelte';
 
   interface Props {
     timestamp: string;
-    progressPercent: number;
+    paused?: boolean;
     class?: string;
   }
 
-  let { timestamp, progressPercent, class: className }: Props = $props();
+  let { timestamp, paused = false, class: className }: Props = $props();
 </script>
 
-<div class={cn("flex items-center gap-3 px-4 py-2.5 text-base border-b border-border-light", className)}>
+<div
+  class={cn("flex items-center gap-3 px-4 py-2.5 text-base border-b border-border-light", className)}
+  class:runrow-pulse={!paused}
+>
   <span class="inline-flex items-center justify-center w-5 h-5 shrink-0">
-    <SpinnerGap size={14} class="animate-spin text-timeline-dot" />
+    {#if paused}
+      <StopIcon size={16} weight="bold" class="text-timeline-dot" />
+    {:else}
+      <HourglassIcon size={16} weight="bold" class="text-timeline-dot" />
+    {/if}
   </span>
   <span class="flex items-center gap-2">
     <span class="text-text-secondary">{formatTimestamp(timestamp)}</span>
-    <span class="text-text-secondary">·</span>
-    <span class="text-text-hint">Running... {progressPercent}%</span>
+    {#if paused}
+      <span class="text-text-primary">Paused</span>
+    {:else}
+      <span class="text-text-primary">Running</span>
+    {/if}
   </span>
 </div>
+
+<style>
+  /* Active (running) row: slow background pulse from the timeline tint toward
+     the lighter primary and back, to signal a live run. */
+  .runrow-pulse {
+    animation: runrow-pulse 3s ease-in-out infinite;
+  }
+  @keyframes runrow-pulse {
+    0%, 100% { background-color: var(--color-bg-timeline); }
+    50% { background-color: var(--color-bg-primary); }
+  }
+</style>

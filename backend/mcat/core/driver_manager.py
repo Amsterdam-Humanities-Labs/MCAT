@@ -75,7 +75,6 @@ class WebDriverPool:
         chrome_options.add_argument("--disable-gpu")
         chrome_options.add_argument("--disable-extensions")
         chrome_options.add_argument("--disable-plugins")
-        chrome_options.add_argument("--disable-images")
         chrome_options.add_argument("--disable-popup-blocking")
         chrome_options.add_argument("--ignore-certificate-errors")
         if not self._cookies:
@@ -89,8 +88,15 @@ class WebDriverPool:
         chrome_options.add_argument("--disable-media-session-api")
         chrome_options.add_argument("--autoplay-policy=no-user-gesture-required")
 
-        # User agent to avoid detection
-        chrome_options.add_argument("--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
+        # User agent: must be a complete, current Chrome UA. A malformed token
+        # (missing "Chrome/<major>.0.0.0 Safari/537.36") makes some sites such as
+        # Instagram serve degraded media (the main post image never loads). Built
+        # from the installed Chrome so it tracks the real version.
+        major = (chromedriver_autoinstaller.get_chrome_version() or "124.0").split(".")[0]
+        chrome_options.add_argument(
+            f"--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+            f"(KHTML, like Gecko) Chrome/{major}.0.0.0 Safari/537.36"
+        )
 
         # Disable automation flags to avoid bot detection
         chrome_options.add_experimental_option("excludeSwitches", ["enable-automation"])

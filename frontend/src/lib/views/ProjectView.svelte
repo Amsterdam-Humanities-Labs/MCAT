@@ -37,7 +37,7 @@
     if (runState === 'idle') return null;
     return {
       timestamp: new Date().toISOString(),
-      progressPercent: processing.progress ? Math.round(processing.progress) : 0,
+      paused: runState === 'paused',
     };
   });
 

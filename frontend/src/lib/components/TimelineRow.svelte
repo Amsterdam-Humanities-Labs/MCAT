@@ -2,7 +2,7 @@
   import { cn } from '$lib/utils';
   import type { Run } from '$types/project';
   import { formatTimestamp } from '$lib/utils/format';
-  import { CaretUp, CaretDown } from 'phosphor-svelte';
+  import { CaretUp, CaretDown, CheckCircleIcon, CircleDashedIcon } from 'phosphor-svelte';
   import TransitionBadge from './TransitionBadge.svelte';
   import StatusBadge from './StatusBadge.svelte';
 
@@ -17,8 +17,6 @@
   let { run, index, isSelected, onClick, class: className }: Props = $props();
 
   const isAbandoned = $derived(run.status === 'abandoned');
-  const isNoChange = $derived(!run.is_baseline && run.changes_count === 0 && !isAbandoned);
-  const dotSize = $derived(isAbandoned || isNoChange ? 'text-[7px]' : 'text-[10px]');
   const dotColor = 'text-text-secondary';
 
   // Sort order: recoveries (→ live) first, then degradations by severity
@@ -61,7 +59,11 @@
     {#if isSelected}
       <span class="absolute inset-0 rounded-full border-2 border-timeline-selection"></span>
     {/if}
-    <span class="{dotSize} {dotColor} leading-none">&#x25CF;</span>
+    {#if isAbandoned}
+      <CircleDashedIcon size={14} class={dotColor} />
+    {:else}
+      <CheckCircleIcon size={14} weight="fill" class={dotColor} />
+    {/if}
   </span>
 
   <!-- Date -->
