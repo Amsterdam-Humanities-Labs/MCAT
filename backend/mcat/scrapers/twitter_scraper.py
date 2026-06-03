@@ -150,7 +150,7 @@ class TwitterScraper(BaseScraper):
     def set_pause_event(self, pause_event):
         self.pause_event = pause_event
 
-    def _log(self, message: str):
+    def _log(self, message: str, level: str = "info"):
         if not self.is_cancelled():
             print(message)
 
