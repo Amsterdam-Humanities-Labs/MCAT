@@ -1,6 +1,8 @@
 <script lang="ts">
   import { cn } from '$lib/utils';
   import Button from './Button.svelte';
+  import Tooltip from './Tooltip.svelte';
+  import { WarningCircle } from 'phosphor-svelte';
   import type { AuthInfo } from '$types/project';
 
   interface Props {
@@ -19,7 +21,9 @@
   let { projectName, platform, urlCount, projectPath, auth, onOpenFolder, onClose, onSetupBrowser, onResetBrowser, class: className }: Props = $props();
 
   const hasSetup = $derived(auth?.has_cookies ?? false);
-  const identityLabel = $derived(auth?.username ? `Logged in: ${auth.username}` : 'Anonymous');
+  const identityLabel = $derived(
+    auth?.username ? `Logged in: ${auth.username}` : auth?.logged_in ? 'Logged in' : 'Anonymous'
+  );
   const consentLabel = $derived(hasSetup ? 'Consent saved' : 'Consent not set');
 
   // Capture date lives in a tooltip rather than a visible label.
@@ -50,6 +54,9 @@
         Reset browser
       </Button>
     {:else}
+      <Tooltip text="Never use your real platform account. Scraping can get it banned, so create a separate account just for MCAT.">
+        <WarningCircle size={18} class="text-status-restricted" />
+      </Tooltip>
       <Button variant="secondary" size="sm" onclick={onSetupBrowser}>
         Set up browser
       </Button>

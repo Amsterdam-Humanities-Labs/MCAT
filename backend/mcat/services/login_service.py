@@ -7,14 +7,8 @@ from selenium.webdriver.chrome.options import Options
 import chromedriver_autoinstaller
 import chromedriver_autoinstaller.utils as cdu
 
-from cookies.cookie_store import CookieStore, SESSION_COOKIE_NAMES
-
-PLATFORM_URLS = {
-    "instagram": "https://www.instagram.com",
-    "facebook": "https://www.facebook.com",
-    "tiktok": "https://www.tiktok.com",
-    "youtube": "https://www.youtube.com",
-}
+from cookies.cookie_store import CookieStore
+from config.platform_profiles import get_profile
 
 
 class LoginService:
@@ -38,13 +32,13 @@ class LoginService:
         if self._driver is not None:
             return {"success": False, "error": "Login already in progress"}
 
-        url = PLATFORM_URLS.get(platform)
-        if not url:
+        profile = get_profile(platform)
+        if not profile or not profile.supports_setup:
             return {"success": False, "error": f"Login not supported for {platform}"}
 
         self._platform = platform
         self._driver = self._create_visible_driver()
-        self._driver.get(url)
+        self._driver.get(profile.base_url)
 
         threading.Thread(target=self._poll_for_login, daemon=True).start()
 
@@ -54,7 +48,8 @@ class LoginService:
         import time
         if not self._platform:
             return
-        cookie_name = SESSION_COOKIE_NAMES.get(self._platform)
+        profile = get_profile(self._platform)
+        cookie_name = profile.login_cookie if profile else None
         platform = self._platform
         last_cookies: list[dict] = []
 
@@ -90,15 +85,11 @@ class LoginService:
         return self._cookie_store.delete_cookies(platform)
 
     def _extract_username(self, cookies: list[dict]) -> str:
-        if self._platform == "instagram":
-            ds_user = next((c for c in cookies if c["name"] == "ds_user_id"), None)
-            if ds_user:
-                return ds_user["value"]
-        elif self._platform == "facebook":
-            c_user = next((c for c in cookies if c["name"] == "c_user"), None)
-            if c_user:
-                return c_user["value"]
-        return ""
+        profile = get_profile(self._platform)
+        if not profile or not profile.username_cookie:
+            return ""
+        match = next((c for c in cookies if c["name"] == profile.username_cookie), None)
+        return match["value"] if match else ""
 
     def _create_visible_driver(self) -> webdriver.Chrome:
         chrome_version = chromedriver_autoinstaller.get_chrome_version()

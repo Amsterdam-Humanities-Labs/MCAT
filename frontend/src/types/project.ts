@@ -41,6 +41,7 @@ export interface TrackingConfig {
 export interface AuthInfo {
   has_cookies: boolean;
   username: string;
+  logged_in: boolean;
   captured_at: string | null;
 }
 

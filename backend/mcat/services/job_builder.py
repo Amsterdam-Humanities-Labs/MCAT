@@ -31,9 +31,14 @@ def build_processing_job(
     cookie_store = CookieStore(project.project_path)
     cookies = cookie_store.load_cookies(project.platform) or []
     cookie_info = cookie_store.get_cookie_info(project.platform)
-    # Consent-only captures (e.g. YouTube, which has no login) carry an empty
-    # username; record those runs as anonymous rather than blank.
-    auth_user = (cookie_info["username"] if cookie_info else "") or "anonymous"
+    # Account id (IG/FB) if the platform exposes one; else "logged-in" for an
+    # authenticated run with no readable id (YouTube/Google); else anonymous.
+    if cookie_info and cookie_info["username"]:
+        auth_user = cookie_info["username"]
+    elif cookie_info and cookie_info.get("logged_in"):
+        auth_user = "logged-in"
+    else:
+        auth_user = "anonymous"
 
     return ProcessingJob(
         file_info=file_info,

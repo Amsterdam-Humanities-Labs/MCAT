@@ -11,7 +11,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "backend" / "mcat"))
 
-from core.driver_manager import WebDriverPool, PLATFORM_DOMAINS
+from core.driver_manager import WebDriverPool
+from config.platform_profiles import get_profile
 
 TEST_COOKIES = [
     {"name": "session_token", "value": "abc123", "domain": ".instagram.com", "path": "/"},
@@ -78,9 +79,10 @@ def test_default_wipes_cookies():
 
 
 def test_platform_domains_complete():
-    """All supported platforms should have domain mappings."""
+    """All supported platforms should have a profile with a base URL."""
     for platform in ("instagram", "facebook", "tiktok", "youtube", "twitter"):
-        assert platform in PLATFORM_DOMAINS, f"Missing domain for {platform}"
+        profile = get_profile(platform)
+        assert profile and profile.base_url, f"Missing profile/base_url for {platform}"
     print("PASSED")
 
 

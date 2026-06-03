@@ -51,5 +51,6 @@ def cookie_status(body: dict) -> dict:
     return {
         "has_cookies": info is not None,
         "username": info["username"] if info else "",
+        "logged_in": info.get("logged_in", False) if info else False,
         "captured_at": info["captured_at"] if info else None,
     }

@@ -4,11 +4,7 @@ import time
 from datetime import datetime
 from pathlib import Path
 
-SESSION_COOKIE_NAMES = {
-    "instagram": "sessionid",
-    "facebook": "c_user",
-    "tiktok": "sessionid",
-}
+from config.platform_profiles import get_profile
 
 
 class CookieStore:
@@ -21,16 +17,33 @@ class CookieStore:
         return self._dir / f"{platform}.json"
 
     def _is_expired(self, platform: str, cookies: list[dict]) -> bool:
-        cookie_name = SESSION_COOKIE_NAMES.get(platform)
+        """A jar is 'expired' only when its login cookie is present but past expiry.
+
+        A missing login cookie means a consent-only jar (the banner was dismissed
+        without logging in, e.g. YouTube), which is valid and must still load.
+        """
+        profile = get_profile(platform)
+        cookie_name = profile.login_cookie if profile else None
         if not cookie_name:
             return False
         session = next((c for c in cookies if c.get("name") == cookie_name), None)
         if not session:
-            return True
+            return False
         expiry = session.get("expiry")
         if expiry and expiry < time.time():
             return True
         return False
+
+    def _has_fresh_login(self, platform: str, cookies: list[dict]) -> bool:
+        """Whether a valid (present and unexpired) login cookie exists."""
+        profile = get_profile(platform)
+        if not profile or not profile.login_cookie:
+            return False
+        c = next((x for x in cookies if x.get("name") == profile.login_cookie), None)
+        if not c:
+            return False
+        expiry = c.get("expiry")
+        return not (expiry and expiry < time.time())
 
     def save_cookies(self, platform: str, cookies: list[dict], username: str = "") -> Path:
         self._dir.mkdir(parents=True, exist_ok=True)
@@ -85,6 +98,7 @@ class CookieStore:
                 "username": data.get("username", ""),
                 "captured_at": data["captured_at"],
                 "cookie_count": len(cookies),
+                "logged_in": self._has_fresh_login(platform, cookies),
             }
         except (json.JSONDecodeError, KeyError):
             return None

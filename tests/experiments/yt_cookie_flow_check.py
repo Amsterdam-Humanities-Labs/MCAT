@@ -12,7 +12,7 @@ BACKEND_MCAT = Path(__file__).resolve().parents[2] / "backend" / "mcat"
 sys.path.insert(0, str(BACKEND_MCAT))
 
 from cookies.cookie_store import CookieStore  # noqa: E402
-from services.login_service import PLATFORM_URLS  # noqa: E402
+from config.platform_profiles import get_profile  # noqa: E402
 
 SOCS = {
     "name": "SOCS", "value": "CAESEwgDEgk5MjQ0Mjk5NjIaAmVuIAEaBgiAuvjQBg",
@@ -29,23 +29,42 @@ def check(label, cond):
 
 
 print("Set up browser is routed for YouTube:")
-check("youtube in PLATFORM_URLS", PLATFORM_URLS.get("youtube") == "https://www.youtube.com")
+_yt = get_profile("youtube")
+check("youtube profile supports setup", bool(_yt and _yt.supports_setup and _yt.base_url == "https://www.youtube.com"))
+
+LOGIN_INFO = {
+    "name": "LOGIN_INFO", "value": "AFmmF2switched",
+    "domain": ".youtube.com", "path": "/", "secure": True, "httpOnly": True,
+}
+
+
+def auth_user_of(info):
+    # mirrors services/job_builder.py
+    if info and info["username"]:
+        return info["username"]
+    if info and info.get("logged_in"):
+        return "logged-in"
+    return "anonymous"
+
 
 with tempfile.TemporaryDirectory() as tmp:
     store = CookieStore(Path(tmp))
+
     store.save_cookies("youtube", [SOCS], username="")  # consent-only, no login
-
-    loaded = store.load_cookies("youtube")
     info = store.get_cookie_info("youtube")
-    print("\nConsent-only jar survives load (youtube not gated by session cookie):")
+    loaded = store.load_cookies("youtube")
+    print("\nConsent-only jar (no login):")
     check("load_cookies returns the jar", bool(loaded) and any(c["name"] == "SOCS" for c in loaded))
-    check("get_cookie_info is not None", info is not None)
-    check("username is empty", info is not None and info["username"] == "")
+    check("logged_in is False", info is not None and info.get("logged_in") is False)
+    check('auth_user is "anonymous"', auth_user_of(info) == "anonymous")
 
-    # replicate job_builder.auth_user
-    auth_user = (info["username"] if info else "") or "anonymous"
-    print("\nauth_user derivation:")
-    check('empty username -> "anonymous"', auth_user == "anonymous")
+    store.save_cookies("youtube", [SOCS, LOGIN_INFO], username="")  # consent + login
+    info = store.get_cookie_info("youtube")
+    loaded = store.load_cookies("youtube")
+    print("\nLogin jar (LOGIN_INFO present):")
+    check("load_cookies returns the jar", bool(loaded) and any(c["name"] == "LOGIN_INFO" for c in loaded))
+    check("logged_in is True", info is not None and info.get("logged_in") is True)
+    check('auth_user is "logged-in"', auth_user_of(info) == "logged-in")
 
 print("\nRESULT:", "ALL PASS" if ok else "FAILURES ABOVE")
 sys.exit(0 if ok else 1)

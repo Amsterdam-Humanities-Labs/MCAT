@@ -9,14 +9,7 @@ from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
 import chromedriver_autoinstaller
 
-
-PLATFORM_DOMAINS = {
-    "instagram": "https://www.instagram.com",
-    "facebook": "https://www.facebook.com",
-    "tiktok": "https://www.tiktok.com",
-    "youtube": "https://www.youtube.com",
-    "twitter": "https://x.com",
-}
+from config.platform_profiles import get_profile
 
 
 class WebDriverPool:
@@ -112,10 +105,10 @@ class WebDriverPool:
         """Inject saved cookies into a driver. Requires navigating to the domain first."""
         if not self._platform or not self._cookies:
             return
-        domain = PLATFORM_DOMAINS.get(self._platform)
-        if not domain:
+        profile = get_profile(self._platform)
+        if not profile:
             return
-        driver.get(domain)
+        driver.get(profile.base_url)
         for cookie in self._cookies:
             try:
                 driver.add_cookie(cookie)
@@ -168,7 +161,8 @@ class WebDriverPool:
         if driver and driver in self.all_drivers:
             try:
                 if self._cookies and self._platform:
-                    domain = PLATFORM_DOMAINS.get(self._platform, "")
+                    profile = get_profile(self._platform)
+                    domain = profile.base_url if profile else ""
                     host = domain.split("://")[-1]
                     if host and host not in (driver.current_url or ""):
                         driver.get(domain)  # only navigate when drifted off-domain
