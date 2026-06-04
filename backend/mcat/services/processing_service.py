@@ -2,6 +2,7 @@
 Processing service — coordinates batch processing with threading.
 """
 
+import asyncio
 import tempfile
 import threading
 import logging
@@ -262,7 +263,10 @@ class ProcessingService:
             if self._cancel_event.is_set():
                 return
 
-            result = processor.process_csv(
+            # The async scraping batch runs in a fresh event loop owned by this
+            # worker thread; the threading state machine, pause/cancel events and
+            # SSE above this line are unchanged.
+            result = asyncio.run(processor.process_csv_async(
                 csv_path=temp_csv_path,
                 platform=job.platform,
                 column_mapping={'post': job.column_mapping.post_column},
@@ -270,7 +274,7 @@ class ProcessingService:
                 save_screenshots=job.save_screenshots,
                 cookies=job.cookies,
                 auth_user=job.auth_user,
-            )
+            ))
 
             if self._cancel_event.is_set():
                 return

@@ -1,8 +1,6 @@
-from selenium.webdriver.common.by import By
-from selenium.webdriver.remote.webdriver import WebDriver
+from zendriver.core.tab import Tab
 
 from scrapers.base_scraper import BaseScraper, StatusResult
-from cookies.youtube_cookie_handler import dismiss_youtube_cookies
 
 
 class YouTubeScraper(BaseScraper):
@@ -23,10 +21,11 @@ class YouTubeScraper(BaseScraper):
     def _extract_id(self, url: str) -> str:
         return url.split('v=')[-1].split('&')[0]
 
-    def _dismiss_consent(self, driver: WebDriver) -> None:
-        dismiss_youtube_cookies(driver, timeout=3)
+    # Consent dismissal not overridden: the per-project jar captures YouTube's
+    # SOCS consent cookie during Set up browser, which suppresses the consent
+    # redirect; initial_title (captured pre-redirect) covers the anonymous case.
 
-    def _detect_status(self, driver: WebDriver, initial_title: str = "") -> StatusResult | None:
+    async def _detect_status(self, tab: Tab, initial_title: str = "") -> StatusResult | None:
         """
         Check all detection signals on the current page state.
 
@@ -39,7 +38,7 @@ class YouTubeScraper(BaseScraper):
         """
         # Get visible text (not raw HTML which contains JS template strings)
         try:
-            page_text = driver.find_element(By.TAG_NAME, "body").text.lower()
+            page_text = (await tab.evaluate("document.body.innerText") or "").lower()
         except Exception:
             return None  # Page not ready yet
 
@@ -62,13 +61,15 @@ class YouTubeScraper(BaseScraper):
 
         # Warning/restricted elements
         try:
-            warning_elements = driver.find_elements(
-                By.CSS_SELECTOR, '[class*="warning"], [class*="restricted"]'
-            )
-            for el in warning_elements:
-                text = el.text.strip()
-                if text:
-                    return ("Restricted", text[:200])
+            warn = await tab.evaluate("""(() => {
+              for (const el of document.querySelectorAll('[class*="warning"],[class*="restricted"]')) {
+                const t = (el.innerText || '').trim();
+                if (t) return t.slice(0, 200);
+              }
+              return '';
+            })()""")
+            if warn:
+                return ("Restricted", warn)
         except Exception:
             pass
 
@@ -76,11 +77,10 @@ class YouTubeScraper(BaseScraper):
 
         # Primary: h1 title element rendered by SPA
         try:
-            title_el = driver.find_element(
-                By.CSS_SELECTOR, 'h1.ytd-watch-metadata, h1.title'
+            h1 = await tab.evaluate(
+                "(document.querySelector('h1.ytd-watch-metadata, h1.title') || {}).innerText || ''"
             )
-            h1_text = driver.execute_script('return arguments[0].innerText', title_el)
-            if h1_text and h1_text.strip():
+            if h1 and h1.strip():
                 return ("Live", "N/A")
         except Exception:
             pass
@@ -88,11 +88,12 @@ class YouTubeScraper(BaseScraper):
         # Fallback: page title set to "<Video Title> - YouTube"
         # Check both current title and initial_title (captured before YouTube
         # redirects incognito browsers to the consent page).
-        for title in (driver.title, initial_title):
-            try:
-                if title and title != "YouTube" and " - YouTube" in title:
-                    return ("Live", "N/A")
-            except Exception:
-                pass
+        try:
+            current_title = await tab.evaluate("document.title") or ""
+        except Exception:
+            current_title = ""
+        for title in (current_title, initial_title):
+            if title and title != "YouTube" and " - YouTube" in title:
+                return ("Live", "N/A")
 
         return None

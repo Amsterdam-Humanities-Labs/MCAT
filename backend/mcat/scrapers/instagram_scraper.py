@@ -1,8 +1,6 @@
-from selenium.webdriver.common.by import By
-from selenium.webdriver.remote.webdriver import WebDriver
+from zendriver.core.tab import Tab
 
 from scrapers.base_scraper import BaseScraper, StatusResult
-from cookies.instagram_cookie_handler import dismiss_instagram_cookies
 
 
 class InstagramScraper(BaseScraper):
@@ -32,10 +30,11 @@ class InstagramScraper(BaseScraper):
         except Exception:
             return "unknown"
 
-    def _dismiss_consent(self, driver: WebDriver) -> None:
-        dismiss_instagram_cookies(driver, timeout=3)
+    # Consent dismissal not overridden: the per-project jar captures IG's device/
+    # consent cookies during Set up browser; detection works logged-out via the
+    # og:title meta and the page title without dismissing the modal.
 
-    def _detect_status(self, driver: WebDriver, initial_title: str = "") -> StatusResult | None:
+    async def _detect_status(self, tab: Tab, initial_title: str = "") -> StatusResult | None:
         """
         Check all detection signals on current page state.
         Returns (status, info) or None if no signal yet.
@@ -43,7 +42,7 @@ class InstagramScraper(BaseScraper):
         Triage: negative signals first, then positive, then login detection.
         """
         try:
-            page_text = driver.find_element(By.TAG_NAME, "body").text.lower()
+            page_text = (await tab.evaluate("document.body.innerText") or "").lower()
         except Exception:
             return None
 
@@ -51,18 +50,15 @@ class InstagramScraper(BaseScraper):
 
         # Page title check
         try:
-            title = driver.title
+            title = await tab.evaluate("document.title") or ""
             if title and "isn't available" in title.lower():
                 return ("Removed", title)
         except Exception:
             pass
 
         # Error SVG icon
-        try:
-            driver.find_element(By.CSS_SELECTOR, 'svg[aria-label="error"]')
+        if await tab.query_selector('svg[aria-label="error"]'):
             return ("Removed", "error icon displayed")
-        except Exception:
-            pass
 
         # Error text in body
         for phrase in self.REMOVAL_PHRASES:
@@ -72,20 +68,15 @@ class InstagramScraper(BaseScraper):
         # --- Positive signals ---
 
         # og:title meta tag — reliable even in logged-out view
-        try:
-            meta = driver.find_element(By.CSS_SELECTOR, 'meta[property="og:title"]')
-            content = meta.get_attribute("content")
-            if content and " on Instagram:" in content:
+        meta = await tab.query_selector('meta[property="og:title"]')
+        if meta:
+            content = meta.attrs.get("content") or ""
+            if " on Instagram:" in content:
                 return ("Live", "N/A")
-        except Exception:
-            pass
 
         # article element — works when logged in
-        try:
-            driver.find_element(By.CSS_SELECTOR, 'article[role="presentation"]')
+        if await tab.query_selector('article[role="presentation"]'):
             return ("Live", "N/A")
-        except Exception:
-            pass
 
         # --- Login detection ---
 

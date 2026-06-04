@@ -1,8 +1,9 @@
 """Project management handlers."""
 
 from pathlib import Path
-from api.context import app_context
+from api.context import app_context, log_buffer
 from api.serializers import build_project_dict
+from core.browser_manager import resolved_user_agent
 
 
 def create(body: dict) -> dict:
@@ -21,6 +22,7 @@ def create(body: dict) -> dict:
         url_column=body["url_column"],
     )
     ctx.set_project(project)
+    log_buffer.info(f"Browser user agent: {resolved_user_agent()}")
     return {"success": True, "project": build_project_dict()}
 
 
@@ -44,6 +46,7 @@ def open_project(body: dict) -> dict:
         project.save()
 
     ctx.set_project(project)
+    log_buffer.info(f"Browser user agent: {resolved_user_agent()}")
     return {"success": True, "project": build_project_dict()}
 
 

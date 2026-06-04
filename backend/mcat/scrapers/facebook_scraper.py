@@ -1,8 +1,6 @@
-from selenium.webdriver.common.by import By
-from selenium.webdriver.remote.webdriver import WebDriver
+from zendriver.core.tab import Tab
 
 from scrapers.base_scraper import BaseScraper, StatusResult
-from cookies.facebook_cookie_handler import dismiss_facebook_cookies
 
 
 class FacebookScraper(BaseScraper):
@@ -44,10 +42,13 @@ class FacebookScraper(BaseScraper):
         except Exception:
             return "unknown"
 
-    def _dismiss_consent(self, driver: WebDriver) -> None:
-        dismiss_facebook_cookies(driver, timeout=3)
+    # Consent dismissal is intentionally not overridden: the per-project jar
+    # captures FB's consent cookies during Set up browser, and detection works
+    # anonymously without dismissing the modal (the article element, removal
+    # text, and og:title are all reachable behind it). If a click-through
+    # fallback is ever needed it can be added as an async override.
 
-    def _detect_status(self, driver: WebDriver, initial_title: str = "") -> StatusResult | None:
+    async def _detect_status(self, tab: Tab, initial_title: str = "") -> StatusResult | None:
         """
         Triage, in order:
           1. removal notice (strongest, mode-independent)
@@ -65,7 +66,7 @@ class FacebookScraper(BaseScraper):
         None -> Unknown for the human to judge from the screenshot.
         """
         try:
-            page_text = driver.find_element(By.TAG_NAME, "body").text.lower()
+            page_text = (await tab.evaluate("document.body.innerText") or "").lower()
         except Exception:
             return None
 
@@ -75,29 +76,22 @@ class FacebookScraper(BaseScraper):
                 return ("Removed", phrase)
 
         # 2. The rendered post itself
-        try:
-            driver.find_element(By.CSS_SELECTOR, 'div[role="article"]')
+        if await tab.query_selector('div[role="article"]'):
             return ("Live", "N/A")
-        except Exception:
-            pass
 
         # 3a. og:title, but only if it carries real content
-        try:
-            meta = driver.find_element(By.CSS_SELECTOR, 'meta[property="og:title"]')
-            content = (meta.get_attribute("content") or "").strip()
+        meta = await tab.query_selector('meta[property="og:title"]')
+        if meta:
+            content = (meta.attrs.get("content") or "").strip()
             if content and content.lower() not in self.GENERIC_TITLES:
                 return ("Live", "N/A")
-        except Exception:
-            pass
 
         # 3b. page title "<content> | Facebook" — check the lead before the suffix
-        try:
-            low = (driver.title or "").strip().lower().removeprefix("(1) ").strip()
-            if " | facebook" in low:
-                lead = low.split(" | facebook")[0].strip()
-                if lead and lead not in self.GENERIC_TITLES:
-                    return ("Live", "N/A")
-        except Exception:
-            pass
+        title = (await tab.evaluate("document.title") or "")
+        low = title.strip().lower().removeprefix("(1) ").strip()
+        if " | facebook" in low:
+            lead = low.split(" | facebook")[0].strip()
+            if lead and lead not in self.GENERIC_TITLES:
+                return ("Live", "N/A")
 
         return None

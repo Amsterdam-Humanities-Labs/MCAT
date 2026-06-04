@@ -1,23 +1,28 @@
+import asyncio
 import threading
-import time
 from collections.abc import Callable
-from concurrent.futures import ThreadPoolExecutor, as_completed
 from queue import Queue
 from pathlib import Path
 
 from config.settings import config
 from models.processing_models import ProcessingResult
 from utils.csv_handler import load_csv, get_columns, get_urls_from_column, validate_column_mapping, count_statuses, IncrementalCSVWriter
-from core.driver_manager import WebDriverPool
+from core.browser_manager import BrowserSession
 from scrapers.base_scraper import BaseScraper
 from scrapers.youtube_scraper import YouTubeScraper
 from scrapers.instagram_scraper import InstagramScraper
 from scrapers.facebook_scraper import FacebookScraper
-from scrapers.twitter_scraper import TwitterScraper
 
 
 class BatchProcessor:
-    """Main processing pipeline coordinator with WebDriver pooling."""
+    """Async processing pipeline coordinator over a zendriver tab pool.
+
+    process_csv_async runs inside an event loop spun up by the worker thread
+    (asyncio.run). Concurrency is bounded by the BrowserSession tab pool, so the
+    coroutines for all URLs are gathered but only pool_size run at once. Pause
+    and cancel are plain threading.Events set from the worker/HTTP thread and
+    polled between awaits.
+    """
 
     def __init__(self, scraper_factory: Callable | None = None):
         self.cancel_flag: threading.Event = threading.Event()
@@ -25,28 +30,19 @@ class BatchProcessor:
         self.resume_event.set()
         self.max_workers: int = config.scraper_settings['max_workers']
         self.log_callback: Callable | None = None
-        self.driver_pool: WebDriverPool | None = None
         self.progress_queue: Queue[dict] = Queue()
         self.progress_callback: Callable | None = None
         self._scraper_factory: Callable | None = scraper_factory
 
-    def process_csv(self, csv_path: str, platform: str, column_mapping: dict[str, str],
-                   output_folder: str | None = None, save_screenshots: bool = False,
-                   cookies: list[dict] | None = None, auth_user: str = "anonymous") -> ProcessingResult:
+    async def process_csv_async(self, csv_path: str, platform: str, column_mapping: dict[str, str],
+                                output_folder: str | None = None, save_screenshots: bool = False,
+                                cookies: list[dict] | None = None, auth_user: str = "anonymous") -> ProcessingResult:
         """Process a CSV file of URLs with incremental saving."""
         result = ProcessingResult()
         csv_writer = None
         output_csv_path = None
         scraper: BaseScraper | None = None
-
-        if self.driver_pool is None and not self._scraper_factory:
-            self.driver_pool = WebDriverPool(
-                pool_size=self.max_workers,
-                headless=config.scraper_settings['headless'],
-                log_callback=self.log_callback,
-                cookies=cookies or None,
-                platform=platform,
-            )
+        session: BrowserSession | None = None
 
         try:
             self.cancel_flag.clear()
@@ -71,14 +67,6 @@ class BatchProcessor:
                 )
                 csv_writer.write_header()
 
-            scraper = self._create_scraper(platform)
-            if not scraper:
-                result.error_message = f"Unsupported platform: {platform}"
-                return result
-
-            if save_screenshots and output_folder:
-                scraper.enable_screenshots(True, output_folder)
-
             url_column = column_mapping.get('post', '')
             urls = get_urls_from_column(rows, url_column)
             self._log(f"Extracted {len(urls)} URLs from column '{url_column}'")
@@ -87,8 +75,26 @@ class BatchProcessor:
                 result.error_message = f"No URLs found in column '{url_column}'"
                 return result
 
+            # One browser + tab pool per run, torn down in finally (no leak class).
+            if not self._scraper_factory:
+                session = await BrowserSession.create(
+                    pool_size=self.max_workers,
+                    headless=config.scraper_settings['headless'],
+                    log_callback=self.log_callback,
+                    cookies=cookies or None,
+                    platform=platform,
+                )
+
+            scraper = self._create_scraper(platform, session)
+            if not scraper:
+                result.error_message = f"Unsupported platform: {platform}"
+                return result
+
+            if save_screenshots and output_folder:
+                scraper.enable_screenshots(True, output_folder)
+
             self._log(f"Starting batch processing of {len(urls)} URLs...")
-            self._process_batch(urls, scraper, csv_writer, rows, url_column, auth_user)
+            await self._process_batch_async(urls, scraper, csv_writer, rows, url_column, auth_user)
             self._log(f"Batch processing completed", "success")
 
             if self.cancel_flag.is_set():
@@ -114,11 +120,12 @@ class BatchProcessor:
         finally:
             if scraper is not None:
                 scraper.cleanup()
-            self.cleanup()
+            if session is not None:
+                await session.stop()
 
         return result
 
-    def _create_scraper(self, platform: str) -> BaseScraper | None:
+    def _create_scraper(self, platform: str, session: BrowserSession | None) -> BaseScraper | None:
         """Create a scraper instance for the specified platform."""
         if self._scraper_factory:
             scraper = self._scraper_factory(platform)
@@ -126,18 +133,17 @@ class BatchProcessor:
             scraper.set_cancel_event(self.cancel_flag)
             return scraper
 
-        assert self.driver_pool is not None
+        assert session is not None
         scrapers: dict[str, type] = {
             'youtube': YouTubeScraper,
             'instagram': InstagramScraper,
             'facebook': FacebookScraper,
-            'twitter': TwitterScraper,
         }
         cls = scrapers.get(platform)
         if not cls:
             return None
 
-        scraper = cls(self.driver_pool, log_callback=self.log_callback)
+        scraper = cls(session, log_callback=self.log_callback)
         scraper.set_pause_event(self.resume_event)
         scraper.set_cancel_event(self.cancel_flag)
         return scraper
@@ -149,30 +155,29 @@ class BatchProcessor:
         self.log_callback = callback
 
     def _log(self, message: str, level: str = "info") -> None:
-        if hasattr(self, 'log_callback') and self.log_callback:
+        if self.log_callback:
             self.log_callback(message, level)
 
-    def _process_batch(self, urls: list[str], scraper: BaseScraper,
-                      csv_writer: IncrementalCSVWriter | None = None,
-                      original_rows: list[dict] | None = None,
-                      url_column: str | None = None,
-                      auth_user: str = "anonymous") -> None:
-        """Process URLs in parallel batches with incremental CSV writing."""
+    async def _process_batch_async(self, urls: list[str], scraper: BaseScraper,
+                                   csv_writer: IncrementalCSVWriter | None = None,
+                                   original_rows: list[dict] | None = None,
+                                   url_column: str | None = None,
+                                   auth_user: str = "anonymous") -> None:
+        """Process URLs concurrently (bounded by the tab pool) with incremental
+        CSV writing. Single-threaded asyncio, so the stats/progress block runs
+        with no await inside it and needs no lock."""
         processed = 0
         total = len(urls)
-
-        stats_lock = threading.Lock()
         stats = {'live': 0, 'removed': 0, 'restricted': 0, 'errors': 0, 'unknown': 0, 'login_required': 0, 'skipped': 0}
-
         original_rows = original_rows or []
 
-        def process_single_url(url: str, row_index: int) -> None:
+        async def process_single_url(url: str, row_index: int) -> None:
             nonlocal processed
             if self.cancel_flag.is_set():
                 return
 
             try:
-                result = scraper.check_url_status(url)
+                result = await scraper.check_url_status(url)
 
                 if self.cancel_flag.is_set() or result.status.lower() == 'cancelled':
                     return
@@ -189,24 +194,23 @@ class BatchProcessor:
                     })
                     csv_writer.append_row(original_row)
 
-                with stats_lock:
-                    status = result.status.lower()
-                    if status == 'live':
-                        stats['live'] += 1
-                    elif status == 'removed':
-                        stats['removed'] += 1
-                    elif status in ['restricted', 'age-restricted', 'geo-blocked', 'private']:
-                        stats['restricted'] += 1
-                    elif status == 'unknown':
-                        stats['unknown'] += 1
-                    elif status == 'login required':
-                        stats['login_required'] += 1
-                    else:
-                        stats['errors'] += 1
+                status = result.status.lower()
+                if status == 'live':
+                    stats['live'] += 1
+                elif status == 'removed':
+                    stats['removed'] += 1
+                elif status in ['restricted', 'age-restricted', 'geo-blocked', 'private']:
+                    stats['restricted'] += 1
+                elif status == 'unknown':
+                    stats['unknown'] += 1
+                elif status == 'login required':
+                    stats['login_required'] += 1
+                else:
+                    stats['errors'] += 1
 
-                    processed += 1
-                    current_processed = processed
-                    current_stats = stats.copy()
+                processed += 1
+                current_processed = processed
+                current_stats = stats.copy()
 
                 short_url = url[:50] + '...' if len(url) > 50 else url
                 self._log(f"[{current_processed}/{total}] {short_url} → {result.status}", "info")
@@ -218,42 +222,20 @@ class BatchProcessor:
                 if self.progress_callback:
                     self.progress_callback(current_stats, total, current_processed, current_action)
                 else:
-                    progress_data = {
+                    self.progress_queue.put({
                         'current': current_processed,
                         'total': total,
                         'stats': current_stats,
                         'current_action': current_action
-                    }
-                    self.progress_queue.put(progress_data)
+                    })
 
             except Exception as e:
                 if not self.cancel_flag.is_set():
                     self._log(f"Error processing URL {url}: {e}", "error")
-                with stats_lock:
-                    stats['errors'] += 1
-                    processed += 1
+                stats['errors'] += 1
+                processed += 1
 
-        with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
-            futures = []
-            for idx, url in enumerate(urls):
-                if self.cancel_flag.is_set():
-                    break
-                futures.append(executor.submit(process_single_url, url, idx))
-
-            cancelled = False
-            for future in as_completed(futures):
-                if self.cancel_flag.is_set() and not cancelled:
-                    cancelled = True
-                    self._log("Cancellation requested - stopping workers...", "info")
-                    for f in futures:
-                        f.cancel()
-                if cancelled:
-                    continue
-                try:
-                    future.result()
-                except Exception as e:
-                    if not self.cancel_flag.is_set():
-                        self._log(f"Error in future result: {e}", "error")
+        await asyncio.gather(*(process_single_url(url, idx) for idx, url in enumerate(urls)))
 
     def pause_processing(self) -> None:
         self.resume_event.clear()
@@ -266,7 +248,6 @@ class BatchProcessor:
         self.resume_event.set()
 
     def cleanup(self) -> None:
+        # The per-run BrowserSession is stopped in process_csv_async's finally;
+        # here we just signal cancellation so an in-flight batch winds down.
         self.cancel_flag.set()
-        if hasattr(self, 'driver_pool') and self.driver_pool:
-            self.driver_pool.cleanup()
-            self.driver_pool = None

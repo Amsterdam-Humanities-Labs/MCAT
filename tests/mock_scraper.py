@@ -8,9 +8,9 @@ URLs not listed in a scenario use the "default" status.
 Usage: MCAT_MOCK=1 pnpm dev
 """
 
+import asyncio
 import json
 import os
-import time
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
@@ -55,19 +55,17 @@ class MockScraper(BaseScraper):
         print(f"[MockScraper] Run #{self.run_number} → using scenario {key}", flush=True)
         return data[key]
 
-    def check_url_status(self, url: str) -> ScrapingResult:
+    async def check_url_status(self, url: str) -> ScrapingResult:
         result = ScrapingResult()
         result.url = url
-
 
         if self.is_cancelled():
             result.status = "Cancelled"
             return result
 
-        if self.pause_event:
-            self.pause_event.wait()
+        await self._check_pause()
 
-        time.sleep(self.SIMULATED_DELAY)
+        await asyncio.sleep(self.SIMULATED_DELAY)
 
         url_id = self._extract_id(url)
         status = self.scenario.get(url_id, self.scenario.get("default", "Live"))

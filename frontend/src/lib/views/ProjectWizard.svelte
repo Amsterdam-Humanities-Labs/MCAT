@@ -30,8 +30,6 @@
     { value: 'youtube', label: 'YouTube' },
     { value: 'instagram', label: 'Instagram' },
     { value: 'facebook', label: 'Facebook' },
-    { value: 'twitter', label: 'Twitter / X', disabled: true },
-    { value: 'tiktok', label: 'TikTok', disabled: true },
   ];
 
   const form = new FormState({

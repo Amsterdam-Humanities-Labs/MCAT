@@ -58,12 +58,6 @@ PROFILES: dict[str, PlatformProfile] = {
         consent_cookies=("datr", "sb"),
         login_cookies=("c_user", "xs", "fr"),
     ),
-    "tiktok": PlatformProfile(
-        "tiktok", "https://www.tiktok.com",
-        login_cookie="sessionid",
-        consent_cookies=("ttwid", "tt_csrf_token"),
-        login_cookies=("sessionid", "sessionid_ss", "sid_tt", "uid_tt"),
-    ),
     "youtube": PlatformProfile(
         "youtube", "https://www.youtube.com",
         # No readable account id cookie, so username_cookie stays None and an
@@ -73,10 +67,6 @@ PROFILES: dict[str, PlatformProfile] = {
         consent_cookies=("SOCS", "CONSENT"),
         login_cookies=("LOGIN_INFO", "SID", "HSID", "SSID", "APISID", "SAPISID",
                        "__Secure-1PSID", "__Secure-3PSID"),
-    ),
-    "twitter": PlatformProfile(
-        "twitter", "https://x.com",
-        supports_setup=False,
     ),
 }
 

@@ -1,3 +1,4 @@
+import asyncio
 import random
 import threading
 import time
@@ -7,10 +8,9 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 
-from selenium.common.exceptions import TimeoutException
-from selenium.webdriver.remote.webdriver import WebDriver
+from zendriver.core.tab import Tab
 
-from core.driver_manager import WebDriverPool
+from core.browser_manager import BrowserSession
 
 
 # A conclusive detection outcome: (status, info). Aliased rather than made a
@@ -33,20 +33,22 @@ class ScrapingResult:
 
 
 class BaseScraper(ABC):
-    """Shared scraping harness for pooled, signal-based platform scrapers.
+    """Shared async scraping harness for tab-pooled, signal-based scrapers.
 
-    The per-URL flow lives here once: check out a driver, rate-limit, load the
-    page, dismiss the consent modal, poll for a conclusive detection signal,
-    screenshot, retry on transient errors, and honor pause/cancel. Subclasses
-    supply only the platform-specific pieces:
+    The per-URL flow lives here once: check out a tab, rate-limit, load the page,
+    dismiss the consent modal, poll for a conclusive detection signal, screenshot,
+    retry on transient errors, and honor pause/cancel. Subclasses supply only the
+    platform-specific pieces:
 
-      - get_platform_name()             (required)
-      - _extract_id(url)                short id for logs + screenshot names
-      - _dismiss_consent(driver)        click-through fallback for the cookie modal
-      - _detect_status(driver, title)   the actual page inspection / triage
+      - get_platform_name()           (required)
+      - _extract_id(url)              short id for logs + screenshot names (sync)
+      - _dismiss_consent(tab)         click-through fallback for the cookie modal
+      - _detect_status(tab, title)    the actual page inspection / triage
 
-    The scraper instance is shared across worker threads, so no per-URL state is
-    stored on self; the page title is threaded through as a parameter.
+    One instance is shared across the concurrent tab coroutines, so no per-URL
+    state is stored on self; the page title is threaded through as a parameter.
+    Pause/cancel use threading.Events (set from the worker/HTTP thread) and are
+    polled between awaits.
     """
 
     cancel_event: threading.Event | None = None
@@ -57,14 +59,13 @@ class BaseScraper(ABC):
     RATE_LIMIT_MAX: float = 3.0
 
     # Timeouts / retries (subclasses may override).
-    DRIVER_POOL_TIMEOUT: int = 30    # max wait for a pooled driver
     SIGNAL_TIMEOUT: int = 15         # max wait for any detection signal after load
     SIGNAL_POLL_INTERVAL: float = 0.5
     MAX_RETRIES: int = 2
     RETRY_DELAY: float = 2.0
 
-    def __init__(self, driver_pool: WebDriverPool, log_callback: Callable | None = None) -> None:
-        self.driver_pool: WebDriverPool = driver_pool
+    def __init__(self, session: BrowserSession, log_callback: Callable | None = None) -> None:
+        self.session: BrowserSession = session
         self._log_callback: Callable | None = log_callback
         self.pause_event: threading.Event | None = None
         self.save_screenshots: bool = False
@@ -72,7 +73,7 @@ class BaseScraper(ABC):
         self.min_delay: float = self.RATE_LIMIT_MIN
         self.max_delay: float = self.RATE_LIMIT_MAX
         self.last_request_time: float = 0.0
-        self._rate_lock: threading.Lock = threading.Lock()
+        self._rate_lock: asyncio.Lock = asyncio.Lock()
 
     # --- platform hooks ---
 
@@ -84,11 +85,11 @@ class BaseScraper(ABC):
         """Short id used in log lines and screenshot filenames. Override per platform."""
         return url.rstrip("/").split("/")[-1][:20]
 
-    def _dismiss_consent(self, driver: WebDriver) -> None:
+    async def _dismiss_consent(self, tab: Tab) -> None:
         """Dismiss the platform's cookie-consent modal (fallback). Override per platform."""
         pass
 
-    def _detect_status(self, driver: WebDriver, initial_title: str = "") -> StatusResult | None:
+    async def _detect_status(self, tab: Tab, initial_title: str = "") -> StatusResult | None:
         """Inspect the current page; return (status, info) or None to keep polling."""
         raise NotImplementedError
 
@@ -103,10 +104,10 @@ class BaseScraper(ABC):
     def is_cancelled(self) -> bool:
         return self.cancel_event is not None and self.cancel_event.is_set()
 
-    def _check_pause(self) -> None:
-        if self.pause_event:
-            # Block until resumed (cheaper than polling).
-            self.pause_event.wait()
+    async def _check_pause(self) -> None:
+        # pause_event is the resume flag: set = run, clear = paused.
+        while self.pause_event is not None and not self.pause_event.is_set():
+            await asyncio.sleep(0.1)
 
     def _log(self, message: str, level: str = "info") -> None:
         if self.is_cancelled():
@@ -115,18 +116,15 @@ class BaseScraper(ABC):
             self._log_callback(message, level)
         print(message)
 
-    def _apply_rate_limit(self) -> None:
-        """Throttle requests across all worker threads sharing this scraper.
-
-        One instance is shared by every worker, so the lock is held through the
-        sleep: the shared timestamp acts as a true global spacer instead of
-        letting workers read it together and fire in a burst.
-        """
-        with self._rate_lock:
+    async def _apply_rate_limit(self) -> None:
+        """Throttle requests across all concurrent tab coroutines sharing this
+        scraper. The lock is held through the sleep so the shared timestamp acts
+        as a true global spacer instead of letting coroutines fire in a burst."""
+        async with self._rate_lock:
             delay = random.uniform(self.min_delay, self.max_delay)
             wait = delay - (time.time() - self.last_request_time)
             if wait > 0:
-                time.sleep(wait)
+                await asyncio.sleep(wait)
             self.last_request_time = time.time()
 
     # --- screenshots ---
@@ -136,7 +134,7 @@ class BaseScraper(ABC):
         if enabled:
             self.screenshot_base_path = Path(base_path) / "screenshots"
 
-    def _save_screenshot(self, driver: WebDriver, url: str, status: str) -> str:
+    async def _save_screenshot(self, tab: Tab, url: str, status: str) -> str:
         if not self.screenshot_base_path:
             return ""
         try:
@@ -145,7 +143,7 @@ class BaseScraper(ABC):
             screenshot_dir.mkdir(parents=True, exist_ok=True)
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             filepath = screenshot_dir / f"{rid}_{timestamp}.png"
-            driver.save_screenshot(str(filepath))
+            await tab.save_screenshot(str(filepath))
             print(f"Screenshot saved: {filepath.name}")
             return str(filepath)
         except Exception as e:
@@ -154,7 +152,7 @@ class BaseScraper(ABC):
 
     # --- shared harness ---
 
-    def check_url_status(self, url: str) -> ScrapingResult:
+    async def check_url_status(self, url: str) -> ScrapingResult:
         """Check a URL with automatic retries on transient errors."""
         result = ScrapingResult(url=url)
         for attempt in range(self.MAX_RETRIES + 1):
@@ -163,7 +161,7 @@ class BaseScraper(ABC):
                 result.info = "Processing was cancelled"
                 return result
 
-            result = self._check_url_once(url)
+            result = await self._check_url_once(url)
 
             # Retry only on transient Error; any decided status returns at once.
             if result.status != "Error":
@@ -177,10 +175,10 @@ class BaseScraper(ABC):
                     result.status = "Cancelled"
                     result.info = "Processing was cancelled"
                     return result
-                time.sleep(0.1)
+                await asyncio.sleep(0.1)
         return result
 
-    def _check_url_once(self, url: str) -> ScrapingResult:
+    async def _check_url_once(self, url: str) -> ScrapingResult:
         rid = self._extract_id(url)
         result = ScrapingResult(url=url)
 
@@ -189,49 +187,49 @@ class BaseScraper(ABC):
             result.info = "Processing was cancelled"
             return result
 
-        driver = None
+        tab = None
         try:
-            driver = self.driver_pool.get_driver(timeout=self.DRIVER_POOL_TIMEOUT)
+            tab = await self.session.acquire_tab()
 
             if self.is_cancelled():
                 result.status = "Cancelled"
                 result.info = "Processing was cancelled"
                 return result
 
-            self._check_pause()
-            self._apply_rate_limit()
+            await self._check_pause()
+            await self._apply_rate_limit()
 
-            # Load page; on timeout keep going and inspect whatever rendered.
+            # Load page; on timeout/error keep going and inspect whatever rendered.
             self._log(f"Loading page ({rid})")
             try:
-                driver.get(url)
-            except TimeoutException:
-                self._log(f"Page load timed out, checking partial content ({rid})", "warning")
+                await tab.get(url)
+            except Exception:
+                self._log(f"Page load issue, checking partial content ({rid})", "warning")
 
             # Capture the title before any consent redirect can replace it
             # (YouTube does this); platforms that ignore it just don't read it.
             initial_title = ""
             try:
-                initial_title = driver.title or ""
+                initial_title = await tab.evaluate("document.title") or ""
             except Exception:
                 pass
 
-            self._dismiss_consent(driver)
+            await self._dismiss_consent(tab)
 
             self._log(f"Waiting for signals ({rid})")
-            detection = self._poll_for_signals(driver, initial_title)
+            detection = await self._poll_for_signals(tab, initial_title)
 
             if detection is not None:
                 result.status, result.info = detection
                 if self.save_screenshots:
-                    result.screenshot_path = self._save_screenshot(driver, url, result.status)
+                    result.screenshot_path = await self._save_screenshot(tab, url, result.status)
                 return result
 
             result.status = "Unknown"
             result.info = "N/A"
             self._log(f"No signal after {self.SIGNAL_TIMEOUT}s ({rid})", "warning")
             if self.save_screenshots:
-                result.screenshot_path = self._save_screenshot(driver, url, result.status)
+                result.screenshot_path = await self._save_screenshot(tab, url, result.status)
             return result
 
         except Exception as e:
@@ -244,29 +242,22 @@ class BaseScraper(ABC):
                 self._log(f"Error: {result.error_message} ({rid})", "error")
             return result
         finally:
-            if driver:
-                if self.is_cancelled():
-                    pass  # pool shutdown will clean up
-                else:
-                    try:
-                        driver.current_url  # cheap responsiveness check
-                        self.driver_pool.return_driver(driver)
-                    except Exception as e:
-                        print(f"Warning: Driver unresponsive, discarding: {e}")
+            if tab is not None:
+                await self.session.release_tab(tab)
 
-    def _poll_for_signals(self, driver: WebDriver, initial_title: str = "") -> StatusResult | None:
+    async def _poll_for_signals(self, tab: Tab, initial_title: str = "") -> StatusResult | None:
         """Poll _detect_status until a conclusive signal appears or timeout."""
         start = time.time()
         while (time.time() - start) < self.SIGNAL_TIMEOUT:
             if self.is_cancelled():
                 return ("Cancelled", "Processing was cancelled")
-            self._check_pause()
-            detection = self._detect_status(driver, initial_title)
+            await self._check_pause()
+            detection = await self._detect_status(tab, initial_title)
             if detection is not None:
                 return detection
-            time.sleep(self.SIGNAL_POLL_INTERVAL)
+            await asyncio.sleep(self.SIGNAL_POLL_INTERVAL)
         return None
 
     def cleanup(self) -> None:
-        """Per-scraper cleanup; the driver pool cleans itself up."""
+        """Per-scraper cleanup; the browser session is stopped by the batch."""
         pass
