@@ -3,6 +3,7 @@ Service for managing processing runs within a project.
 """
 
 import csv
+import json
 from collections.abc import Callable
 from datetime import datetime
 from pathlib import Path
@@ -10,6 +11,7 @@ from pathlib import Path
 from utils.csv_handler import load_csv, save_csv, count_statuses
 from models.project_models import RunConfig, RunStatus
 from models.project_state import ProjectState
+from models.types import StatusSummary, StatusChange
 
 
 class RunService:
@@ -62,7 +64,8 @@ class RunService:
         run.duration_seconds = (run.completed_at - run.started_at).total_seconds()
 
         run.status_summary = self._compute_status_summary(project_state, run)
-        run.total_checked = sum(run.status_summary.values())
+        # .values() on a TypedDict is typed as object; every bucket is an int.
+        run.total_checked = sum(v for v in run.status_summary.values() if isinstance(v, int))
 
         completed_runs = [r for r in project_state.config.get_completed_runs() if r.id != run.id]
         run.is_baseline = len(completed_runs) == 0
@@ -78,6 +81,7 @@ class RunService:
             run.changes_summary = {}
 
         project_state.current_run = None
+        self._write_run_manifest(project_state, run)
         project_state.save()
 
     def abandon_run(self, project_state: ProjectState, run: RunConfig) -> None:
@@ -95,9 +99,33 @@ class RunService:
         if project_state.current_run and project_state.current_run.id == run.id:
             project_state.current_run = None
 
+        self._write_run_manifest(project_state, run)
         project_state.save()
 
-    def _compute_status_summary(self, project_state: ProjectState, run: RunConfig) -> dict[str, int]:
+    def _write_run_manifest(self, project_state: ProjectState, run: RunConfig) -> None:
+        """Write a self-describing run.json into the run folder, mirroring the
+        Run Info tab, so the folder can be interpreted without project.json."""
+        try:
+            decided = [r for r in project_state.config.runs
+                       if r.status in (RunStatus.COMPLETED, RunStatus.ABANDONED)]
+            run_number = next((i + 1 for i, r in enumerate(decided) if r.id == run.id), len(decided))
+            try:
+                total_urls = len(load_csv(str(project_state.urls_csv_path)))
+            except Exception:
+                total_urls = 0
+            manifest = {
+                "run_number": run_number,
+                "platform": project_state.config.platform,
+                "total_urls": total_urls,
+                **run.to_dict(),
+            }
+            run_dir = project_state.get_run_path(run.id)
+            run_dir.mkdir(parents=True, exist_ok=True)
+            (run_dir / "run.json").write_text(json.dumps(manifest, indent=2))
+        except Exception as e:
+            self._log(f"Failed to write run manifest for run {run.id}: {e}", "warning")
+
+    def _compute_status_summary(self, project_state: ProjectState, run: RunConfig) -> StatusSummary:
         results_path = project_state.get_run_results_path(run.id)
         if not results_path.exists():
             return {"live": 0, "removed": 0, "restricted": 0, "errors": 0, "unknown": 0, "login_required": 0}
@@ -109,7 +137,7 @@ class RunService:
             self._log(f"Failed to compute status summary for run {run.id}: {e}", "warning")
             return {"live": 0, "removed": 0, "restricted": 0, "errors": 0, "unknown": 0, "login_required": 0}
 
-    def _compute_changes(self, project_state: ProjectState, previous_run: RunConfig, current_run: RunConfig) -> list[dict]:
+    def _compute_changes(self, project_state: ProjectState, previous_run: RunConfig, current_run: RunConfig) -> list[StatusChange]:
         prev_path = project_state.get_run_results_path(previous_run.id)
         curr_path = project_state.get_run_results_path(current_run.id)
 
@@ -131,7 +159,7 @@ class RunService:
             prev_map = {r[url_col]: r["mcat_status"] for r in prev_rows}
             curr_map = {r[url_col]: r["mcat_status"] for r in curr_rows}
 
-            changes = []
+            changes: list[StatusChange] = []
             for url, new_status in curr_map.items():
                 old_status = prev_map.get(url)
                 if old_status and old_status != new_status:
@@ -146,14 +174,14 @@ class RunService:
             self._log(f"Failed to compute changes for run {current_run.id}: {e}", "warning")
             return []
 
-    def _summarize_changes(self, changes: list[dict]) -> dict[str, int]:
+    def _summarize_changes(self, changes: list[StatusChange]) -> dict[str, int]:
         summary: dict[str, int] = {}
         for ch in changes:
             key = f"{ch['previous_status'].lower()}_to_{ch['new_status'].lower()}"
             summary[key] = summary.get(key, 0) + 1
         return summary
 
-    def _write_changes_csv(self, project_state: ProjectState, run: RunConfig, changes: list[dict]) -> None:
+    def _write_changes_csv(self, project_state: ProjectState, run: RunConfig, changes: list[StatusChange]) -> None:
         changes_path = project_state.get_run_path(run.id) / "changes.csv"
         fieldnames = ["url", "previous_status", "new_status"]
         with open(changes_path, 'w', newline='', encoding='utf-8') as f:
@@ -161,5 +189,5 @@ class RunService:
             writer.writeheader()
             writer.writerows(changes)
 
-    def get_run_stats(self, project_state: ProjectState, run: RunConfig) -> dict[str, int]:
+    def get_run_stats(self, project_state: ProjectState, run: RunConfig) -> StatusSummary:
         return self._compute_status_summary(project_state, run)

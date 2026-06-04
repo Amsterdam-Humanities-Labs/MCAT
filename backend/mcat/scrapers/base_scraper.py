@@ -13,6 +13,13 @@ from selenium.webdriver.remote.webdriver import WebDriver
 from core.driver_manager import WebDriverPool
 
 
+# A conclusive detection outcome: (status, info). Aliased rather than made a
+# NamedTuple because it is always immediately unpacked into ScrapingResult
+# (`result.status, result.info = detection`) and never field-accessed, so the
+# alias documents the 5 detection signatures without churning every return site.
+StatusResult = tuple[str, str]
+
+
 @dataclass
 class ScrapingResult:
     """Standardized result format for all scrapers."""
@@ -81,7 +88,7 @@ class BaseScraper(ABC):
         """Dismiss the platform's cookie-consent modal (fallback). Override per platform."""
         pass
 
-    def _detect_status(self, driver: WebDriver, initial_title: str = "") -> tuple[str, str] | None:
+    def _detect_status(self, driver: WebDriver, initial_title: str = "") -> StatusResult | None:
         """Inspect the current page; return (status, info) or None to keep polling."""
         raise NotImplementedError
 
@@ -247,7 +254,7 @@ class BaseScraper(ABC):
                     except Exception as e:
                         print(f"Warning: Driver unresponsive, discarding: {e}")
 
-    def _poll_for_signals(self, driver: WebDriver, initial_title: str = "") -> tuple[str, str] | None:
+    def _poll_for_signals(self, driver: WebDriver, initial_title: str = "") -> StatusResult | None:
         """Poll _detect_status until a conclusive signal appears or timeout."""
         start = time.time()
         while (time.time() - start) < self.SIGNAL_TIMEOUT:

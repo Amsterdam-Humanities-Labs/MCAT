@@ -1,7 +1,7 @@
 from selenium.webdriver.common.by import By
 from selenium.webdriver.remote.webdriver import WebDriver
 
-from scrapers.base_scraper import BaseScraper
+from scrapers.base_scraper import BaseScraper, StatusResult
 from cookies.youtube_cookie_handler import dismiss_youtube_cookies
 
 
@@ -26,7 +26,7 @@ class YouTubeScraper(BaseScraper):
     def _dismiss_consent(self, driver: WebDriver) -> None:
         dismiss_youtube_cookies(driver, timeout=3)
 
-    def _detect_status(self, driver: WebDriver, initial_title: str = "") -> tuple[str, str] | None:
+    def _detect_status(self, driver: WebDriver, initial_title: str = "") -> StatusResult | None:
         """
         Check all detection signals on the current page state.
 

@@ -1,6 +1,7 @@
 // UI Components
 export { default as Badge } from './Badge.svelte';
 export { default as Button } from './Button.svelte';
+export { default as ButtonIcon } from './ButtonIcon.svelte';
 export { default as Checkbox } from './Checkbox.svelte';
 export { default as Dialog } from './Dialog.svelte';
 export { default as DialogActions } from './DialogActions.svelte';

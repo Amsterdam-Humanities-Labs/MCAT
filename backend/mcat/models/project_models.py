@@ -9,6 +9,8 @@ from enum import Enum
 from pathlib import Path
 import json
 
+from .types import StatusSummary, empty_status_summary
+
 
 class RunStatus(Enum):
     """Status of a processing run."""
@@ -32,7 +34,7 @@ class RunConfig:
     total_checked: int = 0
     changes_count: int = 0
     changes_summary: dict = field(default_factory=dict)
-    status_summary: dict = field(default_factory=dict)
+    status_summary: StatusSummary = field(default_factory=empty_status_summary)
 
     def to_dict(self) -> dict:
         """Convert to dictionary for JSON serialization."""
@@ -66,7 +68,7 @@ class RunConfig:
             total_checked=data.get("total_checked", 0),
             changes_count=data.get("changes_count", 0),
             changes_summary=data.get("changes_summary", {}),
-            status_summary=data.get("status_summary", {}),
+            status_summary=data.get("status_summary") or empty_status_summary(),
         )
 
     @property

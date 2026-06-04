@@ -71,6 +71,8 @@ export const api = {
     callBackend<{ success: boolean }>('/process/pause', 'POST'),
   resumeProcessing: () =>
     callBackend<{ success: boolean }>('/process/resume', 'POST'),
+  abandonProcessing: () =>
+    callBackend<{ success: boolean }>('/process/abandon', 'POST'),
   // Run data
   getRunChangedResults: (run_id: string) =>
     callBackend<{ columns: string[]; rows: Record<string, unknown>[] }>(

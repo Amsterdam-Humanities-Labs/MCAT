@@ -1,7 +1,7 @@
 from selenium.webdriver.common.by import By
 from selenium.webdriver.remote.webdriver import WebDriver
 
-from scrapers.base_scraper import BaseScraper
+from scrapers.base_scraper import BaseScraper, StatusResult
 from cookies.facebook_cookie_handler import dismiss_facebook_cookies
 
 
@@ -47,7 +47,7 @@ class FacebookScraper(BaseScraper):
     def _dismiss_consent(self, driver: WebDriver) -> None:
         dismiss_facebook_cookies(driver, timeout=3)
 
-    def _detect_status(self, driver: WebDriver, initial_title: str = "") -> tuple[str, str] | None:
+    def _detect_status(self, driver: WebDriver, initial_title: str = "") -> StatusResult | None:
         """
         Triage, in order:
           1. removal notice (strongest, mode-independent)

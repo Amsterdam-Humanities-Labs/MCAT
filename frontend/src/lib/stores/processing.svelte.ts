@@ -104,6 +104,16 @@ function createProcessingStore() {
       }
     },
 
+    async abandon() {
+      try {
+        const response = await api.abandonProcessing();
+        return response.success;
+      } catch (e) {
+        storeError = String(e);
+        return false;
+      }
+    },
+
     clearError() {
       storeError = null;
     },

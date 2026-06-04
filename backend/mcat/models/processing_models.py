@@ -7,6 +7,7 @@ from typing import Any
 from enum import Enum
 
 from .file_models import FileInfo, ColumnMapping
+from .types import StatusSummary, empty_status_summary
 
 
 class ProcessingState(Enum):
@@ -87,13 +88,6 @@ class ProcessingResult:
 
     success: bool = False
     rows: list[dict[str, Any]] | None = None
-    stats: dict[str, int] = field(default_factory=lambda: {
-        'live': 0,
-        'removed': 0,
-        'restricted': 0,
-        'errors': 0,
-        'unknown': 0,
-        'login_required': 0,
-    })
+    stats: StatusSummary = field(default_factory=empty_status_summary)
     processed_count: int = 0
     error_message: str = ""

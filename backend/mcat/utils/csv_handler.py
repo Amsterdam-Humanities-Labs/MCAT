@@ -3,6 +3,8 @@ import os
 import threading
 from collections import Counter
 
+from models.types import StatusSummary
+
 
 def load_csv(file_path: str) -> list[dict]:
     """Load CSV file with automatic delimiter detection. Returns list of dicts."""
@@ -60,7 +62,7 @@ def get_urls_from_column(rows: list[dict], url_column: str) -> list[str]:
     return urls
 
 
-def count_statuses(rows: list[dict], status_column: str = "mcat_status") -> dict[str, int]:
+def count_statuses(rows: list[dict], status_column: str = "mcat_status") -> StatusSummary:
     """Count statuses from result rows into standard summary buckets."""
     counts = Counter(r.get(status_column, "") for r in rows)
     return {

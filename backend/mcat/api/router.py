@@ -17,6 +17,7 @@ POST_ROUTES = {
     "/process/start": processing.start,
     "/process/pause": processing.pause,
     "/process/resume": processing.resume,
+    "/process/abandon": processing.abandon,
     "/run/abandon": run.abandon,
     "/run/changed-results": run.get_changed_results,
     "/run/results": run.get_results,

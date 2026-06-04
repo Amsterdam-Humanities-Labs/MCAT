@@ -6,12 +6,13 @@
     enabled: boolean;
     value: number;
     unit: 'minutes' | 'hours' | 'days';
+    disabled?: boolean;
     onToggle?: (enabled: boolean) => void;
     onChange?: (value: number, unit: 'minutes' | 'hours' | 'days') => void;
     class?: string;
   }
 
-  let { enabled, value, unit, onToggle, onChange, class: className }: Props = $props();
+  let { enabled, value, unit, disabled = false, onToggle, onChange, class: className }: Props = $props();
 
   const unitOptions = [
     { value: 'seconds', label: 'seconds' },
@@ -42,18 +43,19 @@
     checked={enabled}
     label="Repeat every"
     size="sm"
+    {disabled}
     onchange={(checked) => onToggle?.(checked)}
   />
   <TimeSelector
     {value}
     min={currentMin}
-    disabled={!enabled}
+    disabled={!enabled || disabled}
     onchange={(v) => onChange?.(v, unit)}
   />
   <Select
     options={unitOptions}
     value={unit}
-    disabled={!enabled}
+    disabled={!enabled || disabled}
     onchange={handleUnitChange}
   />
 </div>

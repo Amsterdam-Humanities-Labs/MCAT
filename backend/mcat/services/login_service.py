@@ -1,14 +1,12 @@
 import threading
 from collections.abc import Callable
-from pathlib import Path
 
 from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
-import chromedriver_autoinstaller
-import chromedriver_autoinstaller.utils as cdu
+from selenium.webdriver.chrome.service import Service
 
 from cookies.cookie_store import CookieStore
 from config.platform_profiles import get_profile
+from core.driver_manager import resolve_chromedriver_path, base_chrome_options
 
 
 class LoginService:
@@ -52,6 +50,7 @@ class LoginService:
         cookie_name = profile.login_cookie if profile else None
         platform = self._platform
         last_cookies: list[dict] = []
+        announced_login = False
 
         while self._driver is not None:
             try:
@@ -59,27 +58,74 @@ class LoginService:
                 if cookies:
                     last_cookies = cookies
 
+                # Announce login once for immediate toolbar feedback, but keep
+                # polling instead of returning, so consent cookies dismissed
+                # AFTER signing in are still captured. The authoritative, complete
+                # set is persisted on window close below.
                 session = next((c for c in cookies if c["name"] == cookie_name), None)
-                if session:
+                if session and not announced_login:
+                    announced_login = True
                     username = self._extract_username(cookies)
                     self._cookie_store.save_cookies(platform, cookies, username=username)
-                    self._log(f"Logged in as {username}")
+                    self._log(f"Logged in as {username}" if username else "Login detected")
                     if self._on_login:
                         self._on_login()
-                    return
             except Exception:
-                # Browser was closed by user — save whatever cookies we captured
+                # Browser was closed by user — persist the final, complete set
+                # (login + consent dismissed in any order) and report exactly
+                # what was captured, since this jar is the authoritative result.
                 if last_cookies:
                     username = self._extract_username(last_cookies)
                     self._cookie_store.save_cookies(platform, last_cookies, username=username)
-                    self._log("Browser setup saved")
+                    self._log_capture_summary(platform, last_cookies)
                     if self._on_login:
                         self._on_login()
+                else:
+                    self._log(
+                        f"Browser setup for {platform}: no cookies captured — nothing saved "
+                        f"(the window may have closed before the page finished loading).",
+                        "warning",
+                    )
                 self._driver = None
                 self._platform = None
                 return
 
             time.sleep(2)
+
+    def _log_capture_summary(self, platform: str, cookies: list[dict]) -> None:
+        """Report which consent / login cookies the setup session captured.
+
+        Classification uses the profile's reporting-only name sets; anything
+        unrecognised is counted as "other". Names only are ever logged, never
+        values. A missing consent set is surfaced as a warning because the
+        scraper modal will likely reappear without it.
+        """
+        profile = get_profile(platform)
+        consent_names = set(profile.consent_cookies) if profile else set()
+        login_names = set(profile.login_cookies) if profile else set()
+
+        names = [c.get("name", "") for c in cookies if c.get("name")]
+        consent = list(dict.fromkeys(n for n in names if n in consent_names))
+        login = list(dict.fromkeys(n for n in names if n in login_names))
+        other = max(0, len(set(names)) - len(consent) - len(login))
+
+        def seg(found: list[str], noun: str, empty: str) -> str:
+            if not found:
+                return empty
+            s = "" if len(found) == 1 else "s"
+            return f"{len(found)} {noun} cookie{s} ({', '.join(found)})"
+
+        consent_seg = seg(consent, "consent", "no consent cookies")
+        login_seg = seg(login, "login", "no login cookies (anonymous)")
+        extra = f", +{other} other" if other else ""
+        self._log(f"Browser setup for {platform}: captured {consent_seg}, {login_seg}{extra}.")
+
+        if not consent:
+            self._log(
+                f"No consent cookies captured for {platform} — the cookie banner may reappear "
+                f"during scraping. Dismiss it in the Set up browser window before closing.",
+                "warning",
+            )
 
     def logout(self, platform: str) -> bool:
         return self._cookie_store.delete_cookies(platform)
@@ -92,24 +138,11 @@ class LoginService:
         return match["value"] if match else ""
 
     def _create_visible_driver(self) -> webdriver.Chrome:
-        chrome_version = chromedriver_autoinstaller.get_chrome_version()
-        chromedriver_path = None
-        if chrome_version:
-            major = chrome_version.split('.')[0]
-            expected = Path(cdu.get_chromedriver_path()) / major / cdu.get_chromedriver_filename()
-            if expected.exists():
-                chromedriver_path = str(expected)
-        if not chromedriver_path:
-            chromedriver_path = chromedriver_autoinstaller.install()
-
-        opts = Options()
-        opts.add_argument("--no-sandbox")
-        opts.add_argument("--disable-dev-shm-usage")
-        opts.add_argument("--disable-blink-features=AutomationControlled")
-        opts.add_experimental_option("excludeSwitches", ["enable-automation"])
-        opts.add_experimental_option('useAutomationExtension', False)
+        # Visible (non-headless) driver for the Set up browser flow. Shares the
+        # base stealth/stability options with the pool, but keeps the real UA
+        # (Google blocks sign-in from the spoofed Windows UA) and is windowed.
+        opts = base_chrome_options()
         opts.add_argument("--window-size=1200,800")
-
-        driver = webdriver.Chrome(options=opts)
+        driver = webdriver.Chrome(service=Service(resolve_chromedriver_path()), options=opts)
         driver.set_page_load_timeout(30)
         return driver

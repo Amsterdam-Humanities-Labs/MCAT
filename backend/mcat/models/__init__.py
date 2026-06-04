@@ -5,6 +5,7 @@ from .processing_models import ProcessingJob, ProcessingStatus, ProcessingState
 from .project_models import ProjectConfig, RunConfig, RunStatus
 from .project_state import ProjectState
 from .import_result import UrlImportResult
+from .types import StatusSummary, StatusChange
 
 __all__ = [
     'FileInfo',
@@ -18,4 +19,6 @@ __all__ = [
     'RunStatus',
     'ProjectState',
     'UrlImportResult',
+    'StatusSummary',
+    'StatusChange',
 ]

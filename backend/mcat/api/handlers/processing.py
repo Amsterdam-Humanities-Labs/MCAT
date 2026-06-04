@@ -75,3 +75,27 @@ def resume(body: dict) -> dict:
     if success:
         log_buffer.info("Processing resumed")
     return {"success": success}
+
+
+def abandon(body: dict) -> dict:
+    """Abandon the active (running or paused) run.
+
+    Stops the live workers via cancel_processing() — which on its own leaves the
+    run record dangling in_progress, because the cancelled worker never fires its
+    on_completed callback — then finalizes the current run as abandoned, keeping
+    whatever partial results were already written. publish_project() refreshes the
+    timeline; cancel_processing() already pushed the CANCELLED state so the UI
+    returns to idle.
+    """
+    ctx = app_context
+    if not ctx.processing_service:
+        raise ValueError("No processing service")
+
+    success = ctx.processing_service.cancel_processing()
+
+    if ctx.current_project and ctx.current_project.current_run:
+        ctx.run_service.abandon_run(ctx.current_project, ctx.current_project.current_run)
+        log_buffer.info("Run abandoned")
+
+    publish_project()
+    return {"success": success}

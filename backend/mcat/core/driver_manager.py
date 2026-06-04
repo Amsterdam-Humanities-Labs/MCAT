@@ -1,6 +1,9 @@
+import atexit
 import os
+import platform
 import threading
 import time
+import weakref
 from collections.abc import Callable
 from pathlib import Path
 from queue import Queue
@@ -10,6 +13,74 @@ from selenium.webdriver.chrome.options import Options
 import chromedriver_autoinstaller
 
 from config.platform_profiles import get_profile
+
+
+# Every live pool registers here so a normal interpreter exit (e.g. the desktop
+# window being closed) still reaps its chromedriver processes even if the
+# explicit cleanup path was missed. WeakSet so pools can still be GC'd normally;
+# atexit does NOT fire on SIGKILL, so this is a safety net, not a guarantee.
+_live_pools: "weakref.WeakSet[WebDriverPool]" = weakref.WeakSet()
+_atexit_registered = False
+
+
+def _cleanup_all_pools() -> None:
+    for pool in list(_live_pools):
+        try:
+            pool.cleanup()
+        except Exception:
+            pass
+
+
+def resolve_chromedriver_path() -> str:
+    """Path to a usable chromedriver: the cached build matching the installed
+    Chrome major version if present, otherwise auto-installed."""
+    import chromedriver_autoinstaller.utils as cdu
+    chrome_version = chromedriver_autoinstaller.get_chrome_version()
+    if chrome_version:
+        major = chrome_version.split('.')[0]
+        expected = Path(cdu.get_chromedriver_path()) / major / cdu.get_chromedriver_filename()
+        if expected.exists():
+            return str(expected)
+    path = chromedriver_autoinstaller.install()
+    if not path:
+        raise RuntimeError("ChromeDriver auto-install returned no path")
+    return path
+
+
+def os_user_agent(major: str) -> str:
+    """A complete, current Chrome UA string matching the *real* host OS.
+
+    The OS token must agree with what Chrome reports independently of the UA —
+    navigator.platform and the Sec-CH-UA-Platform client hint are derived from
+    the actual OS, so a Windows UA on Linux/macOS is a self-contradiction and an
+    easy bot tell. We still set it explicitly (rather than letting Chrome use its
+    native UA) because headless Chrome otherwise advertises "HeadlessChrome",
+    which is its own giveaway; here we keep the real platform but the normal
+    "Chrome" token. `major` is the installed Chrome major version.
+    """
+    system = platform.system()
+    if system == "Darwin":
+        os_token = "Macintosh; Intel Mac OS X 10_15_7"
+    elif system == "Windows":
+        os_token = "Windows NT 10.0; Win64; x64"
+    else:  # Linux and anything else
+        os_token = "X11; Linux x86_64"
+    return (
+        f"Mozilla/5.0 ({os_token}) AppleWebKit/537.36 "
+        f"(KHTML, like Gecko) Chrome/{major}.0.0.0 Safari/537.36"
+    )
+
+
+def base_chrome_options() -> Options:
+    """Chrome options shared by the headless pool and the visible login driver:
+    stability plus the anti-bot-detection flags."""
+    opts = Options()
+    opts.add_argument("--no-sandbox")
+    opts.add_argument("--disable-dev-shm-usage")
+    opts.add_argument("--disable-blink-features=AutomationControlled")
+    opts.add_experimental_option("excludeSwitches", ["enable-automation"])
+    opts.add_experimental_option("useAutomationExtension", False)
+    return opts
 
 
 class WebDriverPool:
@@ -30,6 +101,13 @@ class WebDriverPool:
         self.all_drivers: list[webdriver.Chrome] = []
         self.lock: threading.Lock = threading.Lock()
 
+        # Register for best-effort teardown on interpreter exit.
+        global _atexit_registered
+        _live_pools.add(self)
+        if not _atexit_registered:
+            atexit.register(_cleanup_all_pools)
+            _atexit_registered = True
+
         # Initialize the pool
         self._initialize_pool()
 
@@ -48,31 +126,26 @@ class WebDriverPool:
 
     def _setup_chromedriver(self) -> None:
         """Install and setup ChromeDriver automatically."""
-        import chromedriver_autoinstaller.utils as cdu
-        # Check if chromedriver is already installed at the expected path
-        chrome_version = chromedriver_autoinstaller.get_chrome_version()
-        if chrome_version:
-            major = chrome_version.split('.')[0]
-            expected = Path(cdu.get_chromedriver_path()) / major / cdu.get_chromedriver_filename()
-            if expected.exists():
-                self.chromedriver_path = str(expected)
-                return
         try:
-            self.chromedriver_path = chromedriver_autoinstaller.install()
+            self.chromedriver_path = resolve_chromedriver_path()
         except Exception as e:
             raise Exception(f"Failed to install ChromeDriver: {e}")
 
     def _create_driver_options(self) -> Options:
-        """Create Chrome options for driver instances."""
-        chrome_options = Options()
+        """Create Chrome options for headless pool drivers."""
+        chrome_options = base_chrome_options()
 
         if self.headless:
-            chrome_options.add_argument("--headless")
+            # New headless runs the full Chrome (GPU, extensions, complete feature
+            # set) instead of the old stripped-down headless shell, so its
+            # fingerprint is much closer to a real browser.
+            chrome_options.add_argument("--headless=new")
 
-        # Performance and stability options
-        chrome_options.add_argument("--no-sandbox")
-        chrome_options.add_argument("--disable-dev-shm-usage")
-        chrome_options.add_argument("--disable-gpu")
+        # Performance and stability options. --disable-gpu is deliberately NOT
+        # set: it disables WebGL entirely (renderer reports null), which is a
+        # strong bot tell since real browsers always expose WebGL. Without it,
+        # new headless provides WebGL (SwiftShader in software, or the real GPU
+        # when present). Verified via tests/experiments/fingerprint_probe.py.
         chrome_options.add_argument("--disable-extensions")
         chrome_options.add_argument("--disable-plugins")
         chrome_options.add_argument("--disable-popup-blocking")
@@ -88,22 +161,14 @@ class WebDriverPool:
         chrome_options.add_argument("--disable-media-session-api")
         chrome_options.add_argument("--autoplay-policy=no-user-gesture-required")
 
-        # User agent: must be a complete, current Chrome UA. A malformed token
-        # (missing "Chrome/<major>.0.0.0 Safari/537.36") makes some sites such as
-        # Instagram serve degraded media (the main post image never loads). Built
-        # from the installed Chrome so it tracks the real version.
+        # User agent: a complete, current Chrome UA whose OS token matches the
+        # real host. It must be well-formed — a malformed token (missing
+        # "Chrome/<major>.0.0.0 Safari/537.36") makes some sites such as Instagram
+        # serve degraded media — and it must match the actual OS, since Chrome
+        # reports the real platform via client hints regardless of this string.
+        # Built from the installed Chrome version so it tracks the real browser.
         major = (chromedriver_autoinstaller.get_chrome_version() or "124.0").split(".")[0]
-        chrome_options.add_argument(
-            f"--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
-            f"(KHTML, like Gecko) Chrome/{major}.0.0.0 Safari/537.36"
-        )
-
-        # Disable automation flags to avoid bot detection
-        chrome_options.add_experimental_option("excludeSwitches", ["enable-automation"])
-        chrome_options.add_experimental_option('useAutomationExtension', False)
-
-        # Disable WebDriver flag that sites check for bots
-        chrome_options.add_argument('--disable-blink-features=AutomationControlled')
+        chrome_options.add_argument(f"--user-agent={os_user_agent(major)}")
 
         return chrome_options
 
@@ -124,12 +189,18 @@ class WebDriverPool:
     def _initialize_pool(self) -> None:
         """Initialize the driver pool with browser instances."""
         self._log(f"Initializing WebDriver pool with {self.pool_size} instances...")
-        chrome_options = self._create_driver_options()
-        service = Service(self.chromedriver_path)
 
         for i in range(self.pool_size):
             try:
-                driver = webdriver.Chrome(service=service, options=chrome_options)
+                # Each driver gets its OWN Service and Options. A single shared
+                # Service only retains a reference to its most recently launched
+                # chromedriver, so cleanup() could reap just the last one and
+                # leaked the rest (browser closed, chromedriver server orphaned);
+                # reusing a started Service/Options can also fail later drivers
+                # outright. A fresh pair keeps driver.service.process correct for
+                # every driver so each chromedriver is reaped on cleanup.
+                service = Service(self.chromedriver_path)
+                driver = webdriver.Chrome(service=service, options=self._create_driver_options())
                 driver.set_page_load_timeout(30)
                 if self._cookies:
                     self._inject_cookies(driver)
@@ -189,9 +260,32 @@ class WebDriverPool:
 
             self.available_drivers.put(driver)
         elif driver:
-            # Pool was cleaned up but worker still has driver - quit it
+            # Pool was cleaned up but worker still has driver - dispose it
+            self._dispose_driver(driver)
+
+    def _dispose_driver(self, driver: webdriver.Chrome) -> None:
+        """Quit a driver and make sure its own chromedriver process is reaped.
+
+        quit() normally stops the chromedriver via service.stop(), but if it
+        raises (unresponsive browser) the server can survive — so we kill its
+        process directly as a fallback and wait() to avoid leaving a zombie.
+        Relies on each driver owning its own Service (see _initialize_pool).
+        """
+        process = None
+        try:
+            process = driver.service.process
+        except Exception:
+            pass
+
+        try:
+            driver.quit()
+        except Exception as e:
+            print(f"Warning: driver.quit() failed: {e}", flush=True)
+
+        if process and process.poll() is None:
             try:
-                driver.quit()
+                process.kill()
+                process.wait(timeout=5)
             except Exception:
                 pass
 
@@ -204,20 +298,7 @@ class WebDriverPool:
 
         with self.lock:
             for driver in self.all_drivers:
-                process = None
-                try:
-                    process = driver.service.process
-                except Exception:
-                    pass
-
-                try:
-                    driver.implicitly_wait(1)
-                    driver.quit()
-                except Exception as e:
-                    print(f"Warning: driver.quit() failed: {e}", flush=True)
-
-                if process and process.poll() is None:
-                    process.kill()
+                self._dispose_driver(driver)
 
             self.all_drivers.clear()
 
