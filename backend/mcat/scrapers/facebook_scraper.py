@@ -21,6 +21,10 @@ class FacebookScraper(BaseScraper):
         "this content has been removed",
     )
 
+    # og:title / page-title values that are generic chrome (login or error
+    # pages), never a real post — used to guard the metadata fallbacks.
+    GENERIC_TITLES = {"facebook", "log in to facebook", "log into facebook"}
+
     def get_platform_name(self) -> str:
         return "facebook"
 
@@ -45,51 +49,55 @@ class FacebookScraper(BaseScraper):
 
     def _detect_status(self, driver: WebDriver, initial_title: str = "") -> tuple[str, str] | None:
         """
-        Check all detection signals on current page state.
-        Returns (status, info) or None if no signal yet.
+        Triage, in order:
+          1. removal notice (strongest, mode-independent)
+          2. the rendered post element (reliable anonymous and logged-in)
+          3. content-specific og:title / page title
 
-        Triage: negative signals first, then positive.
+        The metadata fallbacks (3) must be content-specific: a non-empty
+        og:title or title is NOT enough on its own, because Facebook serves a
+        generic "Facebook" / "Log in to Facebook" title on login and error
+        pages, which would otherwise be misread as Live.
+
+        There is deliberately no login-wall branch: the body always contains
+        "log in" and the login form is embedded on every anonymous page, so
+        there is no reliable per-post login signal. An undecided page returns
+        None -> Unknown for the human to judge from the screenshot.
         """
         try:
             page_text = driver.find_element(By.TAG_NAME, "body").text.lower()
         except Exception:
             return None
 
-        # --- Negative signals ---
-
+        # 1. Removal notice
         for phrase in self.REMOVAL_PHRASES:
             if phrase in page_text:
                 return ("Removed", phrase)
 
-        # --- Positive signals ---
-
-        # Article element
+        # 2. The rendered post itself
         try:
             driver.find_element(By.CSS_SELECTOR, 'div[role="article"]')
             return ("Live", "N/A")
         except Exception:
             pass
 
-        # og:title meta tag
+        # 3a. og:title, but only if it carries real content
         try:
             meta = driver.find_element(By.CSS_SELECTOR, 'meta[property="og:title"]')
-            content = meta.get_attribute("content")
-            if content:
+            content = (meta.get_attribute("content") or "").strip()
+            if content and content.lower() not in self.GENERIC_TITLES:
                 return ("Live", "N/A")
         except Exception:
             pass
 
-        # Page title pattern: "Post text - Page Name | Facebook"
+        # 3b. page title "<content> | Facebook" — check the lead before the suffix
         try:
-            title = driver.title
-            if title and title != "Facebook" and " | Facebook" in title:
-                return ("Live", "N/A")
+            low = (driver.title or "").strip().lower().removeprefix("(1) ").strip()
+            if " | facebook" in low:
+                lead = low.split(" | facebook")[0].strip()
+                if lead and lead not in self.GENERIC_TITLES:
+                    return ("Live", "N/A")
         except Exception:
             pass
-
-        # --- Login detection ---
-
-        if "log in" in page_text and "create new account" in page_text:
-            return ("Login Required", "N/A")
 
         return None
