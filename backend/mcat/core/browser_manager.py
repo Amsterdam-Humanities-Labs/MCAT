@@ -23,6 +23,10 @@ BROWSER_ARGS = [
     "--disable-dev-shm-usage",
     "--mute-audio",
     "--disable-background-media-download",
+    # Disable Cast/Media Router: at startup it mDNS/SSDP-broadcasts on the LAN to
+    # discover Chromecasts, which trips macOS's "find devices on local network"
+    # permission prompt. The app never casts, so turn it off.
+    "--disable-features=MediaRouter",
 ]
 
 

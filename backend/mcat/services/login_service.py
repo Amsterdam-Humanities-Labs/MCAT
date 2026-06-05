@@ -63,7 +63,10 @@ class LoginService:
         # in the visible setup window (chromedriver used to hide it automatically).
         browser = await zd.start(
             headless=False, sandbox=False,
-            browser_args=["--window-size=1200,800", "--disable-dev-shm-usage", "--test-type"],
+            browser_args=["--window-size=1200,800", "--disable-dev-shm-usage", "--test-type",
+                          # No Cast/Media Router LAN discovery -> no macOS
+                          # "find devices on local network" prompt.
+                          "--disable-features=MediaRouter"],
         )
         last_cookies: list[dict] = []
         announced = False
