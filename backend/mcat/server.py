@@ -6,6 +6,7 @@ Lean HTTP server entry point. Business logic is in api/handlers/.
 
 import http.client
 import json
+import mimetypes
 import socket
 import sys
 import threading
@@ -49,6 +50,11 @@ def find_available_port(start_port: int, max_attempts: int = 10) -> int:
 
 class MCATHandler(BaseHTTPRequestHandler):
     """HTTP request handler for MCAT API."""
+
+    # In production this is set to the built frontend dir so the SPA is served
+    # from the same origin as the API. It stays None in dev, where Vite serves
+    # the SPA over http and only the API hits this server.
+    static_dir: "Path | None" = None
 
     def _send_json(self, data: dict, status: int = 200):
         """Send JSON response."""
@@ -97,8 +103,34 @@ class MCATHandler(BaseHTTPRequestHandler):
             except Exception as e:
                 print(f"[ERROR] GET {path}: {e}", flush=True)
                 self._send_error(str(e))
+        elif self.static_dir is not None:
+            self._serve_static(path)
         else:
             self._send_error("Not found", 404)
+
+    def _serve_static(self, path: str) -> None:
+        """Serve the built SPA from static_dir (same origin as the API). Loading
+        the UI from here instead of file:// is what lets it fetch the backend:
+        macOS WKWebView blocks a file:// page from reaching http://127.0.0.1.
+        Unknown paths fall back to index.html so the SPA can route them."""
+        assert self.static_dir is not None
+        root = self.static_dir.resolve()
+        target = (root / (path.lstrip("/") or "index.html")).resolve()
+        if not target.is_relative_to(root):
+            self._send_error("Forbidden", 403)
+            return
+        if not target.is_file():
+            target = root / "index.html"
+            if not target.is_file():
+                self._send_error("Not found", 404)
+                return
+        ctype = mimetypes.guess_type(str(target))[0] or "application/octet-stream"
+        data = target.read_bytes()
+        self.send_response(200)
+        self.send_header("Content-Type", ctype)
+        self.send_header("Content-Length", str(len(data)))
+        self.end_headers()
+        self.wfile.write(data)
 
     def _handle_sse(self):
         """Handle Server-Sent Events connection."""

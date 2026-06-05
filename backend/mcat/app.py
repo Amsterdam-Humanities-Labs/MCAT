@@ -100,7 +100,12 @@ def main():
         vite_proc, vite_port = start_vite()
         frontend_url = f"http://127.0.0.1:{vite_port}?port={port}"
     else:
-        frontend_url = str(DIST_DIR / "index.html") + f"?port={port}"
+        # Serve the built SPA from the backend itself so the UI and API share one
+        # origin (http://127.0.0.1:port). Loading it from file:// instead makes
+        # macOS WKWebView block every fetch to the http backend: the UI renders
+        # but all buttons/API calls silently fail.
+        MCATHandler.static_dir = DIST_DIR
+        frontend_url = f"http://127.0.0.1:{port}/?port={port}"
 
     try:
         import webview
