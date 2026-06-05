@@ -31,7 +31,7 @@ a = Analysis(
     excludes=[
         "PyQt5", "PyQt6", "PySide2", "PySide6", "tkinter",
         "unittest", "test", "tests",
-        "email", "html", "http.server", "xmlrpc",
+        "xmlrpc",
         "pydoc", "doctest", "argparse",
         "ftplib", "imaplib", "smtplib", "poplib", "nntplib", "telnetlib",
         "turtle", "turtledemo",
