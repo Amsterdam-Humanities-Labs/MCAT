@@ -15,7 +15,7 @@ BACKEND_MCAT = Path(__file__).resolve().parents[2] / "backend" / "mcat"
 sys.path.insert(0, str(BACKEND_MCAT))
 
 import zendriver as zd  # noqa: E402
-from core.driver_manager import resolved_user_agent  # noqa: E402
+from core.browser_manager import resolved_user_agent  # noqa: E402
 
 FP_JS = r"""
 (() => {

@@ -1,11 +1,9 @@
-"""Async browser layer for zendriver — replaces the Selenium WebDriverPool.
+"""Async browser layer: one zendriver Chrome process driven over CDP, with a
+fixed pool of tabs.
 
-One Chrome process (CDP, no chromedriver) with a fixed pool of tabs. The
-canonical cookie jar (consent + optional login) is injected ONCE at startup and
-shared by all tabs; there is deliberately no per-request wipe (it gave no
-isolation benefit that mattered and presented an abnormal, flaggable session
-state). Concurrency is bounded by the tab pool: acquire_tab() blocks while all
-tabs are busy. Clean teardown is a single browser.stop() — no process leak class.
+The canonical cookie jar (consent + optional login) is injected once at startup
+and shared by all tabs. Concurrency is bounded by the tab pool: acquire_tab()
+blocks while all tabs are busy. Teardown is a single browser.stop().
 """
 import asyncio
 import functools
@@ -18,9 +16,9 @@ import zendriver as zd
 from zendriver import cdp
 from zendriver.core.config import find_executable
 
-# Perf/stability flags only. NOT the old Selenium stealth flags — zendriver masks
-# automation itself (verified passing bot.sannysoft without them) — and NOT
-# --disable-gpu, which disables WebGL entirely (a bot tell).
+# Perf/stability flags only. zendriver masks automation itself, so no stealth
+# flags are needed; --disable-gpu is omitted on purpose because it disables WebGL
+# entirely, which is a bot tell.
 BROWSER_ARGS = [
     "--disable-dev-shm-usage",
     "--mute-audio",
@@ -30,8 +28,8 @@ BROWSER_ARGS = [
 
 @functools.lru_cache(maxsize=1)
 def _chrome_major() -> str:
-    """Installed Chrome major version, via zendriver's browser finder + --version
-    (no chromedriver_autoinstaller). Cached; falls back to a recent version."""
+    """Installed Chrome major version, via zendriver's browser finder + --version.
+    Cached; falls back to a recent version if detection fails."""
     try:
         out = subprocess.run([str(find_executable()), "--version"],
                              capture_output=True, text=True, timeout=5).stdout
@@ -69,8 +67,8 @@ def resolved_user_agent() -> str:
 
 
 def to_cookie_param(c: dict) -> cdp.network.CookieParam:
-    """Convert a stored cookie dict (Selenium-era keys) to a zendriver
-    CookieParam. Phase 6 may move/refine this alongside cookie_store."""
+    """Convert a stored cookie dict (the on-disk jar format) to a zendriver
+    CookieParam, for injecting saved cookies into a tab."""
     cdp_dict: dict = {
         "name": c["name"],
         "value": c["value"],
@@ -89,7 +87,7 @@ def to_cookie_param(c: dict) -> cdp.network.CookieParam:
 
 def cookie_to_dict(c) -> dict:
     """Inverse of to_cookie_param: a zendriver/CDP Cookie -> the stored dict
-    format (Selenium-era keys), for capturing cookies during Set up browser."""
+    (on-disk jar) format, for capturing cookies during Set up browser."""
     d: dict = {
         "name": c.name,
         "value": c.value,
@@ -135,6 +133,7 @@ class BrowserSession:
         self._log(f"Starting browser with {pool_size} tabs...")
         browser = await zd.start(
             headless=headless,
+            sandbox=False,
             user_agent=resolved_user_agent(),
             browser_args=BROWSER_ARGS,
             browser_executable_path=browser_executable_path,

@@ -6,9 +6,6 @@ from scrapers.base_scraper import BaseScraper, StatusResult
 class InstagramScraper(BaseScraper):
     """Instagram post status checker (detection only; flow is in BaseScraper)."""
 
-    RATE_LIMIT_MIN = 1.5
-    RATE_LIMIT_MAX = 3.5
-
     REMOVAL_PHRASES = (
         "post isn't available",
         "sorry, this page isn't available",
@@ -25,8 +22,8 @@ class InstagramScraper(BaseScraper):
             parts = url.rstrip('/').split('/')
             for i, part in enumerate(parts):
                 if part in ('p', 'reel', 'tv') and i + 1 < len(parts):
-                    return parts[i + 1][:20]
-            return url.split('/')[-1][:20]
+                    return parts[i + 1][:self.ID_MAX_LEN]
+            return url.split('/')[-1][:self.ID_MAX_LEN]
         except Exception:
             return "unknown"
 

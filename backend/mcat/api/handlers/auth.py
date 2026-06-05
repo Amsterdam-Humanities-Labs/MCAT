@@ -25,6 +25,13 @@ def _get_login_service() -> LoginService:
     return _login_service
 
 
+def login_in_progress() -> bool:
+    """True while a Set up browser capture is running (window open) or its final
+    cookie save is still finalizing. A run started in this window could load the
+    cookie jar before the just-captured cookies are written."""
+    return _login_service is not None and _login_service.is_active
+
+
 def start_login(body: dict) -> dict:
     service = _get_login_service()
     project = app_context.current_project

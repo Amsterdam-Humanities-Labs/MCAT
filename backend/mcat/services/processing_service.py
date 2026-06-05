@@ -264,8 +264,8 @@ class ProcessingService:
                 return
 
             # The async scraping batch runs in a fresh event loop owned by this
-            # worker thread; the threading state machine, pause/cancel events and
-            # SSE above this line are unchanged.
+            # worker thread; the surrounding threading state machine, pause/cancel
+            # events and SSE stay synchronous.
             result = asyncio.run(processor.process_csv_async(
                 csv_path=temp_csv_path,
                 platform=job.platform,

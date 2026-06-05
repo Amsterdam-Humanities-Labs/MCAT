@@ -8,7 +8,7 @@ from config.platform_profiles import get_profile
 
 
 class CookieStore:
-    """Save and load Selenium session cookies per platform, scoped to a project folder."""
+    """Save and load session cookies per platform, scoped to a project folder."""
 
     def __init__(self, project_path: Path):
         self._dir = Path(project_path) / "cookies"

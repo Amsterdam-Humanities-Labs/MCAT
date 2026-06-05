@@ -11,7 +11,7 @@ class AppConfig:
         """Load scraper settings with defaults."""
         return {
             'timeout': 30,
-            'max_workers': 3,
+            'max_zendriver_tabs': 3,
             'headless': True
         }
 

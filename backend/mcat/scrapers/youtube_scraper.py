@@ -6,9 +6,6 @@ from scrapers.base_scraper import BaseScraper, StatusResult
 class YouTubeScraper(BaseScraper):
     """YouTube video status checker (detection only; flow is in BaseScraper)."""
 
-    RATE_LIMIT_MIN = 1.0
-    RATE_LIMIT_MAX = 3.0
-
     REMOVAL_PHRASES = (
         'video unavailable', 'this video is not available',
         "this video isn't available", "video isn't available anymore",

@@ -59,7 +59,12 @@ class LoginService:
         cookie_name = profile.login_cookie
         # Visible window, real UA (no spoof — Google blocks sign-in from a
         # spoofed Windows UA; zendriver's native UA matches the host OS).
-        browser = await zd.start(headless=False, browser_args=["--window-size=1200,800"])
+        # --test-type suppresses Chrome's "unsupported flag --no-sandbox" infobar
+        # in the visible setup window (chromedriver used to hide it automatically).
+        browser = await zd.start(
+            headless=False, sandbox=False,
+            browser_args=["--window-size=1200,800", "--disable-dev-shm-usage", "--test-type"],
+        )
         last_cookies: list[dict] = []
         announced = False
         try:
@@ -85,7 +90,7 @@ class LoginService:
                     if self._on_login:
                         self._on_login()
 
-                await asyncio.sleep(2)
+                await asyncio.sleep(0.5)
         finally:
             # Window closed (or error) -> persist the final, complete jar.
             if last_cookies:

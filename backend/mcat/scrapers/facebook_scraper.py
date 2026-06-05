@@ -6,9 +6,6 @@ from scrapers.base_scraper import BaseScraper, StatusResult
 class FacebookScraper(BaseScraper):
     """Facebook post status checker (detection only; flow is in BaseScraper)."""
 
-    RATE_LIMIT_MIN = 1.5
-    RATE_LIMIT_MAX = 3.5
-
     REMOVAL_PHRASES = (
         "this content isn't available",
         "this page isn't available",
@@ -29,16 +26,16 @@ class FacebookScraper(BaseScraper):
     def _extract_id(self, url: str) -> str:
         try:
             if "fbid=" in url:
-                return url.split("fbid=")[1].split("&")[0][:20]
+                return url.split("fbid=")[1].split("&")[0][:self.ID_MAX_LEN]
             if "story_fbid=" in url:
-                return url.split("story_fbid=")[1].split("&")[0][:20]
+                return url.split("story_fbid=")[1].split("&")[0][:self.ID_MAX_LEN]
             if "?v=" in url:
-                return url.split("?v=")[1].split("&")[0][:20]
+                return url.split("?v=")[1].split("&")[0][:self.ID_MAX_LEN]
             parts = url.rstrip("/").split("/")
             for i, part in enumerate(parts):
                 if part in ("posts", "videos", "reel", "permalink") and i + 1 < len(parts):
-                    return parts[i + 1].split("?")[0][:20]
-            return parts[-1].split("?")[0][:20]
+                    return parts[i + 1].split("?")[0][:self.ID_MAX_LEN]
+            return parts[-1].split("?")[0][:self.ID_MAX_LEN]
         except Exception:
             return "unknown"
 

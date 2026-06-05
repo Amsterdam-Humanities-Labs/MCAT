@@ -54,15 +54,29 @@ class BaseScraper(ABC):
     cancel_event: threading.Event | None = None
     pause_event: threading.Event | None = None
 
-    # Rate limiting bounds in seconds (subclasses override).
-    RATE_LIMIT_MIN: float = 1.0
-    RATE_LIMIT_MAX: float = 3.0
+    # Rate limiting bounds in seconds (same for every platform).
+    RATE_LIMIT_MIN: float = 1.5
+    RATE_LIMIT_MAX: float = 3.5
+
+    # Max length of the short id used in log lines and screenshot filenames.
+    ID_MAX_LEN: int = 20
 
     # Timeouts / retries (subclasses may override).
     SIGNAL_TIMEOUT: int = 15         # max wait for any detection signal after load
     SIGNAL_POLL_INTERVAL: float = 0.5
     MAX_RETRIES: int = 2
     RETRY_DELAY: float = 2.0
+
+    # Per-operation timeouts (seconds): bound every zendriver tab/CDP call so a
+    # wedged page or connection can't hang the whole batch (a single un-timed
+    # await would block asyncio.gather forever, leaving the run stuck and the
+    # processing state unable to return to idle — i.e. no further runs).
+    PAGE_LOAD_TIMEOUT: float = 30.0
+    DETECT_TIMEOUT: float = 8.0
+    SCREENSHOT_TIMEOUT: float = 15.0
+    EVAL_TIMEOUT: float = 5.0
+    SCREENSHOT_SETTLE_TIMEOUT: float = 10.0  # max wait for a Live post to paint (only when screenshotting)
+    RENDER_MIN_IMAGE_WIDTH: int = 500        # an image this wide = post media painted (vs avatars/icons)
 
     def __init__(self, session: BrowserSession, log_callback: Callable | None = None) -> None:
         self.session: BrowserSession = session
@@ -83,7 +97,7 @@ class BaseScraper(ABC):
 
     def _extract_id(self, url: str) -> str:
         """Short id used in log lines and screenshot filenames. Override per platform."""
-        return url.rstrip("/").split("/")[-1][:20]
+        return url.rstrip("/").split("/")[-1][:self.ID_MAX_LEN]
 
     async def _dismiss_consent(self, tab: Tab) -> None:
         """Dismiss the platform's cookie-consent modal (fallback). Override per platform."""
@@ -143,12 +157,29 @@ class BaseScraper(ABC):
             screenshot_dir.mkdir(parents=True, exist_ok=True)
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             filepath = screenshot_dir / f"{rid}_{timestamp}.png"
-            await tab.save_screenshot(str(filepath))
+            await asyncio.wait_for(tab.save_screenshot(str(filepath)), timeout=self.SCREENSHOT_TIMEOUT)
             print(f"Screenshot saved: {filepath.name}")
             return str(filepath)
         except Exception as e:
             print(f"Warning: Screenshot failed for {url}: {e}")
             return ""
+
+    async def _wait_for_render(self, tab: Tab) -> None:
+        """Wait until a post-media-sized image has painted, so a Live-post
+        screenshot shows the post rather than a loading skeleton. The width
+        threshold separates real post media (wide) from page chrome like avatars
+        and icons (small). Returns as soon as one loads; capped by
+        SCREENSHOT_SETTLE_TIMEOUT so it never stalls the batch."""
+        js = f"[...document.querySelectorAll('img')].some(i => i.naturalWidth > {self.RENDER_MIN_IMAGE_WIDTH})"
+        start = time.time()
+        while (time.time() - start) < self.SCREENSHOT_SETTLE_TIMEOUT:
+            try:
+                ready = await asyncio.wait_for(tab.evaluate(js), timeout=self.EVAL_TIMEOUT)
+            except Exception:
+                ready = False
+            if ready:
+                return
+            await asyncio.sleep(0.4)
 
     # --- shared harness ---
 
@@ -202,7 +233,7 @@ class BaseScraper(ABC):
             # Load page; on timeout/error keep going and inspect whatever rendered.
             self._log(f"Loading page ({rid})")
             try:
-                await tab.get(url)
+                await asyncio.wait_for(tab.get(url), timeout=self.PAGE_LOAD_TIMEOUT)
             except Exception:
                 self._log(f"Page load issue, checking partial content ({rid})", "warning")
 
@@ -210,7 +241,7 @@ class BaseScraper(ABC):
             # (YouTube does this); platforms that ignore it just don't read it.
             initial_title = ""
             try:
-                initial_title = await tab.evaluate("document.title") or ""
+                initial_title = await asyncio.wait_for(tab.evaluate("document.title"), timeout=self.EVAL_TIMEOUT) or ""
             except Exception:
                 pass
 
@@ -222,6 +253,12 @@ class BaseScraper(ABC):
             if detection is not None:
                 result.status, result.info = detection
                 if self.save_screenshots:
+                    # Detection can finish (e.g. via an og: meta tag) before the
+                    # post image paints; let a Live post render so the screenshot
+                    # isn't a skeleton. Removed/restricted pages are already at
+                    # their terminal state, so shoot immediately.
+                    if result.status == "Live":
+                        await self._wait_for_render(tab)
                     result.screenshot_path = await self._save_screenshot(tab, url, result.status)
                 return result
 
@@ -252,7 +289,11 @@ class BaseScraper(ABC):
             if self.is_cancelled():
                 return ("Cancelled", "Processing was cancelled")
             await self._check_pause()
-            detection = await self._detect_status(tab, initial_title)
+            try:
+                detection = await asyncio.wait_for(
+                    self._detect_status(tab, initial_title), timeout=self.DETECT_TIMEOUT)
+            except asyncio.TimeoutError:
+                detection = None  # wedged detect — retry until SIGNAL_TIMEOUT
             if detection is not None:
                 return detection
             await asyncio.sleep(self.SIGNAL_POLL_INTERVAL)

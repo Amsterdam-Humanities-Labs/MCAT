@@ -6,7 +6,7 @@ service, and the API but still have a known, stable set of keys — so a typo in
 a key is a type error instead of a silently-wrong count.
 
 Genuinely dynamic dicts are intentionally NOT modelled here: CSV rows
-(`list[dict]`, columns are user data), selenium cookie dicts (external shape),
+(`list[dict]`, columns are user data), browser cookie dicts (external shape),
 and `changes_summary` (keys like ``live_to_removed`` are derived at runtime).
 """
 from __future__ import annotations

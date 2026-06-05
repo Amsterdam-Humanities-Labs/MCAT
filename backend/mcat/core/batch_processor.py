@@ -28,11 +28,15 @@ class BatchProcessor:
         self.cancel_flag: threading.Event = threading.Event()
         self.resume_event: threading.Event = threading.Event()
         self.resume_event.set()
-        self.max_workers: int = config.scraper_settings['max_workers']
+        self.max_zendriver_tabs: int = config.scraper_settings['max_zendriver_tabs']
         self.log_callback: Callable | None = None
         self.progress_queue: Queue[dict] = Queue()
         self.progress_callback: Callable | None = None
         self._scraper_factory: Callable | None = scraper_factory
+        # Set while a run's event loop is live, so cancel (from the HTTP thread)
+        # can stop the browser and unblock in-flight tab calls immediately.
+        self._loop: asyncio.AbstractEventLoop | None = None
+        self._session: BrowserSession | None = None
 
     async def process_csv_async(self, csv_path: str, platform: str, column_mapping: dict[str, str],
                                 output_folder: str | None = None, save_screenshots: bool = False,
@@ -46,6 +50,7 @@ class BatchProcessor:
 
         try:
             self.cancel_flag.clear()
+            self._loop = asyncio.get_running_loop()
 
             rows = load_csv(csv_path)
             columns = get_columns(rows)
@@ -78,12 +83,13 @@ class BatchProcessor:
             # One browser + tab pool per run, torn down in finally (no leak class).
             if not self._scraper_factory:
                 session = await BrowserSession.create(
-                    pool_size=self.max_workers,
+                    pool_size=self.max_zendriver_tabs,
                     headless=config.scraper_settings['headless'],
                     log_callback=self.log_callback,
                     cookies=cookies or None,
                     platform=platform,
                 )
+                self._session = session
 
             scraper = self._create_scraper(platform, session)
             if not scraper:
@@ -118,6 +124,8 @@ class BatchProcessor:
             result.error_message = str(e)
 
         finally:
+            self._loop = None
+            self._session = None
             if scraper is not None:
                 scraper.cleanup()
             if session is not None:
@@ -246,6 +254,15 @@ class BatchProcessor:
     def cancel_processing(self) -> None:
         self.cancel_flag.set()
         self.resume_event.set()
+        # Stop the browser from the worker's loop (this is usually called from the
+        # HTTP thread). In-flight tab/CDP calls then fail at once and the batch
+        # unwinds immediately, instead of waiting out the per-op timeouts.
+        loop, session = self._loop, self._session
+        if loop is not None and session is not None:
+            try:
+                loop.call_soon_threadsafe(lambda: loop.create_task(session.stop()))
+            except Exception:
+                pass
 
     def cleanup(self) -> None:
         # The per-run BrowserSession is stopped in process_csv_async's finally;

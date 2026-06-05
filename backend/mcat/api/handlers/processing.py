@@ -2,6 +2,7 @@
 
 from api.context import app_context, log_buffer
 from api.serializers import publish_project
+from api.handlers.auth import login_in_progress
 from services.job_builder import build_processing_job
 
 
@@ -13,6 +14,12 @@ def start(body: dict) -> dict:
 
     if not ctx.processing_service:
         raise ValueError("Processing service not initialized")
+
+    # A Set up browser capture writes its cookies on window close, slightly after
+    # the window disappears. Starting now would load the jar before those cookies
+    # land, so the run would scrape without them (e.g. the consent modal returns).
+    if login_in_progress():
+        return {"success": False, "error": "Browser setup is finishing, try again in a moment"}
 
     urls = body.get("urls")
     project = ctx.current_project
