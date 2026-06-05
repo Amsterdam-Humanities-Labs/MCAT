@@ -11,15 +11,13 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # Apple Silicon build -> ships to the researcher (Tahoe / macOS 26).
-          # Built on Sequoia (15) for the lower OS floor; forward-runs on Tahoe.
-          - runner: macos-15
+          # Apple Silicon build -> ships to the researcher. Built on Tahoe
+          # (macos-26) to match their OS exactly.
+          - runner: macos-26
             arch: arm64
-          # Intel build -> for the local QEMU Sequoia VM (x86_64). The researcher
-          # is on Apple Silicon, so this leg only exists to test the same code
-          # path locally before shipping the arm64 build. macos-13 is the last
-          # Intel GitHub runner; its low floor forward-runs onto the Sequoia VM.
-          - runner: macos-13
+          # Intel build -> for the local QEMU Sequoia VM (x86_64). Built on
+          # Intel Sequoia (macos-15-intel) to match that VM exactly.
+          - runner: macos-15-intel
             arch: x86_64
     runs-on: ${{ matrix.runner }}
     name: build-${{ matrix.arch }}
