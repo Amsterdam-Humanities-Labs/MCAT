@@ -7,7 +7,22 @@ on:
 
 jobs:
   build-macos:
-    runs-on: macos-26
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Apple Silicon build -> ships to the researcher (Tahoe / macOS 26).
+          # Built on Sequoia (15) for the lower OS floor; forward-runs on Tahoe.
+          - runner: macos-15
+            arch: arm64
+          # Intel build -> for the local QEMU Sequoia VM (x86_64). The researcher
+          # is on Apple Silicon, so this leg only exists to test the same code
+          # path locally before shipping the arm64 build. macos-13 is the last
+          # Intel GitHub runner; its low floor forward-runs onto the Sequoia VM.
+          - runner: macos-13
+            arch: x86_64
+    runs-on: ${{ matrix.runner }}
+    name: build-${{ matrix.arch }}
 
     steps:
     - name: Checkout code
@@ -37,20 +52,25 @@ jobs:
         cd backend
         python -m venv venv
         venv/bin/pip install --upgrade pip
-        venv/bin/pip install pywebview selenium chromedriver-autoinstaller pyinstaller pyobjc-framework-WebKit
+        venv/bin/pip install zendriver pywebview pyobjc-framework-WebKit pyinstaller
 
     - name: Build with PyInstaller
       run: |
         cd backend
         venv/bin/python -m PyInstaller --clean mcat.spec
 
+    - name: Verify bundle architecture
+      run: |
+        cd backend/dist
+        file MCAT.app/Contents/MacOS/mcat
+
     - name: Zip the app bundle
       run: |
         cd backend/dist
-        zip -r MCAT-macOS.zip MCAT.app
+        zip -r MCAT-macOS-${{ matrix.arch }}.zip MCAT.app
 
     - name: Upload build artifact
       uses: actions/upload-artifact@v4
       with:
-        name: MCAT-macOS
-        path: backend/dist/MCAT-macOS.zip
+        name: MCAT-macOS-${{ matrix.arch }}
+        path: backend/dist/MCAT-macOS-${{ matrix.arch }}.zip
