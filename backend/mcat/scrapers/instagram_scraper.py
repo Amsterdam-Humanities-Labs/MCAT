@@ -27,10 +27,6 @@ class InstagramScraper(BaseScraper):
         except Exception:
             return "unknown"
 
-    # Consent dismissal not overridden: the per-project jar captures IG's device/
-    # consent cookies during Set up browser; detection works logged-out via the
-    # og:title meta and the page title without dismissing the modal.
-
     async def _detect_status(self, tab: Tab, initial_title: str = "") -> StatusResult | None:
         """
         Check all detection signals on current page state.

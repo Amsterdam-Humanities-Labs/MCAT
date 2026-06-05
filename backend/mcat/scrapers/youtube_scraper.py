@@ -18,10 +18,6 @@ class YouTubeScraper(BaseScraper):
     def _extract_id(self, url: str) -> str:
         return url.split('v=')[-1].split('&')[0]
 
-    # Consent dismissal not overridden: the per-project jar captures YouTube's
-    # SOCS consent cookie during Set up browser, which suppresses the consent
-    # redirect; initial_title (captured pre-redirect) covers the anonymous case.
-
     async def _detect_status(self, tab: Tab, initial_title: str = "") -> StatusResult | None:
         """
         Check all detection signals on the current page state.

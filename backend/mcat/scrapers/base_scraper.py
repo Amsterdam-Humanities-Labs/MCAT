@@ -36,14 +36,15 @@ class BaseScraper(ABC):
     """Shared async scraping harness for tab-pooled, signal-based scrapers.
 
     The per-URL flow lives here once: check out a tab, rate-limit, load the page,
-    dismiss the consent modal, poll for a conclusive detection signal, screenshot,
-    retry on transient errors, and honor pause/cancel. Subclasses supply only the
-    platform-specific pieces:
+    poll for a conclusive detection signal, screenshot, retry on transient errors,
+    and honor pause/cancel. Subclasses supply only the platform-specific pieces:
 
       - get_platform_name()           (required)
       - _extract_id(url)              short id for logs + screenshot names (sync)
-      - _dismiss_consent(tab)         click-through fallback for the cookie modal
       - _detect_status(tab, title)    the actual page inspection / triage
+
+    Consent modals are never dismissed in-scraper: the per-project cookie jar,
+    captured during Set up browser, is injected and suppresses them.
 
     One instance is shared across the concurrent tab coroutines, so no per-URL
     state is stored on self; the page title is threaded through as a parameter.
@@ -98,10 +99,6 @@ class BaseScraper(ABC):
     def _extract_id(self, url: str) -> str:
         """Short id used in log lines and screenshot filenames. Override per platform."""
         return url.rstrip("/").split("/")[-1][:self.ID_MAX_LEN]
-
-    async def _dismiss_consent(self, tab: Tab) -> None:
-        """Dismiss the platform's cookie-consent modal (fallback). Override per platform."""
-        pass
 
     async def _detect_status(self, tab: Tab, initial_title: str = "") -> StatusResult | None:
         """Inspect the current page; return (status, info) or None to keep polling."""
@@ -244,8 +241,6 @@ class BaseScraper(ABC):
                 initial_title = await asyncio.wait_for(tab.evaluate("document.title"), timeout=self.EVAL_TIMEOUT) or ""
             except Exception:
                 pass
-
-            await self._dismiss_consent(tab)
 
             self._log(f"Waiting for signals ({rid})")
             detection = await self._poll_for_signals(tab, initial_title)

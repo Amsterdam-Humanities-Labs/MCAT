@@ -39,12 +39,6 @@ class FacebookScraper(BaseScraper):
         except Exception:
             return "unknown"
 
-    # Consent dismissal is intentionally not overridden: the per-project jar
-    # captures FB's consent cookies during Set up browser, and detection works
-    # anonymously without dismissing the modal (the article element, removal
-    # text, and og:title are all reachable behind it). If a click-through
-    # fallback is ever needed it can be added as an async override.
-
     async def _detect_status(self, tab: Tab, initial_title: str = "") -> StatusResult | None:
         """
         Triage, in order:
