@@ -1,3 +1,6 @@
+// Polyfill the native Popover API (used by melt's Dialog) for older WebKit —
+// Safari < 17 / macOS Ventura lacks showPopover/hidePopover. No-op where native.
+import '@oddbird/popover-polyfill';
 import './app.css';
 import App from './App.svelte';
 import { mount } from 'svelte';
