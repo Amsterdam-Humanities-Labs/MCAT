@@ -50,7 +50,7 @@ jobs:
         cd backend
         python -m venv venv
         venv/bin/pip install --upgrade pip
-        venv/bin/pip install zendriver pywebview pyobjc-framework-WebKit pyinstaller
+        venv/bin/pip install ".[dev]"
 
     - name: Build with PyInstaller
       run: |
