@@ -1,19 +1,8 @@
 @import "tailwindcss";
 @import "./themes/noctua-hc.css";
 
-@font-face {
-  font-family: 'General Sans';
-  src: url('/fonts/GeneralSans-Regular.otf') format('opentype');
-  font-weight: 400;
-  font-style: normal;
-}
-
-@font-face {
-  font-family: 'General Sans';
-  src: url('/fonts/GeneralSans-Semibold.otf') format('opentype');
-  font-weight: 600;
-  font-style: normal;
-}
+/* General Sans (400, 600) is loaded from Fontshare's CSS API via the <link>
+   in index.html, so no local @font-face is needed. */
 
 html {
   font-family: 'General Sans', system-ui, sans-serif;
