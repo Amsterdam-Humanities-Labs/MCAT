@@ -1,10 +1,15 @@
-// Polyfill the native Popover API (used by melt's Dialog) for older WebKit —
-// Safari < 17 / macOS Ventura lacks showPopover/hidePopover. No-op where native.
-import '@oddbird/popover-polyfill';
 import './app.css';
 import App from './App.svelte';
 import { mount } from 'svelte';
 import { setBackendUrl } from '$lib/api/client';
+
+// melt's Dialog uses the native Popover API, which older WebKit lacks
+// (Safari < 17 / macOS Ventura). Load the polyfill only when it's actually
+// missing, so modern webviews (Linux, Windows, current macOS) never fetch or
+// run it — capability-gated, not OS-gated.
+if (!('showPopover' in HTMLElement.prototype)) {
+  await import('@oddbird/popover-polyfill');
+}
 
 // Backend URL is passed via query param (pywebview sets this) or defaults to dev port
 const params = new URLSearchParams(window.location.search);
