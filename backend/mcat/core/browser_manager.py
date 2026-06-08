@@ -27,6 +27,12 @@ BROWSER_ARGS = [
     # discover Chromecasts, which trips macOS's "find devices on local network"
     # permission prompt. The app never casts, so turn it off.
     "--disable-features=MediaRouter",
+    # Don't use the OS credential store for cookie/password-at-rest encryption,
+    # or Chrome prompts for the login/admin password on launch (macOS "Chrome
+    # Safe Storage" keychain, Linux gnome-keyring/kwallet). Cookies are injected
+    # over CDP into the live session, so the at-rest store is irrelevant here.
+    "--use-mock-keychain",     # macOS
+    "--password-store=basic",  # Linux
 ]
 
 

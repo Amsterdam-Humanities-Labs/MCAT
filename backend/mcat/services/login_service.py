@@ -66,7 +66,10 @@ class LoginService:
             browser_args=["--window-size=1200,800", "--disable-dev-shm-usage", "--test-type",
                           # No Cast/Media Router LAN discovery -> no macOS
                           # "find devices on local network" prompt.
-                          "--disable-features=MediaRouter"],
+                          "--disable-features=MediaRouter",
+                          # No OS keychain/secret-store access -> no password
+                          # prompt on launch (cookies are captured over CDP).
+                          "--use-mock-keychain", "--password-store=basic"],
         )
         last_cookies: list[dict] = []
         announced = False
