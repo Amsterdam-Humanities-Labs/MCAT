@@ -68,6 +68,7 @@
 
   <div
     {...select.content}
+    data-popover-anchored
     class="absolute z-50 mt-1 w-full bg-bg-primary border border-border-mid rounded shadow-[0_4px_12px_-2px_rgba(0,0,0,0.25)] max-h-60 overflow-auto divide-y divide-border-light"
   >
     {#each options as opt}

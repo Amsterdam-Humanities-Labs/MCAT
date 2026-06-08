@@ -10,3 +10,17 @@ html {
   background: var(--color-bg-primary);
   color: var(--color-text-body);
 }
+
+/* The Popover API polyfill (older WebKit, e.g. macOS Ventura) can't use the real
+   top layer — it just bumps z-index — so melt's fixed-position dropdown/tooltip
+   coordinates resolve against a transformed ancestor and land off-screen. Where
+   native popover is absent, pin marked content back under its trigger via the
+   author's absolute positioning (the wrapper is position: relative). No-op on
+   browsers with native popover; does not touch the dialog overlay. */
+@supports not selector(:popover-open) {
+  [data-popover-anchored] {
+    position: absolute !important;
+    inset: auto !important;
+    transform: none !important;
+  }
+}
