@@ -117,7 +117,10 @@ def main():
             min_size=(800, 600),
             text_select=True,
         )
-        webview.start()
+        # TEMPORARY: debug=True makes the WKWebView inspectable so the startup
+        # console.log (popover support + UA) can be read via right-click → Inspect.
+        # Remove in the next commit.
+        webview.start(debug=True)
     except ImportError:
         url = f"http://127.0.0.1:{vite_port if is_dev else port}?port={port}"
         print(f"pywebview not installed. Open {url} in your browser.", flush=True)
