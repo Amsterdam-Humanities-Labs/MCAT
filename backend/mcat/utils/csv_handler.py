@@ -1,165 +1,135 @@
-import polars as pl
-from typing import Dict, List, Tuple, Any
-import os
 import csv
+import os
 import threading
+from collections import Counter
+
+from models.types import StatusSummary
 
 
-class CSVHandler:
-    """Handles CSV file operations, validation, and column mapping."""
+def load_csv(file_path: str) -> list[dict]:
+    """Load a CSV with automatic delimiter detection. Returns a list of dicts.
 
-    @staticmethod
-    def load_csv(file_path: str) -> pl.DataFrame:
-        """Load CSV file with automatic delimiter detection."""
-        if not os.path.exists(file_path):
-            raise FileNotFoundError(f"CSV file not found: {file_path}")
+    Tries each delimiter and returns the first that splits into more than one
+    column. A genuinely single-column file (e.g. just URLs) falls back to the
+    first successful parse.
+    """
+    if not os.path.exists(file_path):
+        raise FileNotFoundError(f"CSV file not found: {file_path}")
 
+    fallback = None
+    for separator in [',', ';', '\t', '|']:
         try:
-            # Try common delimiters
-            for separator in [',', ';', '\t', '|']:
-                try:
-                    df = pl.read_csv(file_path, separator=separator)
-                    if len(df.columns) > 1 or separator == ',':
-                        if len(df) == 0:
-                            raise ValueError("CSV file is empty")
-                        print(f"Successfully loaded CSV with delimiter '{separator}'")
-                        return df
-                except Exception:
-                    continue
+            with open(file_path, newline='', encoding='utf-8-sig') as f:
+                reader = csv.DictReader(f, delimiter=separator)
+                rows = list(reader)
+        except Exception:
+            continue
+        if not reader.fieldnames:
+            continue
+        if len(reader.fieldnames) > 1:
+            return rows
+        if fallback is None:
+            fallback = rows
 
-            # Default to comma
-            df = pl.read_csv(file_path)
-            if len(df) == 0:
-                raise ValueError("CSV file is empty")
-            print("Successfully loaded CSV with default delimiter")
-            return df
-        except Exception as e:
-            raise Exception(f"Error loading CSV file: {e}")
+    if fallback is not None:
+        return fallback
 
-    @staticmethod
-    def validate_column_mapping(df: pl.DataFrame, column_mapping: Dict[str, str]) -> Tuple[bool, str]:
-        """Validate that mapped columns exist in the DataFrame."""
-        missing_columns = []
+    raise Exception(f"Error loading CSV file: {file_path}")
 
-        for col_type, col_name in column_mapping.items():
-            if col_name and col_name not in df.columns:
-                missing_columns.append(f"{col_type} column '{col_name}'")
 
-        if missing_columns:
-            error_msg = f"Missing columns: {', '.join(missing_columns)}"
-            return False, error_msg
+def save_csv(rows: list[dict], output_path: str) -> None:
+    """Save list of dicts to CSV file."""
+    if not rows:
+        return
+    output_dir = os.path.dirname(output_path)
+    if output_dir and not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+    with open(output_path, 'w', newline='', encoding='utf-8') as f:
+        writer = csv.DictWriter(f, fieldnames=rows[0].keys())
+        writer.writeheader()
+        writer.writerows(rows)
 
-        return True, ""
 
-    @staticmethod
-    def get_urls_from_column(df: pl.DataFrame, url_column: str) -> List[str]:
-        """Extract URLs from the specified column."""
-        if url_column not in df.columns:
-            raise ValueError(f"URL column '{url_column}' not found in CSV")
+def get_columns(rows: list[dict]) -> list[str]:
+    """Get column names from a list of dicts."""
+    if not rows:
+        return []
+    return list(rows[0].keys())
 
-        urls = df.select(pl.col(url_column).drop_nulls().cast(pl.Utf8)).to_series().to_list()
-        if not urls:
-            raise ValueError(f"No URLs found in column '{url_column}'")
 
-        return urls
+def normalize_url(url: str) -> str:
+    """Prepend https:// if no scheme is present."""
+    url = url.strip()
+    if not url:
+        return url
+    if "://" not in url:
+        url = "https://" + url
+    return url
 
-    @staticmethod
-    def add_result_columns(df: pl.DataFrame) -> pl.DataFrame:
-        """Add result columns to the DataFrame if they don't exist."""
-        result_columns = ['status', 'platform', 'info', 'timestamp', 'error_message']
 
-        for col in result_columns:
-            if col not in df.columns:
-                df = df.with_columns(pl.lit('').alias(col))
+def get_urls_from_column(rows: list[dict], url_column: str) -> list[str]:
+    """Extract non-empty URLs from the specified column, normalized."""
+    urls = [normalize_url(r[url_column]) for r in rows if r.get(url_column)]
+    if not urls:
+        raise ValueError(f"No URLs found in column '{url_column}'")
+    return urls
 
-        return df
 
-    @staticmethod
-    def update_results(df: pl.DataFrame, results: List[Dict], url_column: str) -> pl.DataFrame:
-        """Update DataFrame with scraping results."""
-        # Create a mapping of URL to result
-        url_to_result = {result['url']: result for result in results}
+def count_statuses(rows: list[dict], status_column: str = "mcat_status") -> StatusSummary:
+    """Count statuses from result rows into standard summary buckets."""
+    counts = Counter(r.get(status_column, "") for r in rows)
+    return {
+        "live": counts.get("Live", 0),
+        "removed": counts.get("Removed", 0),
+        "restricted": (
+            counts.get("Restricted", 0)
+            + counts.get("Age-restricted", 0)
+            + counts.get("Geo-blocked", 0)
+            + counts.get("Private", 0)
+        ),
+        "errors": counts.get("Error", 0),
+        "unknown": counts.get("Unknown", 0),
+        "login_required": counts.get("Login Required", 0),
+    }
 
-        # Convert to list of dicts, update, and convert back
-        rows = df.to_dicts()
-        for row in rows:
-            url = str(row.get(url_column, ''))
-            if url in url_to_result:
-                result = url_to_result[url]
-                for key, value in result.items():
-                    if key in df.columns:
-                        row[key] = value
 
-        return pl.DataFrame(rows)
-
-    @staticmethod
-    def save_csv(df: pl.DataFrame, output_path: str) -> bool:
-        """Save DataFrame to CSV file."""
-        try:
-            # Ensure output directory exists
-            output_dir = os.path.dirname(output_path)
-            if output_dir and not os.path.exists(output_dir):
-                os.makedirs(output_dir)
-
-            df.write_csv(output_path)
-            return True
-        except Exception as e:
-            raise Exception(f"Error saving CSV file: {e}")
-
-    @staticmethod
-    def get_csv_info(df: pl.DataFrame) -> Dict:
-        """Get basic information about the CSV file."""
-        return {
-            'rows': len(df),
-            'columns': df.columns,
-            'column_count': len(df.columns)
-        }
+def validate_column_mapping(rows: list[dict], column_mapping: dict) -> tuple[bool, str]:
+    """Validate that mapped columns exist."""
+    if not rows:
+        return False, "CSV is empty"
+    columns = set(rows[0].keys())
+    missing = [f"{k} column '{v}'" for k, v in column_mapping.items() if v and v not in columns]
+    if missing:
+        return False, f"Missing columns: {', '.join(missing)}"
+    return True, ""
 
 
 class IncrementalCSVWriter:
     """Thread-safe incremental CSV writer for real-time result saving."""
 
-    def __init__(self, output_path: str, columns: List[str]) -> None:
-        """
-        Initialize incremental CSV writer.
-
-        Args:
-            output_path: Path to output CSV file
-            columns: List of column names for the CSV
-        """
+    def __init__(self, output_path: str, columns: list[str]):
         self.output_path: str = output_path
-        self.columns: List[str] = columns
+        self.columns: list[str] = columns
         self.lock: threading.Lock = threading.Lock()
         self.initialized: bool = False
 
     def write_header(self) -> None:
-        """Write CSV header (call once at start)."""
         with self.lock:
-            # Ensure output directory exists
             output_dir = os.path.dirname(self.output_path)
             if output_dir and not os.path.exists(output_dir):
                 os.makedirs(output_dir)
-
             with open(self.output_path, 'w', newline='', encoding='utf-8') as f:
                 writer = csv.writer(f)
                 writer.writerow(self.columns)
             self.initialized = True
 
-    def append_row(self, row_data: Dict[str, Any]) -> None:
-        """
-        Append a single result row (thread-safe).
-
-        Args:
-            row_data: Dictionary of column name to value
-        """
+    def append_row(self, row_data: dict[str, str]) -> None:
         if not self.initialized:
             raise Exception("Must call write_header() first")
-
         with self.lock:
             try:
                 with open(self.output_path, 'a', newline='', encoding='utf-8') as f:
                     writer = csv.DictWriter(f, fieldnames=self.columns)
                     writer.writerow(row_data)
             except Exception as e:
-                # Log error but don't crash processing
                 print(f"Warning: Failed to write row to CSV: {e}")

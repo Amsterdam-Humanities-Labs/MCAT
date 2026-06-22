@@ -1,1 +1,1 @@
-"""Cookie consent handlers for various platforms."""
+"""Per-project cookie storage."""

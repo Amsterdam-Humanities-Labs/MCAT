@@ -1,6 +1,6 @@
 """CSV operation handlers."""
 
-import polars as pl
+from utils.csv_handler import load_csv, get_columns
 
 
 def load(body: dict) -> dict:
@@ -9,10 +9,10 @@ def load(body: dict) -> dict:
     if not path:
         raise ValueError("Missing path")
 
-    df = pl.read_csv(path)
+    rows = load_csv(path)
     return {
-        "columns": df.columns,
-        "row_count": len(df)
+        "columns": get_columns(rows),
+        "row_count": len(rows)
     }
 
 

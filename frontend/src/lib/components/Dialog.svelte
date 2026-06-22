@@ -2,6 +2,7 @@
   import { cn } from '$lib/utils';
   import { Dialog } from 'melt/builders';
   import { X } from 'phosphor-svelte';
+  import ButtonIcon from './ButtonIcon.svelte';
 
   interface Props {
     open?: boolean;
@@ -43,7 +44,7 @@
   class={cn(
     'fixed left-1/2 top-1/2 z-50 -translate-x-1/2 -translate-y-1/2',
     'w-full max-w-lg max-h-[85vh] overflow-auto',
-    'bg-bg-controls border border-border-mid rounded-lg shadow-xl',
+    'bg-bg-toolbar border border-border-mid rounded-lg shadow-xl',
     'p-0 m-0 opacity-0 scale-95 transition-all duration-200',
     'data-[open]:opacity-100 data-[open]:scale-100',
     className
@@ -67,12 +68,11 @@
     {/if}
   </div>
 
-  <button
-    type="button"
+  <ButtonIcon
+    icon={X}
+    label="Close"
+    variant="secondary"
     onclick={() => (dialog.open = false)}
-    class="absolute top-4 right-4 p-1 text-text-secondary hover:text-text-body transition-colors"
-    aria-label="Close"
-  >
-    <X size={20} />
-  </button>
+    class="absolute top-4 right-4"
+  />
 </dialog>

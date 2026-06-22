@@ -1,3 +1,7 @@
+// melt's Dialog/Select use the native Popover API. This polyfill self-gates
+// (it patches only on WebKit that lacks it, e.g. Safari < 17, and no-ops where
+// native), so a plain import is both correct and the simplest option.
+import '@oddbird/popover-polyfill';
 import './app.css';
 import App from './App.svelte';
 import { mount } from 'svelte';

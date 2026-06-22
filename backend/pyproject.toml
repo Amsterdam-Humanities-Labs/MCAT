@@ -1,20 +1,31 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "mcat"
 version = "0.1.0"
 description = "MCAT - Moderation Content Analysis Tool"
 requires-python = ">=3.10"
 dependencies = [
-    "polars>=1.0.0",
-    "selenium>=4.0.0",
-    "chromedriver-autoinstaller>=0.6.0",
-    "pydispatcher>=2.0.0",
+    "zendriver>=0.15.0",
     "pywebview>=5.0",
 ]
 
 [project.optional-dependencies]
 dev = [
     "pyinstaller>=6.0.0",
+    "pyright>=1.1.0",
+    "pytest>=8.0",
+    "pytest-asyncio>=0.23",
 ]
+
+[tool.setuptools]
+# MCAT runs from source via PyInstaller (flat module tree, no `mcat` package), so
+# the install ships no code. This project exists only to make the dependency
+# lists above the single source of truth for `pip install .[dev]`.
+py-modules = []
 
 [tool.pyright]
 pythonVersion = "3.10"
+reportMissingImports = "warning"

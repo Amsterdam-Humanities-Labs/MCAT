@@ -94,9 +94,9 @@
                   <span class="text-text-secondary">{value ? String(value).split('/').pop() : ''}</span>
                 {:else if col.type === 'transition'}
                   {@const prev = String(getCellValue(row, 'previous_status') ?? '')}
-                  {@const curr = String(getCellValue(row, 'status') ?? '')}
+                  {@const curr = String(getCellValue(row, 'mcat_status') ?? '')}
                   <TransitionBadge from={prev} to={curr} />
-                {:else if col.type === 'status' || col.key === 'status'}
+                {:else if col.type === 'status' || col.key === 'mcat_status'}
                   <StatusBadge status={String(value ?? '').toLowerCase()} />
                 {:else}
                   {value ?? ''}

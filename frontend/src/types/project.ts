@@ -1,4 +1,4 @@
-export type Platform = 'youtube' | 'instagram' | 'facebook' | 'twitter';
+export type Platform = 'youtube' | 'instagram' | 'facebook';
 
 export type RunStatus = 'in_progress' | 'completed' | 'abandoned';
 
@@ -7,6 +7,8 @@ export interface RunStatusSummary {
   removed: number;
   restricted: number;
   error: number;
+  unknown: number;
+  login_required: number;
 }
 
 export interface RunChangesSummary {
@@ -36,6 +38,13 @@ export interface TrackingConfig {
   next_check: string | null;
 }
 
+export interface AuthInfo {
+  has_cookies: boolean;
+  username: string;
+  logged_in: boolean;
+  captured_at: string | null;
+}
+
 export interface Project {
   name: string;
   platform: Platform;
@@ -46,6 +55,7 @@ export interface Project {
   screenshots_enabled: boolean;
   runs: Run[];
   tracking: TrackingConfig;
+  auth?: AuthInfo;
 }
 
 export interface CreateProjectRequest {

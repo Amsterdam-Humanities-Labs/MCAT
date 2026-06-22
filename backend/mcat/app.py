@@ -25,7 +25,7 @@ from server import find_available_port, MCATHandler, DEFAULT_PORT, MAX_PORT_ATTE
 # Resolve paths. When frozen (PyInstaller bundle), files live under sys._MEIPASS.
 # In dev, walk up from backend/mcat/app.py to the project root.
 if getattr(sys, "frozen", False):
-    PROJECT_ROOT = Path(sys._MEIPASS)
+    PROJECT_ROOT = Path(sys._MEIPASS)  # type: ignore[attr-defined]  # PyInstaller runtime
     FRONTEND_DIR = PROJECT_ROOT / "frontend"
     DIST_DIR = FRONTEND_DIR / "dist"
 else:
@@ -100,7 +100,12 @@ def main():
         vite_proc, vite_port = start_vite()
         frontend_url = f"http://127.0.0.1:{vite_port}?port={port}"
     else:
-        frontend_url = str(DIST_DIR / "index.html") + f"?port={port}"
+        # Serve the built SPA from the backend itself so the UI and API share one
+        # origin (http://127.0.0.1:port). Loading it from file:// instead makes
+        # macOS WKWebView block every fetch to the http backend: the UI renders
+        # but all buttons/API calls silently fail.
+        MCATHandler.static_dir = DIST_DIR
+        frontend_url = f"http://127.0.0.1:{port}/?port={port}"
 
     try:
         import webview

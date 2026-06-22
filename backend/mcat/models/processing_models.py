@@ -3,11 +3,11 @@ Data models for processing operations.
 """
 
 from dataclasses import dataclass, field
-from typing import Dict, Optional
+from typing import Any
 from enum import Enum
-import polars as pl
 
 from .file_models import FileInfo, ColumnMapping
+from .types import StatusSummary, empty_status_summary
 
 
 class ProcessingState(Enum):
@@ -30,6 +30,8 @@ class ProcessingJob:
     platform: str = "youtube"
     output_folder: str = ""
     save_screenshots: bool = False
+    cookies: list[dict[str, Any]] = field(default_factory=list)
+    auth_user: str = "anonymous"
 
     @property
     def is_valid(self) -> bool:
@@ -49,7 +51,7 @@ class ProcessingStatus:
     total_count: int = 0
     processed_count: int = 0
     current_action: str = ""
-    stats: Dict[str, int] = field(default_factory=lambda: {
+    stats: dict[str, int] = field(default_factory=lambda: {
         'live': 0,
         'removed': 0,
         'restricted': 0,
@@ -85,18 +87,7 @@ class ProcessingResult:
     """Result of a completed processing operation."""
 
     success: bool = False
-    dataframe: Optional[pl.DataFrame] = None
-    stats: Dict[str, int] = field(default_factory=dict)
+    rows: list[dict[str, Any]] | None = None
+    stats: StatusSummary = field(default_factory=empty_status_summary)
     processed_count: int = 0
     error_message: str = ""
-
-    @classmethod
-    def from_batch_result(cls, batch_result):
-        """Create ProcessingResult from BatchProcessor result."""
-        return cls(
-            success=batch_result.success,
-            dataframe=batch_result.dataframe,
-            stats=batch_result.stats,
-            processed_count=batch_result.processed_count,
-            error_message=batch_result.error_message
-        )

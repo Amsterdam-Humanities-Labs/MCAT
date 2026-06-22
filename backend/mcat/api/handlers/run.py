@@ -1,8 +1,7 @@
 """Run management handlers."""
 
-import polars as pl
-
 from api.context import app_context
+from utils.csv_handler import load_csv, get_columns
 
 
 def abandon(body: dict) -> dict:
@@ -33,41 +32,32 @@ def get_changed_results(body: dict) -> dict:
     if not run_id:
         raise ValueError("Missing run_id")
 
-    # Read changes to get the diff (url, previous_status, new_status)
     changes_path = ctx.current_project.get_run_path(run_id) / "changes.csv"
     if not changes_path.exists():
         return {"columns": [], "rows": []}
 
-    changes_df = pl.read_csv(changes_path)
-    if len(changes_df) == 0:
+    change_rows = load_csv(str(changes_path))
+    if not change_rows:
         return {"columns": [], "rows": []}
 
-    # Build url -> previous_status map
-    prev_map = dict(zip(
-        changes_df["url"].cast(pl.Utf8).to_list(),
-        changes_df["previous_status"].cast(pl.Utf8).to_list()
-    ))
+    prev_map = {r["url"]: r["previous_status"] for r in change_rows}
 
-    # Read full results to get all columns for changed URLs
     results_path = ctx.current_project.get_run_results_path(run_id)
     if not results_path.exists():
         return {"columns": [], "rows": []}
 
-    results_df = pl.read_csv(results_path)
+    result_rows = load_csv(str(results_path))
     url_col = ctx.current_project.url_column
 
-    # Filter results to only changed URLs
-    changed_urls = list(prev_map.keys())
-    filtered = results_df.filter(pl.col(url_col).cast(pl.Utf8).is_in(changed_urls))
+    changed_urls = set(prev_map.keys())
+    filtered = [r for r in result_rows if r.get(url_col) in changed_urls]
 
-    # Convert to dicts and add previous_status
-    rows = filtered.to_dicts()
-    for row in rows:
-        url = str(row.get(url_col, ""))
+    for row in filtered:
+        url = row.get(url_col, "")
         row["previous_status"] = prev_map.get(url, "")
 
-    columns = ["previous_status"] + filtered.columns
-    return {"columns": columns, "rows": rows}
+    columns = ["previous_status"] + get_columns(result_rows)
+    return {"columns": columns, "rows": filtered}
 
 
 def get_results(body: dict) -> dict:
@@ -84,5 +74,5 @@ def get_results(body: dict) -> dict:
     if not results_path.exists():
         return {"columns": [], "rows": []}
 
-    df = pl.read_csv(results_path)
-    return {"columns": df.columns, "rows": df.to_dicts()}
+    rows = load_csv(str(results_path))
+    return {"columns": get_columns(rows), "rows": rows}

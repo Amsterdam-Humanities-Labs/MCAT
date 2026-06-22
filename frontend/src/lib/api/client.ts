@@ -71,6 +71,8 @@ export const api = {
     callBackend<{ success: boolean }>('/process/pause', 'POST'),
   resumeProcessing: () =>
     callBackend<{ success: boolean }>('/process/resume', 'POST'),
+  abandonProcessing: () =>
+    callBackend<{ success: boolean }>('/process/abandon', 'POST'),
   // Run data
   getRunChangedResults: (run_id: string) =>
     callBackend<{ columns: string[]; rows: Record<string, unknown>[] }>(
@@ -108,4 +110,10 @@ export const api = {
     callBackend<{ path: string | null }>('/dialog/open-folder', 'POST'),
   openExternal: (url: string) =>
     callBackend<{ success: boolean }>('/dialog/open-external', 'POST', { url }),
+
+  // Auth
+  startLogin: () =>
+    callBackend<{ success: boolean; platform?: string; error?: string }>('/auth/start-login', 'POST'),
+  logout: () =>
+    callBackend<{ success: boolean; project?: Project }>('/auth/logout', 'POST'),
 };

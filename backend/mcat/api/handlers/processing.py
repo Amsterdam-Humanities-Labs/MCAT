@@ -1,104 +1,9 @@
 """Processing handlers."""
 
-import polars as pl
-
-from api.context import app_context, log_buffer, event_bus
-from api.handlers.project import _publish_project
-from models.processing_models import ProcessingJob
-from models.project_models import RunStatus
-from models.file_models import FileInfo, ColumnMapping
-from events import dispatcher, ProcessingEvents
-
-
-def _build_status_dict() -> dict:
-    """Build processing status dictionary."""
-    ctx = app_context
-    if not ctx.processing_service:
-        return {"state": "no_project"}
-
-    ctx.processing_service._process_progress_updates()
-    status = ctx.processing_service.get_current_status()
-
-    stats = status.stats or {}
-    status_counts = {
-        "live": stats.get("live", 0),
-        "removed": stats.get("removed", 0),
-        "restricted": stats.get("restricted", 0),
-        "error": stats.get("errors", 0),
-    }
-
-    return {
-        "state": status.state.value if status.state else "idle",
-        "total": status.total_count,
-        "processed": status.processed_count,
-        "status_counts": status_counts,
-        "action": status.current_action,
-        "error": status.error_message,
-        "current_url": status.current_action.replace("Checking: ", "") if status.current_action and status.current_action.startswith("Checking: ") else None,
-    }
-
-
-def _publish_status():
-    """Publish processing status via SSE."""
-    event_bus.publish({
-        "type": "processing",
-        **_build_status_dict(),
-    })
-
-
-def _is_stale(sender) -> bool:
-    """Check if signal came from an orphaned processing service."""
-    return sender is not app_context.processing_service
-
-
-def _on_processing_progress(sender, **kwargs):
-    if _is_stale(sender):
-        return
-    _publish_status()
-
-
-def _on_processing_completed(sender, **kwargs):
-    if _is_stale(sender):
-        return
-    ctx = app_context
-    if ctx.current_project and ctx.current_project.current_run:
-        run = ctx.current_project.current_run
-        ctx.run_service.complete_run(ctx.current_project, run)
-        log_buffer.success("Run completed")
-    _publish_status()
-    _publish_project()
-
-
-def _on_processing_error(sender, **kwargs):
-    if _is_stale(sender):
-        return
-    ctx = app_context
-    if ctx.current_project and ctx.current_project.current_run:
-        run = ctx.current_project.current_run
-        run.status = RunStatus.ABANDONED
-        ctx.current_project.current_run = None
-        ctx.current_project.save()
-    _publish_status()
-
-
-def _on_processing_paused(sender, **kwargs):
-    if _is_stale(sender):
-        return
-    _publish_status()
-
-
-def _on_processing_resumed(sender, **kwargs):
-    if _is_stale(sender):
-        return
-    _publish_status()
-
-
-# Register event handlers
-dispatcher.connect(_on_processing_progress, signal=ProcessingEvents.PROGRESS)
-dispatcher.connect(_on_processing_completed, signal=ProcessingEvents.COMPLETED)
-dispatcher.connect(_on_processing_error, signal=ProcessingEvents.ERROR)
-dispatcher.connect(_on_processing_paused, signal=ProcessingEvents.PAUSED)
-dispatcher.connect(_on_processing_resumed, signal=ProcessingEvents.RESUMED)
+from api.context import app_context, log_buffer
+from api.serializers import publish_project
+from api.handlers.auth import login_in_progress
+from services.job_builder import build_processing_job
 
 
 def start(body: dict) -> dict:
@@ -110,42 +15,45 @@ def start(body: dict) -> dict:
     if not ctx.processing_service:
         raise ValueError("Processing service not initialized")
 
+    # A Set up browser capture writes its cookies on window close, slightly after
+    # the window disappears. Starting now would load the jar before those cookies
+    # land, so the run would scrape without them (e.g. the consent modal returns).
+    if login_in_progress():
+        return {"success": False, "error": "Browser setup is finishing, try again in a moment"}
+
     urls = body.get("urls")
     project = ctx.current_project
     screenshots = project.config.screenshots_enabled
 
-    # Start a new run
     run = ctx.run_service.start_run(project, screenshots_enabled=screenshots)
     output_folder = str(project.get_run_path(run.id))
 
-    # Tell mock scraper which run number this is
-    import os
-    if os.environ.get("MCAT_MOCK"):
-        os.environ["MCAT_MOCK_RUN"] = str(len(project.config.runs))
+    job = build_processing_job(project, output_folder, screenshots)
 
-    df = pl.read_csv(project.urls_csv_path)
+    def on_completed(result: object) -> None:
+        if ctx.current_project and ctx.current_project.current_run:
+            ctx.run_service.complete_run(ctx.current_project, ctx.current_project.current_run)
+            log_buffer.success("Run completed")
+        publish_project()
 
-    file_info = FileInfo(path=str(project.urls_csv_path))
-    file_info.dataframe = df
-    file_info.row_count = len(df)
-    file_info.columns = df.columns
-    file_info.valid = True
+    def on_error(error_message: str) -> None:
+        # Delegate to the canonical lifecycle method so the failed run still gets
+        # completed_at / total_checked and reappears in the timeline, then surface
+        # the reason. Hand-rolling abandonment here skipped all of that.
+        if ctx.current_project and ctx.current_project.current_run:
+            ctx.run_service.abandon_run(ctx.current_project, ctx.current_project.current_run)
+        log_buffer.error(error_message)
+        publish_project()
 
-    column_mapping = ColumnMapping()
-    column_mapping.post_column = project.url_column
-
-    job = ProcessingJob(
-        file_info=file_info,
-        column_mapping=column_mapping,
-        platform=project.platform,
-        output_folder=output_folder,
-        save_screenshots=screenshots
-    )
-
-    url_count = len(urls) if urls else len(df)
+    url_count = len(urls) if urls else job.file_info.row_count
     log_buffer.info(f"Starting run: {url_count} URLs on {project.platform}")
 
-    success = ctx.processing_service.start_processing(job, urls=urls)
+    success = ctx.processing_service.start_processing(
+        job,
+        urls=urls,
+        on_completed=on_completed,
+        on_error=on_error,
+    )
     if not success:
         log_buffer.error("Failed to start processing")
         ctx.run_service.abandon_run(project, run)
@@ -173,4 +81,28 @@ def resume(body: dict) -> dict:
     success = ctx.processing_service.resume_processing()
     if success:
         log_buffer.info("Processing resumed")
+    return {"success": success}
+
+
+def abandon(body: dict) -> dict:
+    """Abandon the active (running or paused) run.
+
+    Stops the live workers via cancel_processing() — which on its own leaves the
+    run record dangling in_progress, because the cancelled worker never fires its
+    on_completed callback — then finalizes the current run as abandoned, keeping
+    whatever partial results were already written. publish_project() refreshes the
+    timeline; cancel_processing() already pushed the CANCELLED state so the UI
+    returns to idle.
+    """
+    ctx = app_context
+    if not ctx.processing_service:
+        raise ValueError("No processing service")
+
+    success = ctx.processing_service.cancel_processing()
+
+    if ctx.current_project and ctx.current_project.current_run:
+        ctx.run_service.abandon_run(ctx.current_project, ctx.current_project.current_run)
+        log_buffer.info("Run abandoned")
+
+    publish_project()
     return {"success": success}

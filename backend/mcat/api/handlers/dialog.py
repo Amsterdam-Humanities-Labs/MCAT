@@ -5,14 +5,16 @@ giving native dialogs on any desktop (KDE, GNOME, etc.).
 On macOS/Windows, uses osascript/powershell respectively.
 """
 
+import os
 import platform
 import shutil
 import subprocess
+from pathlib import Path
 
 
 # --- Linux (portal via zenity) ---
 
-def _pick_file_zenity(filters=None):
+def _pick_file_zenity(filters: list[dict] | None = None) -> str | None:
     cmd = ["zenity", "--file-selection"]
     if filters:
         for f in filters:
@@ -25,7 +27,7 @@ def _pick_file_zenity(filters=None):
     return result.stdout.strip() or None
 
 
-def _pick_folder_zenity():
+def _pick_folder_zenity() -> str | None:
     result = subprocess.run(
         ["zenity", "--file-selection", "--directory"],
         capture_output=True, text=True,
@@ -35,7 +37,7 @@ def _pick_folder_zenity():
 
 # --- macOS ---
 
-def _pick_file_macos(filters=None):
+def _pick_file_macos(filters: list[dict] | None = None) -> str | None:
     ext_list = []
     if filters:
         for f in filters:
@@ -49,7 +51,7 @@ def _pick_file_macos(filters=None):
     return result.stdout.strip() or None
 
 
-def _pick_folder_macos():
+def _pick_folder_macos() -> str | None:
     result = subprocess.run(
         ["osascript", "-e", 'POSIX path of (choose folder)'],
         capture_output=True, text=True,
@@ -59,7 +61,7 @@ def _pick_folder_macos():
 
 # --- Dispatch ---
 
-def _pick_file(filters=None):
+def _pick_file(filters: list[dict] | None = None) -> str | None:
     system = platform.system()
     if system == "Darwin":
         return _pick_file_macos(filters)
@@ -69,7 +71,7 @@ def _pick_file(filters=None):
     return None
 
 
-def _pick_folder():
+def _pick_folder() -> str | None:
     system = platform.system()
     if system == "Darwin":
         return _pick_folder_macos()
@@ -92,16 +94,31 @@ def open_folder(body: dict) -> dict:
 
 def open_external(body: dict) -> dict:
     """Open a file or URL in the system default application."""
+    from api.context import app_context
     target = body.get("url", "")
     if not target:
         return {"success": False}
+
+    # Only allow HTTP(S) URLs or paths within the current project
+    is_url = target.startswith("http://") or target.startswith("https://")
+    is_project_path = False
+    if app_context.current_project:
+        try:
+            resolved = Path(target).resolve()
+            project_dir = app_context.current_project.project_path.resolve()
+            is_project_path = str(resolved).startswith(str(project_dir))
+        except Exception:
+            pass
+
+    if not is_url and not is_project_path:
+        return {"success": False, "error": "Path not allowed"}
 
     system = platform.system()
     try:
         if system == "Darwin":
             subprocess.Popen(["open", target])
         elif system == "Windows":
-            subprocess.Popen(["start", "", target], shell=True)
+            os.startfile(target)  # type: ignore[attr-defined]  # Windows only
         else:
             subprocess.Popen(["xdg-open", target])
         return {"success": True}

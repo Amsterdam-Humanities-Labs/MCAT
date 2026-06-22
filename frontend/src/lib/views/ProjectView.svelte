@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Toolbar, Controls, ProgressSection, ConsolePanel } from '$lib/components';
+  import { Toolbar, Controls, ProgressSection, ConsolePanel, Dialog, Button } from '$lib/components';
   import Timeline from '$lib/components/Timeline.svelte';
   import { projectStore } from '$lib/stores/project.svelte';
   import { api } from '$lib/api/client';
@@ -17,6 +17,7 @@
   let { project, processing, messages, onclose }: Props = $props();
 
   let selectedRunId = $state<string | null>(null);
+  let confirmAbandonOpen = $state(false);
   let intervalEnabled = $derived(project.tracking?.enabled ?? false);
   let intervalValue = $derived(project.tracking?.interval_value ?? 30);
   let intervalUnit = $derived(project.tracking?.interval_unit ?? 'minutes') as 'minutes' | 'hours' | 'days';
@@ -37,7 +38,7 @@
     if (runState === 'idle') return null;
     return {
       timestamp: new Date().toISOString(),
-      progressPercent: processing.progress ? Math.round(processing.progress) : 0,
+      paused: runState === 'paused',
     };
   });
 
@@ -60,8 +61,30 @@
     }
   }
 
+  async function handleSetupBrowser() {
+    try {
+      await api.startLogin();
+    } catch (e) {
+      console.error('Browser setup failed:', e);
+    }
+  }
+
+  async function handleResetBrowser() {
+    try {
+      const r = await api.logout();
+      if (r.project) projectStore.setProject(r.project);
+    } catch (e) {
+      console.error('Reset failed:', e);
+    }
+  }
+
   function handleRunClick(id: string) {
     selectedRunId = selectedRunId === id ? null : id;
+  }
+
+  async function confirmAbandon() {
+    confirmAbandonOpen = false;
+    await processing.abandon();
   }
 </script>
 
@@ -71,8 +94,11 @@
     platform={project.platform}
     urlCount={project.url_count}
     projectPath={project.path}
+    auth={project.auth}
     onOpenFolder={handleOpenFolder}
     onClose={onclose}
+    onSetupBrowser={handleSetupBrowser}
+    onResetBrowser={handleResetBrowser}
   />
 
   <Controls
@@ -87,6 +113,7 @@
     onStart={handleStart}
     onPause={() => processing.pause()}
     onResume={() => processing.resume()}
+    onAbandon={() => (confirmAbandonOpen = true)}
     onIntervalToggle={async (v) => { const r = await api.setTrackingConfig({ enabled: v }); if (r.project) projectStore.setProject(r.project); }}
     onIntervalChange={async (v, u) => { const r = await api.setTrackingConfig({ interval_value: v, interval_unit: u }); if (r.project) projectStore.setProject(r.project); }}
     onScreenshotsToggle={async (v) => { const r = await api.setScreenshots(v); if (r.project) projectStore.setProject(r.project); }}
@@ -112,3 +139,23 @@
 
   <ConsolePanel {messages} />
 </div>
+
+<Dialog
+  bind:open={confirmAbandonOpen}
+  title="Abandon run?"
+  onclose={() => (confirmAbandonOpen = false)}
+>
+  <p class="text-base text-text-body m-0">
+    The current run will be stopped and saved as abandoned. Partial results are
+    kept, but the run can't be resumed.
+  </p>
+
+  {#snippet actions()}
+    <Button variant="secondary" onclick={() => (confirmAbandonOpen = false)}>
+      Go back
+    </Button>
+    <Button variant="danger" onclick={confirmAbandon}>
+      Abandon run
+    </Button>
+  {/snippet}
+</Dialog>

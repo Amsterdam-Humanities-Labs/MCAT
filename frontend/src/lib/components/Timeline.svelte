@@ -7,7 +7,7 @@
 
   interface ActiveRun {
     timestamp: string;
-    progressPercent: number;
+    paused: boolean;
   }
 
   interface Props {
@@ -36,7 +36,7 @@
       {#if currentRun}
         <TimelineRunning
           timestamp={currentRun.timestamp}
-          progressPercent={currentRun.progressPercent}
+          paused={currentRun.paused}
         />
       {/if}
 

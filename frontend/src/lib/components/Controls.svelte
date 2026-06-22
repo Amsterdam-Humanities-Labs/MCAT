@@ -18,6 +18,7 @@
     onStart?: () => void;
     onPause?: () => void;
     onResume?: () => void;
+    onAbandon?: () => void;
     onIntervalToggle?: (enabled: boolean) => void;
     onIntervalChange?: (value: number, unit: 'minutes' | 'hours' | 'days') => void;
     onScreenshotsToggle?: (enabled: boolean) => void;
@@ -36,19 +37,26 @@
     onStart,
     onPause,
     onResume,
+    onAbandon,
     onIntervalToggle,
     onIntervalChange,
     onScreenshotsToggle,
     class: className,
   }: Props = $props();
+
+  // Screenshots and tracking are next-run settings, read once at run start, so
+  // they have no effect on an in-flight run. Lock them while one is active
+  // (running or paused) to avoid implying they take effect mid-run.
+  const locked = $derived(runState !== 'idle');
 </script>
 
 <div class={cn("h-14 px-4 flex items-center gap-4 bg-bg-controls border-b border-border-mid", className)}>
-  <ControlsStartButton {runState} {onStart} {onPause} {onResume} />
+  <ControlsStartButton {runState} {onStart} {onPause} {onResume} {onAbandon} />
   <ControlsInterval
     enabled={intervalEnabled}
     value={intervalValue}
     unit={intervalUnit}
+    disabled={locked}
     onToggle={onIntervalToggle}
     onChange={onIntervalChange}
   />
@@ -56,6 +64,7 @@
     checked={screenshotsEnabled}
     label="Save screenshots"
     size="sm"
+    disabled={locked}
     onchange={(checked) => onScreenshotsToggle?.(checked)}
   />
   <ControlsHint durationSeconds={lastRunDuration} />

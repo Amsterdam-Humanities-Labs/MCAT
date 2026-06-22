@@ -1,37 +1,41 @@
 """
 Service for managing scheduled URL tracking.
-
-Tracks URLs periodically to detect status changes while app is running.
 """
+from __future__ import annotations
 
 import threading
+from collections.abc import Callable
 from datetime import datetime, timedelta
-from typing import Optional
+from typing import TYPE_CHECKING
 
-import polars as pl
+from utils.csv_handler import get_urls_from_column
 
 from models.project_state import ProjectState
 from models.project_models import RunStatus
+
+if TYPE_CHECKING:
+    from services.processing_service import ProcessingService
+    from services.run_service import RunService
 
 
 class TrackingService:
     """Manages scheduled tracking runs for URL status monitoring."""
 
     def __init__(self):
-        self._timer: Optional[threading.Timer] = None
-        self._stop_event = threading.Event()
-        self._project_state: Optional[ProjectState] = None
-        self._processing_service = None
-        self._run_service = None
-        self._log_callback = None
-        self._event_bus = None
+        self._timer: threading.Timer | None = None
+        self._stop_event: threading.Event = threading.Event()
+        self._project_state: ProjectState | None = None
+        self._processing_service: ProcessingService | None = None
+        self._run_service: RunService | None = None
+        self._log_callback: Callable | None = None
+        self._publish_project: Callable | None = None
 
-    def initialize(self, processing_service, run_service, log_callback, event_bus):
+    def initialize(self, processing_service: ProcessingService, run_service: RunService, log_callback: Callable, publish_project: Callable) -> None:
         """Initialize tracking service with dependencies."""
         self._processing_service = processing_service
         self._run_service = run_service
         self._log_callback = log_callback
-        self._event_bus = event_bus
+        self._publish_project = publish_project
 
     def start_tracking(self, project_state: ProjectState, interval_value: int, interval_unit: str = "minutes") -> dict:
         """
@@ -90,10 +94,11 @@ class TrackingService:
 
         self._stop_event.set()
 
-        # Log and publish event
+        project_state.config.tracking.enabled = False
+        project_state.save()
+
         if self._log_callback:
             self._log_callback("Tracking stopped", "info")
-
 
         return {"enabled": False}
 
@@ -116,7 +121,7 @@ class TrackingService:
             "next_check": config.next_check.isoformat() if config.next_check else None,
         }
 
-    def _schedule_next_check(self):
+    def _schedule_next_check(self) -> None:
         """Schedule next check using threading.Timer."""
         if self._stop_event.is_set():
             return
@@ -129,16 +134,15 @@ class TrackingService:
             # Update next_check so the frontend can show the countdown
             self._project_state.config.tracking.next_check = datetime.now() + timedelta(seconds=interval_secs)
             self._project_state.save()
-            if self._event_bus:
-                from api.handlers.project import _build_project_dict
-                self._event_bus.publish({"type": "project", "project": _build_project_dict()})
+            if self._publish_project:
+                self._publish_project()
         else:
             interval_secs = 1800  # fallback 30 min
         self._timer = threading.Timer(interval_secs, self._execute_tracking_run)
         self._timer.daemon = True
         self._timer.start()
 
-    def _execute_tracking_run(self):
+    def _execute_tracking_run(self) -> None:
         """Execute a tracking run."""
         if not self._project_state or self._stop_event.is_set():
             return
@@ -160,47 +164,51 @@ class TrackingService:
                     run_type="tracking"
                 )
 
-                # Tell mock scraper which run number this is
-                import os
-                if os.environ.get("MCAT_MOCK"):
-                    os.environ["MCAT_MOCK_RUN"] = str(len(self._project_state.config.runs))
-
                 if self._log_callback:
                     self._log_callback("Tracking started", "info")
 
-                # Read URLs from urls.csv
-                all_urls_df = pl.read_csv(self._project_state.urls_csv_path)
-                urls = all_urls_df.select(
-                    pl.col(self._project_state.url_column).drop_nulls().cast(pl.Utf8)
-                ).to_series().to_list()
+                if self._processing_service and self._run_service:
+                    from services.job_builder import build_processing_job
 
-                # Start processing
-                if self._processing_service:
-                    from models.file_models import FileInfo, ColumnMapping
-                    from models.processing_models import ProcessingJob
+                    output_folder = str(self._project_state.get_run_path(run.id))
+                    job = build_processing_job(self._project_state, output_folder, screenshots)
+                    urls = get_urls_from_column(job.file_info.rows or [], self._project_state.url_column)
 
-                    file_info = FileInfo(path=str(self._project_state.urls_csv_path))
-                    file_info.dataframe = all_urls_df
-                    file_info.row_count = len(all_urls_df)
-                    file_info.columns = all_urls_df.columns
-                    file_info.valid = True
+                    project_state = self._project_state
+                    run_service = self._run_service
+                    publish_project = self._publish_project
 
-                    column_mapping = ColumnMapping()
-                    column_mapping.post_column = self._project_state.url_column
+                    def on_completed(result: object) -> None:
+                        if project_state.current_run:
+                            run_service.complete_run(project_state, project_state.current_run)
+                        if publish_project:
+                            publish_project()
 
-                    job = ProcessingJob(
-                        file_info=file_info,
-                        column_mapping=column_mapping,
-                        platform=self._project_state.platform,
-                        output_folder=str(self._project_state.get_run_path(run.id)),
-                        save_screenshots=screenshots
+                    def on_error(error_message: str) -> None:
+                        if project_state.current_run:
+                            run_service.abandon_run(project_state, project_state.current_run)
+                        if self._log_callback:
+                            self._log_callback(error_message, "error")
+                        if publish_project:
+                            publish_project()
+
+                    started = self._processing_service.start_processing(
+                        job, urls=urls,
+                        on_completed=on_completed,
+                        on_error=on_error,
                     )
-
-                    self._processing_service.start_processing(job, urls=urls)
+                    if not started and project_state.current_run:
+                        run_service.abandon_run(project_state, project_state.current_run)
 
         except Exception as e:
             if self._log_callback:
                 self._log_callback(f"Tracking error: {str(e)}", "error")
+            # A run created before the failure (e.g. job setup raised) would
+            # otherwise leave current_run set forever, short-circuiting every
+            # future tick and silently killing monitoring. Abandon it so the
+            # next tick can proceed.
+            if self._run_service and self._project_state and self._project_state.current_run:
+                self._run_service.abandon_run(self._project_state, self._project_state.current_run)
         finally:
             # Schedule next check
             if not self._stop_event.is_set():

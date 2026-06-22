@@ -3,8 +3,6 @@ Data models for file operations and validation.
 """
 
 from dataclasses import dataclass, field
-from typing import List, Optional
-import polars as pl
 
 
 @dataclass
@@ -12,11 +10,11 @@ class FileInfo:
     """Information about a loaded CSV file."""
 
     path: str
-    columns: List[str] = field(default_factory=list)
+    columns: list[str] = field(default_factory=list)
     row_count: int = 0
     valid: bool = False
     error_message: str = ""
-    dataframe: Optional[pl.DataFrame] = None
+    rows: list[dict] | None = None
 
     @property
     def filename(self) -> str:
@@ -35,7 +33,7 @@ class ValidationResult:
     """Result of validating file and column mappings."""
 
     valid: bool = False
-    errors: List[str] = field(default_factory=list)
+    errors: list[str] = field(default_factory=list)
     post_column: str = ""
 
     def add_error(self, error: str) -> None:
@@ -68,7 +66,7 @@ class ColumnMapping:
         return bool(self.post_column)
 
     @property
-    def all_columns(self) -> List[str]:
+    def all_columns(self) -> list[str]:
         """Get all columns that will be used."""
         columns = []
         if self.post_column:

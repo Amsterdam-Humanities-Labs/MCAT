@@ -1,23 +1,26 @@
 @import "tailwindcss";
-@import "./themes/noctua.css";
+@import "./themes/noctua-hc.css";
 
-@font-face {
-  font-family: 'General Sans';
-  src: url('/fonts/GeneralSans-Regular.otf') format('opentype');
-  font-weight: 400;
-  font-style: normal;
-}
-
-@font-face {
-  font-family: 'General Sans';
-  src: url('/fonts/GeneralSans-Semibold.otf') format('opentype');
-  font-weight: 600;
-  font-style: normal;
-}
+/* General Sans (400, 600) is loaded from Fontshare's CSS API via the <link>
+   in index.html, so no local @font-face is needed. */
 
 html {
   font-family: 'General Sans', system-ui, sans-serif;
   font-size: 16px;
   background: var(--color-bg-primary);
   color: var(--color-text-body);
+}
+
+/* The Popover API polyfill (older WebKit, e.g. macOS Ventura) can't use the real
+   top layer — it just bumps z-index — so melt's fixed-position dropdown/tooltip
+   coordinates resolve against a transformed ancestor and land off-screen. Where
+   native popover is absent, pin marked content back under its trigger via the
+   author's absolute positioning (the wrapper is position: relative). No-op on
+   browsers with native popover; does not touch the dialog overlay. */
+@supports not selector(:popover-open) {
+  [data-popover-anchored] {
+    position: absolute !important;
+    inset: auto !important;
+    transform: none !important;
+  }
 }

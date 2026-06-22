@@ -7,6 +7,7 @@
     "build": "pnpm --filter frontend build",
     "build:linux": "./build/build-linux.sh",
     "check": "pnpm --filter frontend check",
+    "test": "backend/venv/bin/python -m pytest",
     "clean": "rm -rf frontend/dist backend/build backend/dist build/MCAT.AppDir build/MCAT-x86_64.AppImage",
     "start": "cd backend && venv/bin/python mcat/app.py"
   }

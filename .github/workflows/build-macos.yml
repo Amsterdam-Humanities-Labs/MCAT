@@ -2,39 +2,73 @@ name: Build macOS App
 
 on:
   push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
-  workflow_dispatch:  # Allows manual trigger
+    branches: [build]
+  workflow_dispatch:
 
 jobs:
   build-macos:
-    runs-on: macos-13
-    
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Apple Silicon build -> ships to the researcher. Built on Tahoe
+          # (macos-26) to match their OS exactly.
+          - runner: macos-26
+            arch: arm64
+          # Intel build -> for the local QEMU Sequoia VM (x86_64). Built on
+          # Intel Sequoia (macos-15-intel) to match that VM exactly.
+          - runner: macos-15-intel
+            arch: x86_64
+    runs-on: ${{ matrix.runner }}
+    name: build-${{ matrix.arch }}
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
-    
+
     - name: Set up Python
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
-        python-version: '3.13'
-    
-    - name: Install dependencies
+        python-version: '3.12'
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '22'
+
+    - name: Install pnpm
+      run: npm install -g pnpm@9
+
+    - name: Install frontend dependencies
+      run: pnpm install --frozen-lockfile
+
+    - name: Build frontend
+      run: pnpm --filter frontend build
+
+    - name: Set up Python venv and install dependencies
       run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
-    
-    - name: Build with Nuitka
+        cd backend
+        python -m venv venv
+        venv/bin/pip install --upgrade pip
+        venv/bin/pip install ".[dev]"
+
+    - name: Build with PyInstaller
       run: |
-        # Build with Nuitka
-        nuitka --standalone --onefile --enable-plugin=no-qt --include-data-dir=assets/fonts=assets/fonts --output-dir=dist src/main.py
-        
-        # Rename binary
-        mv dist/main.bin mcat.bin
-    
-    - name: Upload build artifacts
+        cd backend
+        venv/bin/python -m PyInstaller --clean mcat.spec
+
+    - name: Verify bundle architecture
+      run: |
+        cd backend/dist
+        file MCAT.app/Contents/MacOS/mcat
+
+    - name: Zip the app bundle
+      run: |
+        cd backend/dist
+        zip -r MCAT-macOS-${{ matrix.arch }}.zip MCAT.app
+
+    - name: Upload build artifact
       uses: actions/upload-artifact@v4
       with:
-        name: mcat-macOS
-        path: mcat.bin
+        name: MCAT-macOS-${{ matrix.arch }}
+        path: backend/dist/MCAT-macOS-${{ matrix.arch }}.zip

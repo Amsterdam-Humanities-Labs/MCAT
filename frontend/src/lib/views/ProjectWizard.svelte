@@ -30,7 +30,6 @@
     { value: 'youtube', label: 'YouTube' },
     { value: 'instagram', label: 'Instagram' },
     { value: 'facebook', label: 'Facebook' },
-    { value: 'twitter', label: 'Twitter / X' },
   ];
 
   const form = new FormState({

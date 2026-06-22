@@ -17,18 +17,32 @@
   let { run, columns, rows, loading, error, onOpenScreenshot, class: className }: Props = $props();
 
   const INTERNAL_COLUMNS = ['previous_status'];
+  // Desired column order: url, then these mcat columns; anything else trails.
+  const MCAT_ORDER = ['mcat_status', 'mcat_screenshot', 'mcat_user', 'mcat_detail', 'mcat_error'];
 
-  const urlColumn = $derived(columns.find(c => !INTERNAL_COLUMNS.includes(c) && c !== 'status'));
+  const naCell = (v: unknown): string => {
+    const s = v == null ? '' : String(v).trim();
+    return s === '' || s.toUpperCase() === 'N/A' ? 'n/a' : s;
+  };
+
+  const displayRows = $derived(rows.map((r) => {
+    const out = { ...r };
+    if ('mcat_detail' in out) out.mcat_detail = naCell(out.mcat_detail);
+    if ('mcat_error' in out) out.mcat_error = naCell(out.mcat_error);
+    return out;
+  }));
+
+  const urlColumn = $derived(columns.find(c => !INTERNAL_COLUMNS.includes(c) && c !== 'mcat_status' && !c.startsWith('mcat_')));
 
   const tableColumns = $derived.by(() => {
     if (!urlColumn) return [];
-    const rest = columns.filter(c => c !== urlColumn && c !== 'status' && !INTERNAL_COLUMNS.includes(c));
-    const ordered = [urlColumn, 'status', ...rest];
+    const head = [urlColumn, ...MCAT_ORDER].filter(c => columns.includes(c) && !INTERNAL_COLUMNS.includes(c));
+    const rest = columns.filter(c => !head.includes(c) && !INTERNAL_COLUMNS.includes(c));
 
-    return ordered.map((col) => ({
+    return [...head, ...rest].map((col) => ({
       key: col,
-      header: col === 'status' ? 'change' : col,
-      type: col === 'status' ? 'transition' as const : col === urlColumn ? 'link' as const : col === 'status_screenshot' ? 'file' as const : 'text' as const,
+      header: col === 'mcat_status' ? 'change' : col,
+      type: col === 'mcat_status' ? 'transition' as const : col === urlColumn ? 'link' as const : col === 'mcat_screenshot' ? 'file' as const : 'text' as const,
     }));
   });
 </script>
@@ -54,6 +68,6 @@
     </div>
   </div>
 {:else}
-  <DataTable columns={tableColumns} {rows} emptyMessage="No changes detected" onScreenshotClick={onOpenScreenshot} />
+  <DataTable columns={tableColumns} rows={displayRows} emptyMessage="No changes detected" onScreenshotClick={onOpenScreenshot} />
 {/if}
 </div>

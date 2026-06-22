@@ -1,13 +1,15 @@
 """
 Data models for project management.
 """
+from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
-from typing import List, Optional
 import json
+
+from .types import StatusSummary, empty_status_summary
 
 
 class RunStatus(Enum):
@@ -23,7 +25,7 @@ class RunConfig:
 
     id: str
     started_at: datetime
-    completed_at: Optional[datetime] = None
+    completed_at: datetime | None = None
     status: RunStatus = RunStatus.IN_PROGRESS
     screenshots_enabled: bool = False
     run_type: str = "manual"  # "manual" or "tracking"
@@ -32,7 +34,7 @@ class RunConfig:
     total_checked: int = 0
     changes_count: int = 0
     changes_summary: dict = field(default_factory=dict)
-    status_summary: dict = field(default_factory=dict)
+    status_summary: StatusSummary = field(default_factory=empty_status_summary)
 
     def to_dict(self) -> dict:
         """Convert to dictionary for JSON serialization."""
@@ -66,7 +68,7 @@ class RunConfig:
             total_checked=data.get("total_checked", 0),
             changes_count=data.get("changes_count", 0),
             changes_summary=data.get("changes_summary", {}),
-            status_summary=data.get("status_summary", {}),
+            status_summary=data.get("status_summary") or empty_status_summary(),
         )
 
     @property
@@ -91,8 +93,8 @@ class TrackingConfig:
     enabled: bool = False
     interval_value: int = 30
     interval_unit: str = "minutes"  # "minutes", "hours", "days"
-    last_check: Optional[datetime] = None
-    next_check: Optional[datetime] = None
+    last_check: datetime | None = None
+    next_check: datetime | None = None
 
     @property
     def interval_seconds(self) -> int:
@@ -112,9 +114,16 @@ class TrackingConfig:
 
     @classmethod
     def from_dict(cls, data: dict) -> "TrackingConfig":
-        """Create TrackingConfig from dictionary."""
+        """Create TrackingConfig from dictionary.
+
+        enabled is intentionally NOT restored from disk. Scheduled monitoring is
+        a live, in-session state, not a persisted preference: restoring it on
+        reopen would either silently run unattended or show the toggle on while
+        nothing is actually armed. The user re-enables each session. The cadence
+        (interval_value/unit) is still restored.
+        """
         return cls(
-            enabled=data.get("enabled", False),
+            enabled=False,
             interval_value=data.get("interval_value", 30),
             interval_unit=data.get("interval_unit", "minutes"),
             last_check=datetime.fromisoformat(data["last_check"]) if data.get("last_check") else None,
@@ -131,7 +140,7 @@ class ProjectConfig:
     created_at: datetime
     url_column: str
     screenshots_enabled: bool = False
-    runs: List[RunConfig] = field(default_factory=list)
+    runs: list[RunConfig] = field(default_factory=list)
     tracking: TrackingConfig = field(default_factory=TrackingConfig)
 
     def to_dict(self) -> dict:
@@ -177,21 +186,21 @@ class ProjectConfig:
         """Add a run to the project."""
         self.runs.append(run)
 
-    def get_run(self, run_id: str) -> Optional[RunConfig]:
+    def get_run(self, run_id: str) -> RunConfig | None:
         """Get a run by ID."""
         for run in self.runs:
             if run.id == run_id:
                 return run
         return None
 
-    def get_interrupted_run(self) -> Optional[RunConfig]:
+    def get_interrupted_run(self) -> RunConfig | None:
         """Get the first interrupted run, if any."""
         for run in self.runs:
             if run.is_interrupted:
                 return run
         return None
 
-    def get_completed_runs(self) -> List[RunConfig]:
+    def get_completed_runs(self) -> list[RunConfig]:
         """Get all completed runs."""
         return [run for run in self.runs if run.is_complete]
 

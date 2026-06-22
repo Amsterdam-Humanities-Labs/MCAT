@@ -10,6 +10,9 @@ importers:
 
   frontend:
     dependencies:
+      '@oddbird/popover-polyfill':
+        specifier: ^0.6.1
+        version: 0.6.1
       clsx:
         specifier: ^2.1.1
         version: 2.1.1
@@ -243,6 +246,9 @@ packages:
 
   '@jridgewell/trace-mapping@0.3.31':
     resolution: {integrity: sha512-zzNR+SdQSDJzc8joaeP8QQoCQr8NuYx2dIIytl1QeBEZHJ9uW6hebsrYgbz8hJwUQao3TWCMtmfV8Nu1twOLAw==}
+
+  '@oddbird/popover-polyfill@0.6.1':
+    resolution: {integrity: sha512-Papau51NPG+NajXvoEHCNT1CBJv4WIyvIGfH5gpJPLL8MZJt/4giC0jJ/mNZRtJmdzRuXWpUFB6QxkJa1RvMAQ==}
 
   '@rollup/rollup-android-arm-eabi@4.59.0':
     resolution: {integrity: sha512-upnNBkA6ZH2VKGcBj9Fyl9IGNPULcjXRlg0LLeaioQWueH30p6IXtJEbKAgvyv+mJaMxSm1l6xwDXYjpEMiLMg==}
@@ -1015,6 +1021,8 @@ snapshots:
     dependencies:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.5.5
+
+  '@oddbird/popover-polyfill@0.6.1': {}
 
   '@rollup/rollup-android-arm-eabi@4.59.0':
     optional: true
