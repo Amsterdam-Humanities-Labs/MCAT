@@ -7,19 +7,32 @@ from models.types import StatusSummary
 
 
 def load_csv(file_path: str) -> list[dict]:
-    """Load CSV file with automatic delimiter detection. Returns list of dicts."""
+    """Load a CSV with automatic delimiter detection. Returns a list of dicts.
+
+    Tries each delimiter and returns the first that splits into more than one
+    column. A genuinely single-column file (e.g. just URLs) falls back to the
+    first successful parse.
+    """
     if not os.path.exists(file_path):
         raise FileNotFoundError(f"CSV file not found: {file_path}")
 
+    fallback = None
     for separator in [',', ';', '\t', '|']:
         try:
             with open(file_path, newline='', encoding='utf-8-sig') as f:
                 reader = csv.DictReader(f, delimiter=separator)
                 rows = list(reader)
-                if reader.fieldnames and (len(reader.fieldnames) > 1 or separator == ','):
-                    return rows
         except Exception:
             continue
+        if not reader.fieldnames:
+            continue
+        if len(reader.fieldnames) > 1:
+            return rows
+        if fallback is None:
+            fallback = rows
+
+    if fallback is not None:
+        return fallback
 
     raise Exception(f"Error loading CSV file: {file_path}")
 

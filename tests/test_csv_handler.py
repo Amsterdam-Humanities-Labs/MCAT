@@ -40,17 +40,14 @@ def test_load_csv_missing_raises(tmp_path):
         load_csv(str(tmp_path / "nope.csv"))
 
 
-@pytest.mark.xfail(reason="BUG: load_csv returns on the comma delimiter first, so "
-                          "semicolon files are misparsed as one column", strict=True)
 def test_load_csv_semicolon(tmp_path):
     rows = load_csv(_write(tmp_path / "sc.csv", "url;title\nhttp://a;A\n"))
-    assert list(rows[0].keys()) == ["url", "title"]
+    assert rows == [{"url": "http://a", "title": "A"}]
 
 
-@pytest.mark.xfail(reason="BUG: same comma-first short-circuit misparses tab files", strict=True)
 def test_load_csv_tab(tmp_path):
     rows = load_csv(_write(tmp_path / "t.csv", "url\ttitle\nhttp://a\tA\n"))
-    assert list(rows[0].keys()) == ["url", "title"]
+    assert rows == [{"url": "http://a", "title": "A"}]
 
 
 # --- get_columns ---

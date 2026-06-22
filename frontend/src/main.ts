@@ -12,14 +12,6 @@ const params = new URLSearchParams(window.location.search);
 const port = params.get('port') || '9876';
 setBackendUrl(`http://127.0.0.1:${port}`);
 
-// TEMPORARY: report whether this webview has native popover. CSS.supports is the
-// reliable check — the polyfill can't make :popover-open a real selector, so it
-// stays false when polyfilled. Logged to the devtools console (app runs debug=True).
-// Remove in the next commit.
-console.log(
-  `popover support: ${CSS.supports('selector(:popover-open)') ? 'native' : 'polyfilled'} — ${navigator.userAgent}`
-);
-
 const app = mount(App, {
   target: document.getElementById('app')!,
 });
