@@ -20,6 +20,7 @@ class StatusSummary(TypedDict):
     sum to the run's ``total_checked``."""
     live: int
     removed: int
+    unavailable: int
     restricted: int
     errors: int
     unknown: int
@@ -38,5 +39,5 @@ def empty_status_summary() -> StatusSummary:
     """A zero-filled summary, for use as a dataclass default before any rows
     have been counted."""
     return StatusSummary(
-        live=0, removed=0, restricted=0, errors=0, unknown=0, login_required=0
+        live=0, removed=0, unavailable=0, restricted=0, errors=0, unknown=0, login_required=0
     )

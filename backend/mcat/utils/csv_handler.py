@@ -81,6 +81,7 @@ def count_statuses(rows: list[dict], status_column: str = "mcat_status") -> Stat
     return {
         "live": counts.get("Live", 0),
         "removed": counts.get("Removed", 0),
+        "unavailable": counts.get("Unavailable", 0),
         "restricted": (
             counts.get("Restricted", 0)
             + counts.get("Age-restricted", 0)

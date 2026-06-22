@@ -12,6 +12,7 @@ from scrapers.base_scraper import BaseScraper
 from scrapers.youtube_scraper import YouTubeScraper
 from scrapers.instagram_scraper import InstagramScraper
 from scrapers.facebook_scraper import FacebookScraper
+from scrapers.twitter_scraper import TwitterScraper
 
 
 class BatchProcessor:
@@ -146,6 +147,7 @@ class BatchProcessor:
             'youtube': YouTubeScraper,
             'instagram': InstagramScraper,
             'facebook': FacebookScraper,
+            'twitter': TwitterScraper,
         }
         cls = scrapers.get(platform)
         if not cls:
@@ -176,7 +178,7 @@ class BatchProcessor:
         with no await inside it and needs no lock."""
         processed = 0
         total = len(urls)
-        stats = {'live': 0, 'removed': 0, 'restricted': 0, 'errors': 0, 'unknown': 0, 'login_required': 0, 'skipped': 0}
+        stats = {'live': 0, 'removed': 0, 'unavailable': 0, 'restricted': 0, 'errors': 0, 'unknown': 0, 'login_required': 0, 'skipped': 0}
         original_rows = original_rows or []
 
         async def process_single_url(url: str, row_index: int) -> None:
@@ -207,6 +209,8 @@ class BatchProcessor:
                     stats['live'] += 1
                 elif status == 'removed':
                     stats['removed'] += 1
+                elif status == 'unavailable':
+                    stats['unavailable'] += 1
                 elif status in ['restricted', 'age-restricted', 'geo-blocked', 'private']:
                     stats['restricted'] += 1
                 elif status == 'unknown':

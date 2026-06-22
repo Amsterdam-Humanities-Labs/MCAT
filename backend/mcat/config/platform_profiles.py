@@ -68,6 +68,12 @@ PROFILES: dict[str, PlatformProfile] = {
         login_cookies=("LOGIN_INFO", "SID", "HSID", "SSID", "APISID", "SAPISID",
                        "__Secure-1PSID", "__Secure-3PSID"),
     ),
+    "twitter": PlatformProfile(
+        "twitter", "https://x.com",
+        login_cookie="auth_token", username_cookie="twid",
+        consent_cookies=("guest_id", "personalization_id", "gt"),
+        login_cookies=("auth_token", "ct0", "twid"),
+    ),
 }
 
 
