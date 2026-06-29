@@ -45,13 +45,15 @@ class CookieStore:
         expiry = c.get("expiry")
         return not (expiry and expiry < time.time())
 
-    def save_cookies(self, platform: str, cookies: list[dict], username: str = "") -> Path:
+    def save_cookies(self, platform: str, cookies: list[dict], username: str = "",
+                     consent_captured: bool = False) -> Path:
         self._dir.mkdir(parents=True, exist_ok=True)
         path = self._path(platform)
         data = {
             "platform": platform,
             "username": username,
             "captured_at": datetime.now().isoformat(),
+            "consent_captured": consent_captured,
             "cookies": cookies,
         }
         path.write_text(json.dumps(data, indent=2))
@@ -99,6 +101,28 @@ class CookieStore:
                 "captured_at": data["captured_at"],
                 "cookie_count": len(cookies),
                 "logged_in": self._has_fresh_login(platform, cookies),
+                # A missing field means no consent event was ever recorded, so
+                # it's treated as not captured (a jar from before the field
+                # existed shows "Consent not set" until its next setup run).
+                "consent_captured": data.get("consent_captured", False),
             }
         except (json.JSONDecodeError, KeyError):
             return None
+
+    def get_auth_info(self, platform: str) -> dict:
+        """The auth facts the UI needs, in one shape. Single source so the
+        project serializer and the cookie-status endpoint cannot drift.
+
+        Note ``logged_in`` is derived live from cookie freshness, whereas
+        ``consent_captured`` is persisted: a saved jar alone can't reveal
+        whether a present consent cookie was user-chosen or auto-set, so the
+        consent decision is recorded as an event at setup time (see
+        ``cookie_diff.consent_login_events``)."""
+        info = self.get_cookie_info(platform)
+        return {
+            "has_cookies": info is not None,
+            "username": info["username"] if info else "",
+            "logged_in": info["logged_in"] if info else False,
+            "captured_at": info["captured_at"] if info else None,
+            "consent_captured": info["consent_captured"] if info else False,
+        }

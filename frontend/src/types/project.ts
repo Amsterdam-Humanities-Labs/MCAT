@@ -44,6 +44,7 @@ export interface AuthInfo {
   username: string;
   logged_in: boolean;
   captured_at: string | null;
+  consent_captured: boolean;
 }
 
 export interface Project {

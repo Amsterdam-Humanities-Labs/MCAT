@@ -1,3 +1,4 @@
+import json
 import sys
 from pathlib import Path
 
@@ -47,6 +48,36 @@ def test_get_cookie_info(store):
     assert info["platform"] == "instagram"
     assert info["cookie_count"] == 2
     assert "captured_at" in info
+
+
+def test_consent_captured_round_trips(store):
+    store.save_cookies("instagram", FAKE_COOKIES, consent_captured=True)
+    assert store.get_cookie_info("instagram")["consent_captured"] is True
+    store.save_cookies("instagram", FAKE_COOKIES)  # default
+    assert store.get_cookie_info("instagram")["consent_captured"] is False
+
+
+def test_jar_without_field_defaults_consent_false(store, tmp_path):
+    # No recorded consent event -> treated as not captured (and the jar still
+    # loads; only the consent flag is absent).
+    path = tmp_path / "cookies" / "instagram.json"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps({
+        "platform": "instagram", "username": "", "captured_at": "2025-01-01T00:00:00",
+        "cookies": FAKE_COOKIES,
+    }))
+    assert store.get_cookie_info("instagram")["consent_captured"] is False
+
+
+def test_get_auth_info_shape(store):
+    empty = store.get_auth_info("instagram")
+    assert empty == {"has_cookies": False, "username": "", "logged_in": False,
+                     "captured_at": None, "consent_captured": False}
+    store.save_cookies("instagram", FAKE_COOKIES, username="jane", consent_captured=True)
+    info = store.get_auth_info("instagram")
+    assert info["has_cookies"] is True
+    assert info["username"] == "jane"
+    assert info["consent_captured"] is True
 
 
 def test_separate_platforms(store):

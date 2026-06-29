@@ -20,11 +20,14 @@
 
   let { projectName, platform, urlCount, projectPath, auth, onOpenFolder, onClose, onSetupBrowser, onResetBrowser, class: className }: Props = $props();
 
+  // hasSetup (any saved jar) gates the Reset/Set up button and identity label.
+  // The consent label is separate: it reflects whether the user actually made a
+  // consent choice, not merely that a cookie file exists (sites auto-set tokens).
   const hasSetup = $derived(auth?.has_cookies ?? false);
   const identityLabel = $derived(
     auth?.username ? `Logged in: ${auth.username}` : auth?.logged_in ? 'Logged in' : 'Anonymous'
   );
-  const consentLabel = $derived(hasSetup ? 'Consent saved' : 'Consent not set');
+  const consentLabel = $derived(auth?.consent_captured ? 'Consent saved' : 'Consent not set');
 
   // Capture date lives in a tooltip rather than a visible label.
   const captureTooltip = $derived.by(() => {

@@ -6,6 +6,7 @@ import zendriver as zd
 from zendriver import cdp
 
 from cookies.cookie_store import CookieStore
+from cookies.cookie_diff import classify_cookie_names, consent_login_events
 from config.platform_profiles import get_profile
 from core.browser_manager import cookie_to_dict
 
@@ -57,6 +58,10 @@ class LoginService:
         if not profile:
             return
         cookie_name = profile.login_cookie
+        # Consent is monotonic across set-ups: a no-op re-run must never clear a
+        # previously-earned consent, so carry the prior value and OR the event in.
+        prior = self._cookie_store.get_cookie_info(platform)
+        prior_consent = bool(prior["consent_captured"]) if prior else False
         # Visible window, real UA (no spoof — Google blocks sign-in from a
         # spoofed Windows UA; zendriver's native UA matches the host OS).
         # --test-type suppresses Chrome's "unsupported flag --no-sandbox" infobar
@@ -72,6 +77,10 @@ class LoginService:
                           "--use-mock-keychain", "--password-store=basic"],
         )
         last_cookies: list[dict] = []
+        # First non-empty read after the page settles — the pre-action baseline
+        # the close-time diff compares against (no fixed delay; the get() above
+        # already awaited load).
+        baseline_cookies: list[dict] = []
         announced = False
         try:
             tab = await browser.get(profile.base_url)
@@ -85,13 +94,16 @@ class LoginService:
                 cookies = [cookie_to_dict(c) for c in raw]
                 if cookies:
                     last_cookies = cookies
+                    if not baseline_cookies:
+                        baseline_cookies = cookies
 
                 # Announce login once for immediate feedback, but keep polling so
                 # consent dismissed AFTER sign-in is still captured on close.
                 if not announced and cookie_name and any(c["name"] == cookie_name for c in cookies):
                     announced = True
                     username = self._extract_username(platform, cookies)
-                    self._cookie_store.save_cookies(platform, cookies, username=username)
+                    self._cookie_store.save_cookies(platform, cookies, username=username,
+                                                    consent_captured=prior_consent)
                     self._log(f"Logged in as {username}" if username else "Login detected")
                     if self._on_login:
                         self._on_login()
@@ -101,7 +113,10 @@ class LoginService:
             # Window closed (or error) -> persist the final, complete jar.
             if last_cookies:
                 username = self._extract_username(platform, last_cookies)
-                self._cookie_store.save_cookies(platform, last_cookies, username=username)
+                consent_event, _ = consent_login_events(baseline_cookies, last_cookies, platform)
+                consent_captured = prior_consent or consent_event
+                self._cookie_store.save_cookies(platform, last_cookies, username=username,
+                                                consent_captured=consent_captured)
                 self._log_capture_summary(platform, last_cookies)
                 if self._on_login:
                     self._on_login()
@@ -134,14 +149,8 @@ class LoginService:
         values. A missing consent set is surfaced as a warning because the
         scraper modal will likely reappear without it.
         """
-        profile = get_profile(platform)
-        consent_names = set(profile.consent_cookies) if profile else set()
-        login_names = set(profile.login_cookies) if profile else set()
-
         names = [c.get("name", "") for c in cookies if c.get("name")]
-        consent = list(dict.fromkeys(n for n in names if n in consent_names))
-        login = list(dict.fromkeys(n for n in names if n in login_names))
-        other = max(0, len(set(names)) - len(consent) - len(login))
+        consent, login, other = classify_cookie_names(platform, names)
 
         def seg(found: list[str], noun: str, empty: str) -> str:
             if not found:

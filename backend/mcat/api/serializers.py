@@ -17,7 +17,6 @@ def build_project_dict() -> dict | None:
 
     project = ctx.current_project
     cookie_store = CookieStore(project.project_path)
-    cookie_info = cookie_store.get_cookie_info(project.platform)
 
     return {
         "name": project.name,
@@ -28,12 +27,7 @@ def build_project_dict() -> dict | None:
         "screenshots_enabled": project.config.screenshots_enabled,
         "runs": [run.to_dict() for run in project.config.runs],
         "tracking": project.config.tracking.to_dict(),
-        "auth": {
-            "has_cookies": cookie_info is not None,
-            "username": cookie_info["username"] if cookie_info else "",
-            "logged_in": cookie_info.get("logged_in", False) if cookie_info else False,
-            "captured_at": cookie_info["captured_at"] if cookie_info else None,
-        },
+        "auth": cookie_store.get_auth_info(project.platform),
     }
 
 
