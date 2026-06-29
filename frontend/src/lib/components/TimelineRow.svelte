@@ -21,7 +21,9 @@
 
   // Sort order: recoveries (→ live) first, then degradations by severity
   const STATUS_WEIGHT: Record<string, number> = {
-    live: 0, restricted: 1, private: 2, unknown: 3, removed: 4, error: 5,
+    live: 0, restricted: 1, moderated: 2, unavailable: 3, 'login required': 4, unknown: 5, error: 6,
+    // legacy statuses from older runs
+    private: 1, 'age-restricted': 1, 'geo-blocked': 1, removed: 3,
   };
 
   const summary = $derived(run.changes_summary || {});
@@ -81,8 +83,11 @@
         {#if run.status_summary.restricted > 0}
           <StatusBadge status="restricted" count={run.status_summary.restricted} />
         {/if}
-        {#if run.status_summary.removed > 0}
-          <StatusBadge status="removed" count={run.status_summary.removed} />
+        {#if run.status_summary.moderated > 0}
+          <StatusBadge status="moderated" count={run.status_summary.moderated} />
+        {/if}
+        {#if run.status_summary.unavailable > 0}
+          <StatusBadge status="unavailable" count={run.status_summary.unavailable} />
         {/if}
       </span>
     {/if}

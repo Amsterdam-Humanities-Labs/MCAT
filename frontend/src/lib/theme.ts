@@ -23,8 +23,11 @@ export const colors = {
   },
   status: {
     live: '#2F6B22',
-    removed: '#A52727',
+    unavailable: '#A52727',
+    moderated: '#8A3D6B',
     restricted: '#A85E08',
+    login: '#3A5A78',
+    unknown: '#6E6258',
     error: '#6B472A',
   },
   link: '#3A7A4A',

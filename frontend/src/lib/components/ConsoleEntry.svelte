@@ -21,11 +21,16 @@
 
   const statusColors: Record<string, string> = {
     live: 'text-status-live',
-    removed: 'text-status-removed',
+    unavailable: 'text-status-unavailable',
+    moderated: 'text-status-moderated',
     restricted: 'text-status-restricted',
-    private: 'text-status-restricted',
+    unknown: 'text-status-unknown',
     error: 'text-status-error',
-    unknown: 'text-text-secondary',
+    // legacy statuses still present in older result logs
+    removed: 'text-status-unavailable',
+    private: 'text-status-restricted',
+    'age-restricted': 'text-status-restricted',
+    'geo-blocked': 'text-status-restricted',
   };
 
   function formatTime(date: Date): string {

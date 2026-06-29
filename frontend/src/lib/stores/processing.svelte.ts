@@ -14,11 +14,12 @@ interface ProcessingStatus {
 
 const defaultStatusCounts: RunStatusSummary = {
   live: 0,
-  removed: 0,
+  unavailable: 0,
+  moderated: 0,
   restricted: 0,
-  error: 0,
-  unknown: 0,
   login_required: 0,
+  unknown: 0,
+  errors: 0,
 };
 
 function createProcessingStore() {

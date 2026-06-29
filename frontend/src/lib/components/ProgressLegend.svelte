@@ -19,9 +19,12 @@
 
   const items = $derived([
     { label: 'Live', count: statusCounts.live, delta: formatDelta(statusCounts.live, baselineCounts?.live), color: 'bg-status-live', textColor: 'text-status-live' },
-    { label: 'Removed', count: statusCounts.removed, delta: formatDelta(statusCounts.removed, baselineCounts?.removed), color: 'bg-status-removed', textColor: 'text-status-removed' },
     { label: 'Restricted', count: statusCounts.restricted, delta: formatDelta(statusCounts.restricted, baselineCounts?.restricted), color: 'bg-status-restricted', textColor: 'text-status-restricted' },
-    { label: 'Error', count: statusCounts.error, delta: formatDelta(statusCounts.error, baselineCounts?.error), color: 'bg-status-error', textColor: 'text-status-error' },
+    { label: 'Moderated', count: statusCounts.moderated, delta: formatDelta(statusCounts.moderated, baselineCounts?.moderated), color: 'bg-status-moderated', textColor: 'text-status-moderated' },
+    { label: 'Unavailable', count: statusCounts.unavailable, delta: formatDelta(statusCounts.unavailable, baselineCounts?.unavailable), color: 'bg-status-unavailable', textColor: 'text-status-unavailable' },
+    { label: 'Login Required', count: statusCounts.login_required, delta: formatDelta(statusCounts.login_required, baselineCounts?.login_required), color: 'bg-status-login', textColor: 'text-status-login' },
+    { label: 'Unknown', count: statusCounts.unknown, delta: formatDelta(statusCounts.unknown, baselineCounts?.unknown), color: 'bg-status-unknown', textColor: 'text-status-unknown' },
+    { label: 'Error', count: statusCounts.errors, delta: formatDelta(statusCounts.errors, baselineCounts?.errors), color: 'bg-status-error', textColor: 'text-status-error' },
   ]);
 </script>
 

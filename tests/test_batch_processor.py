@@ -61,14 +61,15 @@ async def test_happy_path(tmp_path):
 
 
 async def test_mixed_statuses_bucket_into_stats(tmp_path):
-    smap = {"http://a": "Live", "http://b": "Removed",
-            "http://c": "Private", "http://d": "Unknown"}
+    smap = {"http://a": "Live", "http://b": "Unavailable",
+            "http://c": "Private", "http://d": "Unknown", "http://e": "Moderated"}
     out = tmp_path / "out"; out.mkdir()
     result = await _proc(ScriptedScraper(status_map=smap)).process_csv_async(
         _csv(tmp_path, list(smap)), "test", {"post": "url"}, output_folder=str(out))
     assert result.success
     assert result.stats["live"] == 1
-    assert result.stats["removed"] == 1
+    assert result.stats["unavailable"] == 1
+    assert result.stats["moderated"] == 1
     assert result.stats["restricted"] == 1     # Private collapses into restricted
     assert result.stats["unknown"] == 1
 

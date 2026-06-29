@@ -62,8 +62,11 @@
       {#if run.status_summary?.restricted}
         <span style="color: {colors.status.restricted}">{run.status_summary.restricted} Restricted</span>
       {/if}
-      {#if run.status_summary?.removed}
-        <span style="color: {colors.status.removed}">{run.status_summary.removed} Removed</span>
+      {#if run.status_summary?.moderated}
+        <span style="color: {colors.status.moderated}">{run.status_summary.moderated} Moderated</span>
+      {/if}
+      {#if run.status_summary?.unavailable}
+        <span style="color: {colors.status.unavailable}">{run.status_summary.unavailable} Unavailable</span>
       {/if}
     </div>
   </div>

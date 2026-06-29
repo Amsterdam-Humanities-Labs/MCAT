@@ -1,18 +1,19 @@
-export type Platform = 'youtube' | 'instagram' | 'facebook';
+export type Platform = 'youtube' | 'instagram' | 'facebook' | 'twitter';
 
 export type RunStatus = 'in_progress' | 'completed' | 'abandoned';
 
 export interface RunStatusSummary {
   live: number;
-  removed: number;
+  unavailable: number;
+  moderated: number;
   restricted: number;
-  error: number;
-  unknown: number;
   login_required: number;
+  unknown: number;
+  errors: number;
 }
 
 export interface RunChangesSummary {
-  [transition: string]: number; // e.g. "live_to_removed": 3
+  [transition: string]: number; // e.g. "live_to_unavailable": 3
 }
 
 export interface Run {

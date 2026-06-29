@@ -128,14 +128,14 @@ class RunService:
     def _compute_status_summary(self, project_state: ProjectState, run: RunConfig) -> StatusSummary:
         results_path = project_state.get_run_results_path(run.id)
         if not results_path.exists():
-            return {"live": 0, "removed": 0, "restricted": 0, "errors": 0, "unknown": 0, "login_required": 0}
+            return {"live": 0, "unavailable": 0, "moderated": 0, "restricted": 0, "errors": 0, "unknown": 0, "login_required": 0}
 
         try:
             rows = load_csv(str(results_path))
             return count_statuses(rows)
         except Exception as e:
             self._log(f"Failed to compute status summary for run {run.id}: {e}", "warning")
-            return {"live": 0, "removed": 0, "restricted": 0, "errors": 0, "unknown": 0, "login_required": 0}
+            return {"live": 0, "unavailable": 0, "moderated": 0, "restricted": 0, "errors": 0, "unknown": 0, "login_required": 0}
 
     def _compute_changes(self, project_state: ProjectState, previous_run: RunConfig, current_run: RunConfig) -> list[StatusChange]:
         prev_path = project_state.get_run_results_path(previous_run.id)

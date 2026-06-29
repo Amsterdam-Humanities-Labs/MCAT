@@ -1,8 +1,8 @@
 # MCAT
 
-**MCAT (Moderation Content Analysis Tool)** is a desktop app for researchers studying platform content moderation. Given a list of post/video URLs, it checks whether each is still **live**, **removed**, or **restricted** (age-gated, geo-blocked, private, login-walled…) by loading it in a real browser and inspecting the rendered page — and it can **re-check on a schedule** to capture *when* a piece of content's status changes over time.
+**MCAT (Moderation Content Analysis Tool)** is a desktop app for researchers studying platform content moderation. Given a list of post/video URLs, it checks whether each is still **live**, **restricted** (age-gated, geo-blocked, private), **moderated** (taken down by the platform), or **unavailable** (gone) by loading it in a real browser and inspecting the rendered page — and it can **re-check on a schedule** to capture *when* a piece of content's status changes over time.
 
-It targets **YouTube, Instagram, and Facebook**, runs locally as a native window, and writes results to a plain CSV alongside per-URL screenshots, so findings stay auditable and easy to analyze. Nothing leaves your machine except the page loads themselves.
+It targets **YouTube, Instagram, Facebook, and X (Twitter)**, runs locally as a native window, and writes results to a plain CSV alongside per-URL screenshots, so findings stay auditable and easy to analyze. Nothing leaves your machine except the page loads themselves.
 
 Built with pywebview — a Python backend, a Svelte 5 frontend, and a zendriver-driven Chrome for scraping.
 
@@ -16,7 +16,7 @@ flowchart LR
     HTTP["Backend HTTP server"]
     Worker["Worker thread<br/>(batch processor)"]
     Browser["zendriver Chrome<br/>+ tab pool"]
-    Sites["YouTube · Instagram · Facebook"]
+    Sites["YouTube · Instagram · Facebook · X"]
     Files[("project files<br/>results.csv · screenshots")]
 
     UI -->|"commands: /process/start, /project/*, /auth/*"| HTTP
@@ -75,6 +75,7 @@ Covers `csv_handler` (I/O + delimiter handling), each platform's `_detect_status
 url
 https://youtube.com/watch?v=...
 https://instagram.com/p/...
+https://x.com/user/status/...
 ```
 
 **Output** is written incrementally to `results.csv` in the run folder: the original columns plus `mcat_status`, `mcat_detail`, `mcat_screenshot`, `mcat_timestamp`, `mcat_error`, and `mcat_user`. When screenshots are enabled, they're saved under `screenshots/<status>/`.
@@ -86,10 +87,11 @@ https://instagram.com/p/...
 - **No passwords are ever stored** — only cookies, and the activity log prints cookie *names* only, never values.
 - **Use a dedicated / throwaway account, never your real one.** Automated logins can get flagged or locked.
 - Instagram and Facebook may need login to view content; if their session cookies expire, the scraper reports `Login Required` (Instagram) or an undecided `Unknown` (Facebook), and you re-run Set up browser. YouTube needs no login but shows a consent modal — running Set up browser once captures its `SOCS` consent cookie (~13-month lifetime) so the modal never renders. Recommended in the EU, where an un-set-up YouTube project gets redirected to the consent page and detection degrades.
+- X (Twitter) should be **run logged in**. Logged out, X throttles even live tweets to a generic "nothing to see here" page, so a live post can be misread as `Unavailable`; Set up browser → log in to X so the run sees the real tweet.
 
 ### Monitoring over time (tracking)
 
-Enable **tracking** to re-run the checks automatically on an interval (minutes / hours / days). Each scheduled run re-checks the project's URLs, so you can capture when content gets removed or restricted *after* the initial check — the core "moderation over time" use case. The next-check time is shown in the UI; tracking stops when you disable it or close the project.
+Enable **tracking** to re-run the checks automatically on an interval (minutes / hours / days). Each scheduled run re-checks the project's URLs, so you can capture when content gets taken down or restricted *after* the initial check — the core "moderation over time" use case. The next-check time is shown in the UI; tracking stops when you disable it or close the project.
 
 ## Scraping strategies
 
@@ -99,14 +101,27 @@ Each scraper drives a Chrome tab via **zendriver** (Chrome DevTools Protocol —
 
 Detection reads `body.innerText` (visible text only, not raw HTML, to avoid false positives from JS template strings) and triages in a fixed **order of precedence**:
 
-1. **Negative signals first** — affirmative evidence the content is *gone or restricted* (removal phrases, error icons, age/geo/private/restricted markers). Highest priority: a removal notice must never be overridden by a "looks live" signal.
+1. **Negative signals first** — affirmative evidence the content is *gone, moderated, or restricted* (removal/suspension phrases, error icons, age/geo/private markers). Highest priority: a takedown notice must never be overridden by a "looks live" signal.
 2. **Positive signals** — affirmative evidence the content is *present* (the rendered post element, `og:title`, the SPA's title element).
 3. **Login Required** (Instagram) — a login wall with no other signal.
 4. **Unknown** — nothing matched.
 
-The guiding principle: **both `Live` and `Removed` require their own affirmative evidence — neither is ever a guess.** A page is never called `Live` until all negative checks fail *and* a positive signal is found. When neither is found, the result is **`Unknown`** (the genuine fallback) for a human to judge from the screenshot — the scraper never defaults absence-of-removal to "live."
+X (Twitter) is the exception: because it only renders a tweet when it's live, its scraper inverts steps 1 and 2 and checks the **positive signal first** — a rendered tweet is conclusive proof of `Live`.
 
-Statuses the system can emit: `Live`, `Removed`, `Age-restricted`, `Geo-blocked`, `Private`, `Restricted` (YouTube), `Login Required` (Instagram), and the universal `Unknown` / `Error` / `Cancelled`. When screenshots are enabled, a `Live` post additionally waits for its main image to paint before capture, so the screenshot shows the post rather than a loading skeleton.
+The guiding principle: **`Live` and every negative status (`Moderated`, `Unavailable`, `Restricted`) require their own affirmative evidence — none is ever a guess.** A page is never called `Live` until all negative checks fail *and* a positive signal is found. When neither is found, the result is **`Unknown`** (the genuine fallback) for a human to judge from the screenshot — the scraper never defaults absence-of-removal to "live."
+
+Statuses the system can emit:
+
+| Status | Meaning |
+|--------|---------|
+| `Live` | content is present and accessible |
+| `Restricted` | present but gated — age-gated, geo-blocked, or private |
+| `Moderated` | taken down by platform enforcement — a suspended account or terminated channel |
+| `Unavailable` | gone, with no attributable cause — deleted, 404, or expired |
+| `Login Required` | an auth wall blocked the check; the content itself may still be live |
+| `Unknown` / `Error` / `Cancelled` | universal: nothing matched / the probe failed / the run was stopped |
+
+Following *simplicity in the status, nuance in the detail*, the specific reason — `age-restricted`, `geo-blocked`, `private`, `removed by uploader`, `suspended account` — is recorded in `mcat_detail` rather than spawning its own status. When screenshots are enabled, a `Live` post additionally waits for its main image to paint before capture, so the screenshot shows the post rather than a loading skeleton.
 
 Consent modals are never dismissed in-scraper — the consent cookie captured during **Set up browser** is injected into every tab, so the modal simply never renders.
 
@@ -114,13 +129,11 @@ Consent modals are never dismissed in-scraper — the consent cookie captured du
 
 The page title is captured immediately after `tab.get()` returns, before YouTube redirects incognito browsers to its consent page. This initial title is a fallback `Live` signal when the SPA doesn't fully render. Set up browser injects the consent cookie and prevents the redirect entirely.
 
-| Status | Signal |
+| Status | Signal (reason recorded in `mcat_detail`) |
 |--------|--------|
-| Removed | Text: "video unavailable", "this video isn't available", "removed by the user", "account has been terminated" |
-| Age-restricted | Text: "age-restricted", "sign in to confirm your age" |
-| Geo-blocked | Text: "not available in your country" |
-| Private | Text: "private video" |
-| Restricted | DOM: elements with `warning` or `restricted` in class name |
+| Unavailable | Text: "video unavailable", "this video isn't available", "removed by the user" |
+| Moderated | Text: "account has been terminated" |
+| Restricted | Text: "age-restricted" / "sign in to confirm your age" (age); "not available in your country" (geo); "private video" (private); DOM: elements with `warning` or `restricted` in class name |
 | Live | DOM: `h1.ytd-watch-metadata` via `innerText` (handles hashtag-only titles); fallback: page title matches `"<Title> - YouTube"` |
 | Unknown | No signal found after timeout |
 
@@ -130,21 +143,32 @@ Works without login (Instagram shows post previews to anonymous visitors). With 
 
 | Status | Signal |
 |--------|--------|
-| Removed | Page title contains "isn't available"; error SVG `svg[aria-label="error"]`; text: "post isn't available", "sorry, this page isn't available", "page not found" |
+| Unavailable | Page title contains "isn't available"; error SVG `svg[aria-label="error"]`; text: "post isn't available", "sorry, this page isn't available", "page not found" |
 | Live | Meta tag `og:title` contains `" on Instagram:"`; fallback: `article[role="presentation"]` (logged-in view) |
 | Login Required | Login wall detected ("log in" + "sign up" in body text) with no other signal |
 | Unknown | No signal found after timeout |
 
 ### Facebook
 
-Posts are partially visible without login. Removed posts load fast (~0.7s) with a clear error; live posts take longer (~4–9s) as the SPA renders.
+Posts are partially visible without login. Unavailable posts load fast (~0.7s) with a clear error; live posts take longer (~4–9s) as the SPA renders.
 
 There is deliberately no login-wall branch: every anonymous page embeds a login form, so there is no reliable per-post login signal. An undecided page returns `Unknown` for a human to judge from the screenshot.
 
 | Status | Signal |
 |--------|--------|
-| Removed | Text: "this content isn't available", "this page isn't available", "this content has been removed", "the link you followed may be broken", "page not found" |
+| Unavailable | Text: "this content isn't available", "this page isn't available", "this content has been removed", "the link you followed may be broken", "page not found" |
 | Live | DOM: `div[role="article"]`; fallback: `og:title` meta or page title `"... \| Facebook"`, but only when they carry real content (generic "Facebook" / "Log in to Facebook" titles are ignored) |
+| Unknown | No signal found after timeout |
+
+### X (Twitter)
+
+X renders a tweet only when it's live, so detection is **positive-first**: a rendered tweet is conclusive proof of `Live`, checked before the negative phrases. Run logged in — logged out, X throttles even live tweets to a generic "nothing to see here" page that's indistinguishable from a real takedown. Only phrases confirmed by live probing are matched.
+
+| Status | Signal |
+|--------|--------|
+| Live | Page title contains `" on X:"`; `og:title` contains `" on X"`; DOM: `article[data-testid="tweet"]` |
+| Moderated | Text: "suspended account" (logged-in: "This Post is from a suspended account") |
+| Unavailable | Text: "nothing to see here" (logged-out "gone" page); page title is exactly `"X / ?"` |
 | Unknown | No signal found after timeout |
 
 ## Project structure

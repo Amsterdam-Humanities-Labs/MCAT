@@ -81,9 +81,9 @@ function createConsoleStore() {
       add(`${current}/${total} ${shortUrl} → ${status}`, 'info', 'processing');
     },
 
-    processingCompleted(stats: { live: number; removed: number; restricted: number; error: number }) {
+    processingCompleted(stats: { live: number; unavailable: number; moderated: number; restricted: number; errors: number }) {
       add(
-        `Processing completed: ${stats.live} live, ${stats.removed} removed, ${stats.restricted} restricted, ${stats.error} errors`,
+        `Processing completed: ${stats.live} live, ${stats.unavailable} unavailable, ${stats.moderated} moderated, ${stats.restricted} restricted, ${stats.errors} errors`,
         'success',
         'processing'
       );

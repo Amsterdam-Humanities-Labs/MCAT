@@ -6,7 +6,9 @@ from scrapers.base_scraper import BaseScraper, StatusResult
 class InstagramScraper(BaseScraper):
     """Instagram post status checker (detection only; flow is in BaseScraper)."""
 
-    REMOVAL_PHRASES = (
+    # Generic "gone" — IG never says why (deleted/removed/private/never-existed
+    # are one page), so it's always Unavailable, never an attributed removal.
+    UNAVAILABLE_PHRASES = (
         "post isn't available",
         "sorry, this page isn't available",
         "this page isn't available",
@@ -45,18 +47,18 @@ class InstagramScraper(BaseScraper):
         try:
             title = await tab.evaluate("document.title") or ""
             if title and "isn't available" in title.lower():
-                return ("Removed", title)
+                return ("Unavailable", title)
         except Exception:
             pass
 
         # Error SVG icon
         if await tab.query_selector('svg[aria-label="error"]'):
-            return ("Removed", "error icon displayed")
+            return ("Unavailable", "error icon displayed")
 
         # Error text in body
-        for phrase in self.REMOVAL_PHRASES:
+        for phrase in self.UNAVAILABLE_PHRASES:
             if phrase in page_text:
-                return ("Removed", phrase)
+                return ("Unavailable", phrase)
 
         # --- Positive signals ---
 

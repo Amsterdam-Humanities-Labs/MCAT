@@ -4,13 +4,20 @@ export function statusColor(status: string): string {
   switch (status.toLowerCase()) {
     case 'live':
       return colors.status.live;
-    case 'removed':
-      return colors.status.removed;
+    case 'unavailable':
+    case 'removed': // legacy
+      return colors.status.unavailable;
+    case 'moderated':
+      return colors.status.moderated;
     case 'restricted':
     case 'age-restricted':
     case 'geo-blocked':
     case 'private':
       return colors.status.restricted;
+    case 'login required':
+      return colors.status.login;
+    case 'unknown':
+      return colors.status.unknown;
     case 'error':
       return colors.status.error;
     default:

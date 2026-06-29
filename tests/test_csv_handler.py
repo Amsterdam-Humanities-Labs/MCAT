@@ -86,13 +86,15 @@ def test_get_urls_empty_raises():
 
 def test_count_statuses_buckets():
     rows = [{"mcat_status": s} for s in [
-        "Live", "Live", "Removed",
+        "Live", "Live", "Unavailable", "Removed",  # legacy "Removed" folds into unavailable
+        "Moderated",
         "Restricted", "Age-restricted", "Geo-blocked", "Private",  # all -> restricted
         "Login Required", "Unknown", "Error",
     ]]
     counts = count_statuses(rows)
     assert counts["live"] == 2
-    assert counts["removed"] == 1
+    assert counts["unavailable"] == 2         # Unavailable + legacy Removed
+    assert counts["moderated"] == 1
     assert counts["restricted"] == 4          # Restricted + Age-restricted + Geo-blocked + Private
     assert counts["login_required"] == 1
     assert counts["unknown"] == 1

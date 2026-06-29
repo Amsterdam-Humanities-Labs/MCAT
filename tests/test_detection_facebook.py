@@ -14,8 +14,8 @@ def _scraper():
 
 @pytest.mark.parametrize("kw, expected", [
     # negative
-    (dict(body_text="this content isn't available"), "Removed"),
-    (dict(body_text="the link you followed may be broken"), "Removed"),
+    (dict(body_text="this content isn't available"), "Unavailable"),
+    (dict(body_text="the link you followed may be broken"), "Unavailable"),
     # positive
     (dict(body_text="x", selectors={ARTICLE: FakeEl()}), "Live"),
     (dict(body_text="x", selectors={OG: FakeEl({"content": "A real post headline"})}), "Live"),
@@ -25,8 +25,8 @@ def _scraper():
     (dict(body_text="x", title="Log in to Facebook | Facebook"), None),
     # login-walled / undecided -> Unknown (no login-required branch by design)
     (dict(body_text="you must log in to continue", title="Facebook"), None),
-    # precedence: removal beats the rendered article
-    (dict(body_text="this content isn't available", selectors={ARTICLE: FakeEl()}), "Removed"),
+    # precedence: a "gone" notice beats the rendered article
+    (dict(body_text="this content isn't available", selectors={ARTICLE: FakeEl()}), "Unavailable"),
 ])
 async def test_facebook_detection(kw, expected):
     result = await _scraper()._detect_status(FakeTab(**kw), "")

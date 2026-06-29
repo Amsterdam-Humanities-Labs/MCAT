@@ -9,22 +9,29 @@
 
   let { status, count, class: className }: Props = $props();
 
+  const restrictedClasses = 'bg-badge-restricted-bg text-status-restricted border-badge-restricted-border';
+  const unavailableClasses = 'bg-badge-unavailable-bg text-status-unavailable border-badge-unavailable-border';
+
   const statusConfig: Record<string, { label: string; classes: string }> = {
     live: {
       label: 'Live',
       classes: 'bg-badge-live-bg text-status-live border-badge-live-border',
     },
-    removed: {
-      label: 'Removed',
-      classes: 'bg-badge-removed-bg text-status-removed border-badge-removed-border',
+    unavailable: {
+      label: 'Unavailable',
+      classes: unavailableClasses,
+    },
+    moderated: {
+      label: 'Moderated',
+      classes: 'bg-badge-moderated-bg text-status-moderated border-badge-moderated-border',
     },
     restricted: {
       label: 'Restricted',
-      classes: 'bg-badge-restricted-bg text-status-restricted border-badge-restricted-border',
+      classes: restrictedClasses,
     },
-    private: {
-      label: 'Private',
-      classes: 'bg-badge-restricted-bg text-status-restricted border-badge-restricted-border',
+    'login required': {
+      label: 'Login Required',
+      classes: 'bg-badge-login-bg text-status-login border-badge-login-border',
     },
     error: {
       label: 'Error',
@@ -32,8 +39,13 @@
     },
     unknown: {
       label: 'Unknown',
-      classes: 'bg-bg-controls text-text-secondary border-border-light',
+      classes: 'bg-badge-unknown-bg text-status-unknown border-badge-unknown-border',
     },
+    // Legacy statuses retained for results recorded before the taxonomy change.
+    removed: { label: 'Removed', classes: unavailableClasses },
+    private: { label: 'Private', classes: restrictedClasses },
+    'age-restricted': { label: 'Age-restricted', classes: restrictedClasses },
+    'geo-blocked': { label: 'Geo-blocked', classes: restrictedClasses },
   };
 
   const normalized = $derived(status.toLowerCase());

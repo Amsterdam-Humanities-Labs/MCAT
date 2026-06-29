@@ -178,7 +178,7 @@ class BatchProcessor:
         with no await inside it and needs no lock."""
         processed = 0
         total = len(urls)
-        stats = {'live': 0, 'removed': 0, 'unavailable': 0, 'restricted': 0, 'errors': 0, 'unknown': 0, 'login_required': 0, 'skipped': 0}
+        stats = {'live': 0, 'unavailable': 0, 'moderated': 0, 'restricted': 0, 'errors': 0, 'unknown': 0, 'login_required': 0, 'skipped': 0}
         original_rows = original_rows or []
 
         async def process_single_url(url: str, row_index: int) -> None:
@@ -207,10 +207,10 @@ class BatchProcessor:
                 status = result.status.lower()
                 if status == 'live':
                     stats['live'] += 1
-                elif status == 'removed':
-                    stats['removed'] += 1
-                elif status == 'unavailable':
+                elif status in ('unavailable', 'removed'):
                     stats['unavailable'] += 1
+                elif status == 'moderated':
+                    stats['moderated'] += 1
                 elif status in ['restricted', 'age-restricted', 'geo-blocked', 'private']:
                     stats['restricted'] += 1
                 elif status == 'unknown':

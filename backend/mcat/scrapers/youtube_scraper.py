@@ -6,10 +6,12 @@ from scrapers.base_scraper import BaseScraper, StatusResult
 class YouTubeScraper(BaseScraper):
     """YouTube video status checker (detection only; flow is in BaseScraper)."""
 
-    REMOVAL_PHRASES = (
-        'video unavailable', 'this video is not available',
+    # Platform action -> Moderated; everything else gone -> Unavailable.
+    MODERATED_PHRASES = ("account has been terminated",)
+    UNAVAILABLE_PHRASES = (
+        "video unavailable", "this video is not available",
         "this video isn't available", "video isn't available anymore",
-        'removed by the user', 'account has been terminated',
+        "removed by the user",
     )
 
     def get_platform_name(self) -> str:
@@ -35,22 +37,19 @@ class YouTubeScraper(BaseScraper):
         except Exception:
             return None  # Page not ready yet
 
-        # --- Negative signals (positive evidence of removal/restriction) ---
+        # --- Negative signals ---
 
-        for phrase in self.REMOVAL_PHRASES:
+        for phrase in self.MODERATED_PHRASES:
             if phrase in page_text:
-                return ("Removed", phrase)
+                return ("Moderated", phrase)
 
-        if 'age-restricted' in page_text:
-            return ("Age-restricted", "age-restricted")
-        if 'sign in to confirm your age' in page_text:
-            return ("Age-restricted", "sign in to confirm your age")
-
+        # Restricted: gated but present; specific reason in the detail.
+        if 'age-restricted' in page_text or 'sign in to confirm your age' in page_text:
+            return ("Restricted", "age-restricted")
         if 'not available in your country' in page_text:
-            return ("Geo-blocked", "not available in your country")
-
+            return ("Restricted", "geo-blocked")
         if 'private video' in page_text:
-            return ("Private", "private video")
+            return ("Restricted", "private")
 
         # Warning/restricted elements
         try:
@@ -65,6 +64,10 @@ class YouTubeScraper(BaseScraper):
                 return ("Restricted", warn)
         except Exception:
             pass
+
+        for phrase in self.UNAVAILABLE_PHRASES:
+            if phrase in page_text:
+                return ("Unavailable", phrase)
 
         # --- Positive signals (evidence the video is live) ---
 

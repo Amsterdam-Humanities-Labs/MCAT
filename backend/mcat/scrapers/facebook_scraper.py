@@ -6,7 +6,9 @@ from scrapers.base_scraper import BaseScraper, StatusResult
 class FacebookScraper(BaseScraper):
     """Facebook post status checker (detection only; flow is in BaseScraper)."""
 
-    REMOVAL_PHRASES = (
+    # Generic "gone" — FB doesn't reliably attribute a reason, so it's always
+    # Unavailable, never an attributed removal.
+    UNAVAILABLE_PHRASES = (
         "this content isn't available",
         "this page isn't available",
         "content isn't available right now",
@@ -61,10 +63,10 @@ class FacebookScraper(BaseScraper):
         except Exception:
             return None
 
-        # 1. Removal notice
-        for phrase in self.REMOVAL_PHRASES:
+        # 1. "Gone" notice
+        for phrase in self.UNAVAILABLE_PHRASES:
             if phrase in page_text:
-                return ("Removed", phrase)
+                return ("Unavailable", phrase)
 
         # 2. The rendered post itself
         if await tab.query_selector('div[role="article"]'):

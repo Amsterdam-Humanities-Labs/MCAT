@@ -12,9 +12,12 @@
 
   const segments = $derived([
     { key: 'live', count: statusCounts.live, color: 'bg-status-live' },
-    { key: 'removed', count: statusCounts.removed, color: 'bg-status-removed' },
     { key: 'restricted', count: statusCounts.restricted, color: 'bg-status-restricted' },
-    { key: 'error', count: statusCounts.error, color: 'bg-status-error' },
+    { key: 'moderated', count: statusCounts.moderated, color: 'bg-status-moderated' },
+    { key: 'unavailable', count: statusCounts.unavailable, color: 'bg-status-unavailable' },
+    { key: 'login_required', count: statusCounts.login_required, color: 'bg-status-login' },
+    { key: 'unknown', count: statusCounts.unknown, color: 'bg-status-unknown' },
+    { key: 'errors', count: statusCounts.errors, color: 'bg-status-error' },
   ]);
 </script>
 

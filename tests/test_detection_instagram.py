@@ -15,9 +15,9 @@ def _scraper():
 
 @pytest.mark.parametrize("kw, expected", [
     # negative
-    (dict(body_text="x", title="Sorry, this isn't available"), "Removed"),
-    (dict(body_text="x", selectors={ERROR_SVG: FakeEl()}), "Removed"),
-    (dict(body_text="post isn't available"), "Removed"),
+    (dict(body_text="x", title="Sorry, this isn't available"), "Unavailable"),
+    (dict(body_text="x", selectors={ERROR_SVG: FakeEl()}), "Unavailable"),
+    (dict(body_text="post isn't available"), "Unavailable"),
     # positive
     (dict(body_text="x", selectors={OG: FakeEl({"content": "Jane on Instagram: a photo"})}), "Live"),
     (dict(body_text="x", selectors={ARTICLE: FakeEl()}), "Live"),
@@ -25,9 +25,9 @@ def _scraper():
     (dict(body_text="please log in or sign up to continue"), "Login Required"),
     # no signal
     (dict(body_text="just a normal page"), None),
-    # precedence: removal beats a live og:title
+    # precedence: a "gone" notice beats a live og:title
     (dict(body_text="post isn't available",
-          selectors={OG: FakeEl({"content": "Jane on Instagram: x"})}), "Removed"),
+          selectors={OG: FakeEl({"content": "Jane on Instagram: x"})}), "Unavailable"),
 ])
 async def test_instagram_detection(kw, expected):
     result = await _scraper()._detect_status(FakeTab(**kw), "")
