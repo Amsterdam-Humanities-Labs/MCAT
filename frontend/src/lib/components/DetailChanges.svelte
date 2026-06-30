@@ -2,6 +2,7 @@
   import { cn } from '$lib/utils';
   import type { Run } from '$types/project';
   import { colors } from '$lib/theme';
+  import { normalizeRows, buildResultColumns } from '$lib/utils/resultTable';
   import DataTable from './DataTable.svelte';
 
   interface Props {
@@ -16,40 +17,8 @@
 
   let { run, columns, rows, loading, error, onOpenScreenshot, class: className }: Props = $props();
 
-  const INTERNAL_COLUMNS = ['previous_status'];
-  // Desired column order: url, then these mcat columns; anything else trails.
-  const MCAT_ORDER = ['mcat_status', 'mcat_screenshot', 'mcat_user', 'mcat_detail', 'mcat_error'];
-
-  const naCell = (v: unknown): string => {
-    const s = v == null ? '' : String(v).trim();
-    return s === '' || s.toUpperCase() === 'N/A' ? 'n/a' : s;
-  };
-
-  const mcatIndex = (r: Record<string, unknown>): number => {
-    const n = Number(r.mcat_index);
-    return Number.isFinite(n) ? n : Infinity;
-  };
-
-  const displayRows = $derived(rows.map((r) => {
-    const out = { ...r };
-    if ('mcat_detail' in out) out.mcat_detail = naCell(out.mcat_detail);
-    if ('mcat_error' in out) out.mcat_error = naCell(out.mcat_error);
-    return out;
-  }).sort((a, b) => mcatIndex(a) - mcatIndex(b)));
-
-  const urlColumn = $derived(columns.find(c => !INTERNAL_COLUMNS.includes(c) && c !== 'mcat_status' && !c.startsWith('mcat_')));
-
-  const tableColumns = $derived.by(() => {
-    if (!urlColumn) return [];
-    const head = ['mcat_index', urlColumn, ...MCAT_ORDER].filter(c => columns.includes(c) && !INTERNAL_COLUMNS.includes(c));
-    const rest = columns.filter(c => !head.includes(c) && !INTERNAL_COLUMNS.includes(c));
-
-    return [...head, ...rest].map((col) => ({
-      key: col,
-      header: col === 'mcat_status' ? 'change' : col === 'mcat_index' ? '#' : col,
-      type: col === 'mcat_status' ? 'transition' as const : col === urlColumn ? 'link' as const : col === 'mcat_screenshot' ? 'file' as const : 'text' as const,
-    }));
-  });
+  const displayRows = $derived(normalizeRows(rows));
+  const tableColumns = $derived(buildResultColumns(columns, { statusType: 'transition', internal: ['previous_status'] }));
 </script>
 
 <div class={cn(className)}>

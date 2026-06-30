@@ -11,7 +11,7 @@ from pathlib import Path
 from utils.csv_handler import load_csv, save_csv, count_statuses
 from models.project_models import RunConfig, RunStatus
 from models.project_state import ProjectState
-from models.types import StatusSummary, StatusChange
+from models.types import StatusSummary, StatusChange, empty_status_summary
 
 
 class RunService:
@@ -128,14 +128,14 @@ class RunService:
     def _compute_status_summary(self, project_state: ProjectState, run: RunConfig) -> StatusSummary:
         results_path = project_state.get_run_results_path(run.id)
         if not results_path.exists():
-            return {"live": 0, "unavailable": 0, "moderated": 0, "restricted": 0, "errors": 0, "unknown": 0, "login_required": 0}
+            return empty_status_summary()
 
         try:
             rows = load_csv(str(results_path))
             return count_statuses(rows)
         except Exception as e:
             self._log(f"Failed to compute status summary for run {run.id}: {e}", "warning")
-            return {"live": 0, "unavailable": 0, "moderated": 0, "restricted": 0, "errors": 0, "unknown": 0, "login_required": 0}
+            return empty_status_summary()
 
     def _compute_changes(self, project_state: ProjectState, previous_run: RunConfig, current_run: RunConfig) -> list[StatusChange]:
         prev_path = project_state.get_run_results_path(previous_run.id)
