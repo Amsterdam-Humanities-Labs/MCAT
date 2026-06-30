@@ -6,13 +6,26 @@ import shutil
 from datetime import datetime
 from pathlib import Path
 
-from utils.csv_handler import load_csv, save_csv, get_columns
+from utils.csv_handler import load_csv, save_csv, get_columns, assign_url_indices
 from models.project_models import ProjectConfig
 from models.project_state import ProjectState
 from models.import_result import UrlImportResult
 
 
 class ProjectService:
+
+    def ensure_url_indices(self, project_state: ProjectState) -> None:
+        """Give every source URL a stable mcat_index, allocating fresh numbers
+        to any that lack one (new project, imported or hand-added rows) from the
+        project's monotonic counter. Idempotent — writes only when something was
+        assigned, so it's safe to call on every open / import / create."""
+        rows = load_csv(str(project_state.urls_csv_path))
+        config = project_state.config
+        rows, next_index = assign_url_indices(rows, config.next_url_index)
+        if next_index != config.next_url_index:
+            save_csv(rows, str(project_state.urls_csv_path))
+            config.next_url_index = next_index
+            project_state.save()
 
     def create_project(
         self,
@@ -50,7 +63,9 @@ class ProjectService:
 
         config.save(project_path / "project.json")
 
-        return ProjectState(config=config, project_path=project_path)
+        state = ProjectState(config=config, project_path=project_path)
+        self.ensure_url_indices(state)
+        return state
 
     def open_project(self, project_path: Path) -> ProjectState:
         project_json_path = project_path / "project.json"
@@ -61,7 +76,9 @@ class ProjectService:
         if not urls_csv_path.exists():
             raise ValueError(f"urls.csv not found in {project_path}")
 
-        return ProjectState.load(project_path)
+        state = ProjectState.load(project_path)
+        self.ensure_url_indices(state)
+        return state
 
     def save_project(self, project_state: ProjectState) -> None:
         project_state.save()
@@ -124,6 +141,9 @@ class ProjectService:
 
         save_csv(existing_rows, str(project_state.urls_csv_path))
         project_state._url_count = len(existing_rows)
+
+        # New rows were padded with a blank mcat_index; assign them fresh numbers.
+        self.ensure_url_indices(project_state)
 
         return len(import_result.rows_to_add)
 

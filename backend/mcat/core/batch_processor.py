@@ -65,8 +65,10 @@ class BatchProcessor:
                 output_csv_path = Path(output_folder) / "results.csv"
                 url_col = column_mapping.get('post', columns[0])
                 result_columns = ['mcat_status', 'mcat_detail', 'mcat_screenshot', 'mcat_timestamp', 'mcat_error', 'mcat_user']
-                other_columns = [c for c in columns if c != url_col and c not in result_columns]
-                all_columns = [url_col, *result_columns, *other_columns]
+                # mcat_index is a passthrough source column; surface it first.
+                index_col = ['mcat_index'] if 'mcat_index' in columns else []
+                other_columns = [c for c in columns if c != url_col and c not in result_columns and c != 'mcat_index']
+                all_columns = [*index_col, url_col, *result_columns, *other_columns]
                 csv_writer = IncrementalCSVWriter(
                     output_path=str(output_csv_path),
                     columns=all_columns

@@ -8,6 +8,7 @@ class TwitterScraper(BaseScraper):
 
     # Only phrases observed in live probing.
     MODERATED_PHRASES = ("suspended account",)      # "This Post is from a suspended account" (logged in)
+    RESTRICTED_PHRASES = ("protected account",)     # "This Post is from a protected account" (owner-gated, follower-only)
     UNAVAILABLE_PHRASES = ("nothing to see here",)  # logged-out "gone" page (title "X / ?")
 
     def get_platform_name(self) -> str:
@@ -38,6 +39,9 @@ class TwitterScraper(BaseScraper):
         for phrase in self.MODERATED_PHRASES:
             if phrase in page_text:
                 return ("Moderated", phrase)
+        for phrase in self.RESTRICTED_PHRASES:
+            if phrase in page_text:
+                return ("Restricted", phrase)
         for phrase in self.UNAVAILABLE_PHRASES:
             if phrase in page_text:
                 return ("Unavailable", phrase)

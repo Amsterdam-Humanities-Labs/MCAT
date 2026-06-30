@@ -25,23 +25,28 @@
     return s === '' || s.toUpperCase() === 'N/A' ? 'n/a' : s;
   };
 
+  const mcatIndex = (r: Record<string, unknown>): number => {
+    const n = Number(r.mcat_index);
+    return Number.isFinite(n) ? n : Infinity;
+  };
+
   const displayRows = $derived(rows.map((r) => {
     const out = { ...r };
     if ('mcat_detail' in out) out.mcat_detail = naCell(out.mcat_detail);
     if ('mcat_error' in out) out.mcat_error = naCell(out.mcat_error);
     return out;
-  }));
+  }).sort((a, b) => mcatIndex(a) - mcatIndex(b)));
 
   const urlColumn = $derived(columns.find(c => !INTERNAL_COLUMNS.includes(c) && c !== 'mcat_status' && !c.startsWith('mcat_')));
 
   const tableColumns = $derived.by(() => {
     if (!urlColumn) return [];
-    const head = [urlColumn, ...MCAT_ORDER].filter(c => columns.includes(c) && !INTERNAL_COLUMNS.includes(c));
+    const head = ['mcat_index', urlColumn, ...MCAT_ORDER].filter(c => columns.includes(c) && !INTERNAL_COLUMNS.includes(c));
     const rest = columns.filter(c => !head.includes(c) && !INTERNAL_COLUMNS.includes(c));
 
     return [...head, ...rest].map((col) => ({
       key: col,
-      header: col === 'mcat_status' ? 'change' : col,
+      header: col === 'mcat_status' ? 'change' : col === 'mcat_index' ? '#' : col,
       type: col === 'mcat_status' ? 'transition' as const : col === urlColumn ? 'link' as const : col === 'mcat_screenshot' ? 'file' as const : 'text' as const,
     }));
   });

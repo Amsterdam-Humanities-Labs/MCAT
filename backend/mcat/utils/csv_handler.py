@@ -75,6 +75,22 @@ def get_urls_from_column(rows: list[dict], url_column: str) -> list[str]:
     return urls
 
 
+def assign_url_indices(rows: list[dict], next_index: int,
+                       column: str = "mcat_index") -> tuple[list[dict], int]:
+    """Give every row a stable 1-based ``mcat_index``, allocating fresh numbers
+    only to rows that lack one (new/appended URLs). Existing values are never
+    touched, so the index is a durable per-URL identity across runs. Returns the
+    rows (mutated in place) and the advanced allocator; an unchanged allocator
+    means nothing needed assigning.
+    """
+    for row in rows:
+        value = row.get(column, "")
+        if value is None or str(value).strip() == "":
+            row[column] = str(next_index)
+            next_index += 1
+    return rows, next_index
+
+
 def count_statuses(rows: list[dict], status_column: str = "mcat_status") -> StatusSummary:
     """Count statuses from result rows into standard summary buckets."""
     counts = Counter(r.get(status_column, "") for r in rows)

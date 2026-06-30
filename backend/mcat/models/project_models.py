@@ -142,6 +142,9 @@ class ProjectConfig:
     screenshots_enabled: bool = False
     runs: list[RunConfig] = field(default_factory=list)
     tracking: TrackingConfig = field(default_factory=TrackingConfig)
+    # Monotonic allocator for mcat_index: the next number to hand a source URL.
+    # Only ever increments, so a number is never reused even after deletes.
+    next_url_index: int = 1
 
     def to_dict(self) -> dict:
         """Convert to dictionary for JSON serialization."""
@@ -152,7 +155,8 @@ class ProjectConfig:
             "url_column": self.url_column,
             "screenshots_enabled": self.screenshots_enabled,
             "runs": [run.to_dict() for run in self.runs],
-            "tracking": self.tracking.to_dict()
+            "tracking": self.tracking.to_dict(),
+            "next_url_index": self.next_url_index,
         }
 
     @classmethod
@@ -165,7 +169,8 @@ class ProjectConfig:
             url_column=data["url_column"],
             screenshots_enabled=data.get("screenshots_enabled", False),
             runs=[RunConfig.from_dict(r) for r in data.get("runs", [])],
-            tracking=TrackingConfig.from_dict(data.get("tracking", {}))
+            tracking=TrackingConfig.from_dict(data.get("tracking", {})),
+            next_url_index=data.get("next_url_index", 1),
         )
 
     def save(self, path: Path) -> None:

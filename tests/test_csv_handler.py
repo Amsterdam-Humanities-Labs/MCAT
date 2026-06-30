@@ -7,6 +7,7 @@ from utils.csv_handler import (
     normalize_url,
     get_urls_from_column,
     count_statuses,
+    assign_url_indices,
     validate_column_mapping,
     IncrementalCSVWriter,
 )
@@ -99,6 +100,32 @@ def test_count_statuses_buckets():
     assert counts["login_required"] == 1
     assert counts["unknown"] == 1
     assert counts["errors"] == 1
+
+
+# --- assign_url_indices ---
+
+def test_assign_url_indices_fresh_is_1_based():
+    rows = [{"url": "a"}, {"url": "b"}, {"url": "c"}]
+    out, nxt = assign_url_indices(rows, 1)
+    assert [r["mcat_index"] for r in out] == ["1", "2", "3"]
+    assert nxt == 4
+
+
+def test_assign_url_indices_fills_only_missing_from_counter():
+    # Two existing rows keep their numbers; the new/blank rows draw from the
+    # counter (which has already advanced past the originals).
+    rows = [{"url": "a", "mcat_index": "1"}, {"url": "b"}, {"url": "c", "mcat_index": ""}]
+    out, nxt = assign_url_indices(rows, 3)
+    assert [r["mcat_index"] for r in out] == ["1", "3", "4"]
+    assert nxt == 5
+
+
+def test_assign_url_indices_idempotent():
+    rows = [{"url": "a"}, {"url": "b"}]
+    rows, nxt = assign_url_indices(rows, 1)
+    rows, nxt2 = assign_url_indices(rows, nxt)  # nothing left to assign
+    assert nxt2 == nxt == 3
+    assert [r["mcat_index"] for r in rows] == ["1", "2"]
 
 
 # --- validate_column_mapping ---

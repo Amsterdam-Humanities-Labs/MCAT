@@ -168,6 +168,7 @@ X renders a tweet only when it's live, so detection is **positive-first**: a ren
 |--------|--------|
 | Live | Page title contains `" on X:"`; `og:title` contains `" on X"`; DOM: `article[data-testid="tweet"]` |
 | Moderated | Text: "suspended account" (logged-in: "This Post is from a suspended account") |
+| Restricted | Text: "protected account" ("This Post is from a protected account" — owner-gated, visible only to approved followers) |
 | Unavailable | Text: "nothing to see here" (logged-out "gone" page); page title is exactly `"X / ?"` |
 | Unknown | No signal found after timeout |
 
