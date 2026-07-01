@@ -82,7 +82,7 @@
               {@const value = getCellValue(row, col.key)}
               <td class="px-4 py-3 text-text-body">
                 {#if (col.type === 'link' || col.key === 'url') && isUrl(value)}
-                  <Link href={String(value)} class="max-w-[280px] block">{value}</Link>
+                  <Link href={String(value)} class="block">{value}</Link>
                 {:else if col.type === 'file' && value && onScreenshotClick}
                   <button
                     class="text-accent-primary underline decoration-accent-primary/40 hover:decoration-accent-primary cursor-pointer truncate max-w-[200px] block text-left"
