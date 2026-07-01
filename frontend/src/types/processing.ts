@@ -15,15 +15,6 @@ export const ACTIVE_STATES: ProcessingState[] = ['processing'];
 // States where processing is paused
 export const PAUSED_STATES: ProcessingState[] = ['paused'];
 
-export type ContentStatus =
-  | 'live'
-  | 'unavailable'
-  | 'moderated'
-  | 'restricted'
-  | 'login_required'
-  | 'unknown'
-  | 'error';
-
 export interface StartProcessingRequest {
   urls?: string[];
   screenshots?: boolean;

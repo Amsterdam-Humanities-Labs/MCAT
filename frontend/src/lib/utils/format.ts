@@ -1,30 +1,3 @@
-import { colors } from '$lib/theme';
-
-export function statusColor(status: string): string {
-  switch (status.toLowerCase()) {
-    case 'live':
-      return colors.status.live;
-    case 'unavailable':
-    case 'removed': // legacy
-      return colors.status.unavailable;
-    case 'moderated':
-      return colors.status.moderated;
-    case 'restricted':
-    case 'age-restricted':
-    case 'geo-blocked':
-    case 'private':
-      return colors.status.restricted;
-    case 'login required':
-      return colors.status.login;
-    case 'unknown':
-      return colors.status.unknown;
-    case 'error':
-      return colors.status.error;
-    default:
-      return colors.text.muted;
-  }
-}
-
 export function formatDuration(seconds: number | null | undefined): string {
   if (seconds == null || seconds <= 0) return '';
   if (seconds < 60) return `${Math.round(seconds)}s`;

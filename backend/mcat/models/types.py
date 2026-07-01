@@ -35,9 +35,33 @@ class StatusChange(TypedDict):
     new_status: str
 
 
+# Raw mcat_status strings that fold into each summary bucket (matched
+# case-insensitively), including legacy values the taxonomy collapsed. This is
+# the single source for the string->bucket mapping; count_statuses, the batch
+# tally, and the SSE payload all go through bucket_for / the keys here.
+STATUS_BUCKETS: dict[str, tuple[str, ...]] = {
+    "live": ("Live",),
+    "unavailable": ("Unavailable", "Removed"),
+    "moderated": ("Moderated",),
+    "restricted": ("Restricted", "Age-restricted", "Geo-blocked", "Private"),
+    "login_required": ("Login Required",),
+    "unknown": ("Unknown",),
+    "errors": ("Error",),
+}
+
+# Fails at import if the buckets and the StatusSummary schema ever drift apart.
+assert set(STATUS_BUCKETS) == set(StatusSummary.__annotations__)
+
+_BUCKET_BY_STATUS = {raw.lower(): bucket for bucket, raws in STATUS_BUCKETS.items() for raw in raws}
+
+
+def bucket_for(status: str) -> str:
+    """Summary bucket for a raw mcat_status (case-insensitive). Anything
+    unrecognized falls to ``errors`` so the buckets always sum to the row count."""
+    return _BUCKET_BY_STATUS.get((status or "").strip().lower(), "errors")
+
+
 def empty_status_summary() -> StatusSummary:
     """A zero-filled summary, for use as a dataclass default before any rows
     have been counted."""
-    return StatusSummary(
-        live=0, unavailable=0, moderated=0, restricted=0, errors=0, unknown=0, login_required=0
-    )
+    return StatusSummary(**{bucket: 0 for bucket in STATUS_BUCKETS})

@@ -1,5 +1,6 @@
 <script lang="ts">
   import { cn } from '$lib/utils';
+  import { STATUS_META } from '$lib/status';
   import type { RunStatusSummary } from '$types/project';
 
   interface Props {
@@ -17,15 +18,15 @@
     return diff > 0 ? `+${diff}` : `${diff}`;
   }
 
-  const items = $derived([
-    { label: 'Live', count: statusCounts.live, delta: formatDelta(statusCounts.live, baselineCounts?.live), color: 'bg-status-live', textColor: 'text-status-live' },
-    { label: 'Restricted', count: statusCounts.restricted, delta: formatDelta(statusCounts.restricted, baselineCounts?.restricted), color: 'bg-status-restricted', textColor: 'text-status-restricted' },
-    { label: 'Moderated', count: statusCounts.moderated, delta: formatDelta(statusCounts.moderated, baselineCounts?.moderated), color: 'bg-status-moderated', textColor: 'text-status-moderated' },
-    { label: 'Unavailable', count: statusCounts.unavailable, delta: formatDelta(statusCounts.unavailable, baselineCounts?.unavailable), color: 'bg-status-unavailable', textColor: 'text-status-unavailable' },
-    { label: 'Login Required', count: statusCounts.login_required, delta: formatDelta(statusCounts.login_required, baselineCounts?.login_required), color: 'bg-status-login', textColor: 'text-status-login' },
-    { label: 'Unknown', count: statusCounts.unknown, delta: formatDelta(statusCounts.unknown, baselineCounts?.unknown), color: 'bg-status-unknown', textColor: 'text-status-unknown' },
-    { label: 'Error', count: statusCounts.errors, delta: formatDelta(statusCounts.errors, baselineCounts?.errors), color: 'bg-status-error', textColor: 'text-status-error' },
-  ]);
+  const items = $derived(
+    STATUS_META.map((m) => ({
+      label: m.label,
+      count: statusCounts[m.summaryKey],
+      delta: formatDelta(statusCounts[m.summaryKey], baselineCounts?.[m.summaryKey]),
+      color: m.bg,
+      textColor: m.text,
+    }))
+  );
 </script>
 
 <div class={cn("flex items-center gap-4", className)}>

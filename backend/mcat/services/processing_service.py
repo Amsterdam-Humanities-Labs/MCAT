@@ -11,6 +11,7 @@ from collections.abc import Callable
 
 from models.processing_models import ProcessingJob, ProcessingStatus, ProcessingState, ProcessingResult
 from models.file_models import ValidationResult
+from models.types import STATUS_BUCKETS
 from core.batch_processor import BatchProcessor
 from utils.csv_handler import save_csv
 from events import event_bus
@@ -222,15 +223,7 @@ class ProcessingService:
             "state": self.current_status.state.value if self.current_status.state else "idle",
             "total": self.current_status.total_count,
             "processed": self.current_status.processed_count,
-            "status_counts": {
-                "live": stats.get("live", 0),
-                "unavailable": stats.get("unavailable", 0),
-                "moderated": stats.get("moderated", 0),
-                "restricted": stats.get("restricted", 0),
-                "login_required": stats.get("login_required", 0),
-                "unknown": stats.get("unknown", 0),
-                "errors": stats.get("errors", 0),
-            },
+            "status_counts": {k: stats.get(k, 0) for k in STATUS_BUCKETS},
             "action": self.current_status.current_action,
             "error": self.current_status.error_message,
         })
@@ -313,12 +306,8 @@ class ProcessingService:
 
         if result.success:
             if self._log_callback:
-                stats = result.stats
-                self._log_callback(
-                    f"Completed: {stats.get('live', 0)} live, {stats.get('removed', 0)} removed, "
-                    f"{stats.get('restricted', 0)} restricted, {stats.get('errors', 0)} errors",
-                    "success"
-                )
+                summary = ", ".join(f"{v} {k}" for k, v in result.stats.items() if v)
+                self._log_callback(f"Completed: {summary or 'no results'}", "success")
             if self._on_completed:
                 self._on_completed(result)
         else:

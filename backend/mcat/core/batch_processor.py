@@ -6,6 +6,7 @@ from pathlib import Path
 
 from config.settings import config
 from models.processing_models import ProcessingResult
+from models.types import STATUS_BUCKETS, bucket_for
 from utils.csv_handler import load_csv, get_columns, get_urls_from_column, validate_column_mapping, count_statuses, IncrementalCSVWriter
 from core.browser_manager import BrowserSession
 from scrapers.base_scraper import BaseScraper
@@ -180,7 +181,7 @@ class BatchProcessor:
         with no await inside it and needs no lock."""
         processed = 0
         total = len(urls)
-        stats = {'live': 0, 'unavailable': 0, 'moderated': 0, 'restricted': 0, 'errors': 0, 'unknown': 0, 'login_required': 0, 'skipped': 0}
+        stats = {bucket: 0 for bucket in STATUS_BUCKETS}
         original_rows = original_rows or []
 
         async def process_single_url(url: str, row_index: int) -> None:
@@ -206,21 +207,7 @@ class BatchProcessor:
                     })
                     csv_writer.append_row(original_row)
 
-                status = result.status.lower()
-                if status == 'live':
-                    stats['live'] += 1
-                elif status in ('unavailable', 'removed'):
-                    stats['unavailable'] += 1
-                elif status == 'moderated':
-                    stats['moderated'] += 1
-                elif status in ['restricted', 'age-restricted', 'geo-blocked', 'private']:
-                    stats['restricted'] += 1
-                elif status == 'unknown':
-                    stats['unknown'] += 1
-                elif status == 'login required':
-                    stats['login_required'] += 1
-                else:
-                    stats['errors'] += 1
+                stats[bucket_for(result.status)] += 1
 
                 processed += 1
                 current_processed = processed

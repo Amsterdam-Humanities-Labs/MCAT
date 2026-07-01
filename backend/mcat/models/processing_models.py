@@ -51,12 +51,7 @@ class ProcessingStatus:
     total_count: int = 0
     processed_count: int = 0
     current_action: str = ""
-    stats: dict[str, int] = field(default_factory=lambda: {
-        'live': 0,
-        'removed': 0,
-        'restricted': 0,
-        'errors': 0
-    })
+    stats: dict[str, int] = field(default_factory=empty_status_summary)
     error_message: str = ""
 
     @property

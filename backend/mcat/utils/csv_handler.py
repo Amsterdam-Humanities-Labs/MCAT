@@ -1,9 +1,9 @@
 import csv
 import os
 import threading
-from collections import Counter
+from typing import cast
 
-from models.types import StatusSummary
+from models.types import StatusSummary, STATUS_BUCKETS, bucket_for
 
 
 def load_csv(file_path: str) -> list[dict]:
@@ -92,23 +92,11 @@ def assign_url_indices(rows: list[dict], next_index: int,
 
 
 def count_statuses(rows: list[dict], status_column: str = "mcat_status") -> StatusSummary:
-    """Count statuses from result rows into standard summary buckets."""
-    counts = Counter(r.get(status_column, "") for r in rows)
-    return {
-        "live": counts.get("Live", 0),
-        # legacy "Removed" rows fold into unavailable (the status was retired)
-        "unavailable": counts.get("Unavailable", 0) + counts.get("Removed", 0),
-        "moderated": counts.get("Moderated", 0),
-        "restricted": (
-            counts.get("Restricted", 0)
-            + counts.get("Age-restricted", 0)
-            + counts.get("Geo-blocked", 0)
-            + counts.get("Private", 0)
-        ),
-        "errors": counts.get("Error", 0),
-        "unknown": counts.get("Unknown", 0),
-        "login_required": counts.get("Login Required", 0),
-    }
+    """Count result rows into the standard summary buckets (see STATUS_BUCKETS)."""
+    summary = {bucket: 0 for bucket in STATUS_BUCKETS}
+    for r in rows:
+        summary[bucket_for(r.get(status_column, ""))] += 1
+    return cast(StatusSummary, summary)
 
 
 def validate_column_mapping(rows: list[dict], column_mapping: dict) -> tuple[bool, str]:

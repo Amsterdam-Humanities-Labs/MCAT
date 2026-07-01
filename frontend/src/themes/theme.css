@@ -1,21 +1,19 @@
-/* Noctua, higher-contrast variant. Same warm palette as noctua.css, with the
-   muted text, status, and console colors darkened and borders strengthened so
-   type reads clearly against its background. Backgrounds are unchanged.
-   To revert: point app.css back at "./themes/noctua.css". */
+/* MCAT theme — the design tokens (colors), exposed to Tailwind via @theme.
+   A warm, high-contrast palette tuned so text reads clearly against it. */
 @theme {
-  /* Background colors (unchanged from noctua) */
+  /* Background colors */
   --color-bg-primary: #FAF6F0;
   --color-bg-timeline: #E0D1BC;
   --color-bg-controls: #EAE0CE;
   --color-bg-toolbar: #F5EDE0;
   --color-bg-detail: #F3EDE4;
 
-  /* Border colors (darkened for definition) */
+  /* Border colors */
   --color-border-light: #D6C7AE;
   --color-border-mid: #C5B28C;
   --color-border-input: #AC9468;
 
-  /* Text colors (muted tones darkened; primary/body already near-black) */
+  /* Text colors */
   --color-text-primary: #1A1209;
   --color-text-body: #2A1E0E;
   --color-text-secondary: #46341F;
@@ -27,9 +25,8 @@
   --color-accent-tab-active: #E8DCC8;
   --color-accent-secondary-bg: #EDE5D8;
 
-  /* Status colors (darkened, hue preserved, for readable status text + badges).
-     status-removed is kept as the generic danger-red used by form/button/banner
-     UI; the content taxonomy uses the semantic tokens below. */
+  /* Status colors. status-removed is the generic danger-red for form/button/
+     banner UI; the content taxonomy uses the semantic tokens below. */
   --color-status-live: #2F6B22;
   --color-status-removed: #A52727;
   --color-status-unavailable: #A52727;

@@ -17,12 +17,13 @@ class FakeEl:
 
 class FakeTab:
     def __init__(self, *, body_text="", title="", h1_text="", warn_text="",
-                 img_ready=True, selectors=None, evaluate_hook=None):
+                 img_ready=True, href="", selectors=None, evaluate_hook=None):
         self.body_text = body_text
         self.title = title
         self.h1_text = h1_text
         self.warn_text = warn_text
         self.img_ready = img_ready
+        self.href = href
         self.selectors = selectors or {}
         self.evaluate_hook = evaluate_hook   # optional callable(js) -> value | coroutine
         self.got = []                        # urls passed to get()
@@ -43,6 +44,8 @@ class FakeTab:
             return self.warn_text
         if "naturalWidth" in js:             # _wait_for_render probe
             return self.img_ready
+        if "location.href" in js:
+            return self.href
         if "document.title" in js:
             return self.title
         return ""

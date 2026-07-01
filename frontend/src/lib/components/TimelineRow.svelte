@@ -2,6 +2,7 @@
   import { cn } from '$lib/utils';
   import type { Run } from '$types/project';
   import { formatTimestamp } from '$lib/utils/format';
+  import { statusOrder, STATUS_META } from '$lib/status';
   import { CaretUp, CaretDown, CheckCircleIcon, CircleDashedIcon } from 'phosphor-svelte';
   import TransitionBadge from './TransitionBadge.svelte';
   import StatusBadge from './StatusBadge.svelte';
@@ -19,13 +20,6 @@
   const isAbandoned = $derived(run.status === 'abandoned');
   const dotColor = 'text-text-secondary';
 
-  // Sort order: recoveries (→ live) first, then degradations by severity
-  const STATUS_WEIGHT: Record<string, number> = {
-    live: 0, restricted: 1, moderated: 2, unavailable: 3, 'login required': 4, unknown: 5, error: 6,
-    // legacy statuses from older runs
-    private: 1, 'age-restricted': 1, 'geo-blocked': 1, removed: 3,
-  };
-
   const summary = $derived(run.changes_summary || {});
   const timestamp = $derived(formatTimestamp(run.started_at));
 
@@ -42,8 +36,8 @@
       const aToLive = a.to === 'live' ? 0 : 1;
       const bToLive = b.to === 'live' ? 0 : 1;
       if (aToLive !== bToLive) return aToLive - bToLive;
-      const aWeight = (STATUS_WEIGHT[a.to] ?? 99) - (STATUS_WEIGHT[a.from] ?? 99);
-      const bWeight = (STATUS_WEIGHT[b.to] ?? 99) - (STATUS_WEIGHT[b.from] ?? 99);
+      const aWeight = statusOrder(a.to) - statusOrder(a.from);
+      const bWeight = statusOrder(b.to) - statusOrder(b.from);
       return aWeight - bWeight;
     });
 
@@ -77,18 +71,11 @@
     <span class="text-text-primary shrink-0">Baseline</span>
     {#if run.status_summary}
       <span class="flex items-center gap-1.5">
-        {#if run.status_summary.live > 0}
-          <StatusBadge status="live" count={run.status_summary.live} />
-        {/if}
-        {#if run.status_summary.restricted > 0}
-          <StatusBadge status="restricted" count={run.status_summary.restricted} />
-        {/if}
-        {#if run.status_summary.moderated > 0}
-          <StatusBadge status="moderated" count={run.status_summary.moderated} />
-        {/if}
-        {#if run.status_summary.unavailable > 0}
-          <StatusBadge status="unavailable" count={run.status_summary.unavailable} />
-        {/if}
+        {#each STATUS_META as m (m.key)}
+          {#if run.status_summary[m.summaryKey] > 0}
+            <StatusBadge status={m.key} count={run.status_summary[m.summaryKey]} />
+          {/if}
+        {/each}
       </span>
     {/if}
   {:else}

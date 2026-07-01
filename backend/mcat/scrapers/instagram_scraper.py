@@ -62,11 +62,13 @@ class InstagramScraper(BaseScraper):
 
         # --- Positive signals ---
 
-        # og:title meta tag — reliable even in logged-out view
+        # og:title meta tag — reliable even in logged-out view. No trailing colon:
+        # RTL captions (Urdu/Arabic/…) put a U+200E bidi mark before it, so
+        # "X on Instagram‎:" would miss an exact " on Instagram:" match.
         meta = await tab.query_selector('meta[property="og:title"]')
         if meta:
             content = meta.attrs.get("content") or ""
-            if " on Instagram:" in content:
+            if " on Instagram" in content:
                 return ("Live", "N/A")
 
         # article element — works when logged in
@@ -74,6 +76,17 @@ class InstagramScraper(BaseScraper):
             return ("Live", "N/A")
 
         # --- Login detection ---
+
+        # A hard gate redirects walled content to /accounts/login/; that final
+        # URL is the reliable signal (its body reads "create new account", not
+        # "sign up", so text alone misses it). The "log in"+"sign up" text is the
+        # soft "never miss a post" modal, kept as a secondary signal.
+        try:
+            href = (await tab.evaluate("location.href") or "").lower()
+        except Exception:
+            href = ""
+        if "/accounts/login" in href:
+            return ("Login Required", "N/A")
 
         if "log in" in page_text and "sign up" in page_text:
             return ("Login Required", "N/A")

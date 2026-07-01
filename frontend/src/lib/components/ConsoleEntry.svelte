@@ -1,5 +1,6 @@
 <script lang="ts">
   import { cn } from '$lib/utils';
+  import { statusMeta } from '$lib/status';
   import type { LogLevel } from '$types/console';
 
   interface Props {
@@ -19,20 +20,6 @@
     success: 'text-text-body',
   };
 
-  const statusColors: Record<string, string> = {
-    live: 'text-status-live',
-    unavailable: 'text-status-unavailable',
-    moderated: 'text-status-moderated',
-    restricted: 'text-status-restricted',
-    unknown: 'text-status-unknown',
-    error: 'text-status-error',
-    // legacy statuses still present in older result logs
-    removed: 'text-status-unavailable',
-    private: 'text-status-restricted',
-    'age-restricted': 'text-status-restricted',
-    'geo-blocked': 'text-status-restricted',
-  };
-
   function formatTime(date: Date): string {
     return date.toLocaleTimeString('en-US', {
       hour12: false,
@@ -46,9 +33,9 @@
   const parsed = $derived.by(() => {
     const match = message.match(/^(.+→\s*)(\w[\w-]*)$/);
     if (!match) return null;
-    const status = match[2].toLowerCase();
-    if (!statusColors[status]) return null;
-    return { prefix: match[1], status: match[2], colorClass: statusColors[status] };
+    const colorClass = statusMeta(match[2])?.text;
+    if (!colorClass) return null;
+    return { prefix: match[1], status: match[2], colorClass };
   });
 </script>
 

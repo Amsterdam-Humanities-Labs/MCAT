@@ -1,5 +1,6 @@
 <script lang="ts">
   import { cn } from '$lib/utils';
+  import { STATUS_META } from '$lib/status';
   import type { RunStatusSummary } from '$types/project';
 
   interface Props {
@@ -10,15 +11,9 @@
 
   let { total, statusCounts, class: className }: Props = $props();
 
-  const segments = $derived([
-    { key: 'live', count: statusCounts.live, color: 'bg-status-live' },
-    { key: 'restricted', count: statusCounts.restricted, color: 'bg-status-restricted' },
-    { key: 'moderated', count: statusCounts.moderated, color: 'bg-status-moderated' },
-    { key: 'unavailable', count: statusCounts.unavailable, color: 'bg-status-unavailable' },
-    { key: 'login_required', count: statusCounts.login_required, color: 'bg-status-login' },
-    { key: 'unknown', count: statusCounts.unknown, color: 'bg-status-unknown' },
-    { key: 'errors', count: statusCounts.errors, color: 'bg-status-error' },
-  ]);
+  const segments = $derived(
+    STATUS_META.map((m) => ({ key: m.key, count: statusCounts[m.summaryKey], color: m.bg }))
+  );
 </script>
 
 <div class={cn("h-1.5 rounded bg-progress-track overflow-hidden flex", className)}>

@@ -1,5 +1,5 @@
 @import "tailwindcss";
-@import "./themes/noctua-hc.css";
+@import "./themes/theme.css";
 
 /* General Sans (400, 600) is loaded from Fontshare's CSS API via the <link>
    in index.html, so no local @font-face is needed. */

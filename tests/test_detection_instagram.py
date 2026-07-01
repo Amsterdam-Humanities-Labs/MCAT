@@ -21,8 +21,15 @@ def _scraper():
     # positive
     (dict(body_text="x", selectors={OG: FakeEl({"content": "Jane on Instagram: a photo"})}), "Live"),
     (dict(body_text="x", selectors={ARTICLE: FakeEl()}), "Live"),
-    # login wall
+    # RTL caption puts a U+200E bidi mark before the colon; the visible post's
+    # login modal must not override the og:title Live signal.
+    (dict(body_text="log in sign up never miss a post",
+          selectors={OG: FakeEl({"content": "PPP on Instagram‎: احتجاج"})}), "Live"),
+    # login wall: soft modal text, and the hard redirect to /accounts/login/
+    # (whose body says "create new account", not "sign up")
     (dict(body_text="please log in or sign up to continue"), "Login Required"),
+    (dict(body_text="log into instagram create new account",
+          href="https://www.instagram.com/accounts/login/?next=%2Ftv%2Fx%2F"), "Login Required"),
     # no signal
     (dict(body_text="just a normal page"), None),
     # precedence: a "gone" notice beats a live og:title
