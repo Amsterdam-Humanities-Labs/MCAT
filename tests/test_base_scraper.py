@@ -69,6 +69,23 @@ async def test_no_signal_unknown():
     assert (await _scraper(detect).check_url_status("http://x")).status == "Unknown"
 
 
+async def test_load_failure_no_content_errors():
+    # Load failed AND nothing rendered -> Error (we couldn't check the URL), not Unknown.
+    async def detect(tab, it): return None
+    tab = FakeTab(get_error=asyncio.TimeoutError())
+    result = await _scraper(detect, tab).check_url_status("http://x")
+    assert result.status == "Error"
+    assert "timed out" in result.info
+
+
+async def test_load_failure_with_signal_keeps_status():
+    # Load failed but content still rendered -> the real status wins (no over-flagging).
+    async def detect(tab, it): return ("Unavailable", "gone")
+    tab = FakeTab(get_error=Exception("net::ERR_ABORTED"))
+    result = await _scraper(detect, tab).check_url_status("http://x")
+    assert result.status == "Unavailable"
+
+
 async def test_detect_timeout_does_not_hang():
     async def detect(tab, it): await asyncio.sleep(10)
     assert (await _scraper(detect).check_url_status("http://x")).status == "Unknown"

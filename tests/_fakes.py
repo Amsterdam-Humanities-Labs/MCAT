@@ -17,7 +17,8 @@ class FakeEl:
 
 class FakeTab:
     def __init__(self, *, body_text="", title="", h1_text="", warn_text="",
-                 img_ready=True, href="", selectors=None, evaluate_hook=None):
+                 img_ready=True, href="", selectors=None, evaluate_hook=None,
+                 get_error=None):
         self.body_text = body_text
         self.title = title
         self.h1_text = h1_text
@@ -26,6 +27,7 @@ class FakeTab:
         self.href = href
         self.selectors = selectors or {}
         self.evaluate_hook = evaluate_hook   # optional callable(js) -> value | coroutine
+        self.get_error = get_error           # exception to raise from get() (load failure)
         self.got = []                        # urls passed to get()
         self.screenshots = []                # paths passed to save_screenshot()
 
@@ -55,6 +57,8 @@ class FakeTab:
 
     async def get(self, url):
         self.got.append(url)
+        if self.get_error is not None:
+            raise self.get_error
 
     async def save_screenshot(self, path):
         self.screenshots.append(path)

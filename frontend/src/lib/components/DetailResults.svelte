@@ -24,6 +24,6 @@
 {:else if error}
   <p class="text-status-removed text-base py-4">{error}</p>
 {:else}
-  <DataTable columns={tableColumns} rows={displayRows} onScreenshotClick={onOpenScreenshot} />
+  <DataTable columns={tableColumns} rows={displayRows} maxRows={displayRows.length} onScreenshotClick={onOpenScreenshot} />
 {/if}
 </div>

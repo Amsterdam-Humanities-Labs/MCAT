@@ -213,8 +213,7 @@ class BatchProcessor:
                 current_processed = processed
                 current_stats = stats.copy()
 
-                short_url = url[:50] + '...' if len(url) > 50 else url
-                self._log(f"[{current_processed}/{total}] {short_url} → {result.status}", "info")
+                self._log(f"[{current_processed}/{total}] {url} → {result.status}", "info")
 
                 if self.cancel_flag.is_set():
                     return

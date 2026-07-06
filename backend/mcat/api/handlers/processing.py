@@ -55,9 +55,11 @@ def start(body: dict) -> dict:
         on_error=on_error,
     )
     if not success:
-        log_buffer.error("Failed to start processing")
+        reason = ctx.processing_service.last_start_error or "Failed to start processing"
+        log_buffer.error(reason)
         ctx.run_service.abandon_run(project, run)
-    return {"success": success, "run_id": run.id}
+        return {"success": False, "error": reason, "run_id": run.id}
+    return {"success": True, "run_id": run.id}
 
 
 def pause(body: dict) -> dict:

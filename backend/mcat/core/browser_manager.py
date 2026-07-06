@@ -118,11 +118,20 @@ def cookie_to_dict(c) -> dict:
 class BrowserSession:
     """One zendriver Browser plus a fixed pool of reusable tabs."""
 
+    # A tab is replaced once it fails a health probe or has done this many
+    # navigations — long-lived tabs on heavy pages accumulate detached frames and
+    # renderer bloat. The probe timeout bounds how long a wedged tab is waited on.
+    HEALTH_CHECK_TIMEOUT: float = 5.0
+    RECYCLE_EVERY: int = 50
+
     def __init__(self, log_callback: Callable | None = None) -> None:
         self._browser: zd.Browser | None = None
         self._tabs: asyncio.Queue = asyncio.Queue()
         self._all_tabs: list = []
         self._log_callback: Callable | None = log_callback
+        self._cookie_params: list = []
+        self._nav_counts: dict = {}
+        self._stopped: bool = False
 
     def _log(self, message: str, level: str = "info") -> None:
         if self._log_callback:
@@ -150,46 +159,106 @@ class BrowserSession:
         )
         self._browser = browser
 
-        params = []
         for c in (cookies or []):
             try:
-                params.append(to_cookie_param(c))
+                self._cookie_params.append(to_cookie_param(c))
             except Exception:
                 pass
 
-        # Reuse the browser's initial tab as pool slot 1, open the rest.
+        # Reuse the browser's initial tab as pool slot 1, open the rest; each tab
+        # gets the jar injected (see _inject_cookies) and joins the pool.
         first = browser.main_tab
-        tabs = [first] if first is not None else []
-        for _ in range(max(0, pool_size - len(tabs))):
-            tabs.append(await browser.get("about:blank", new_tab=True))
-
-        # Inject the jar per-tab via Network.setCookies: zendriver's browser.cookies
-        # uses Storage on the wrong browser context, so cookies set that way never
-        # reach the tab's navigation. Network.setCookies on the tab does.
-        for tab in tabs:
-            if params:
-                try:
-                    await tab.send(cdp.network.set_cookies(params))
-                except Exception as e:
-                    self._log(f"Cookie injection failed on a tab: {e}", "warning")
+        if first is not None:
+            await self._inject_cookies(first)
+            self._all_tabs.append(first)
+            self._tabs.put_nowait(first)
+        while len(self._all_tabs) < pool_size:
+            tab = await self._open_tab()
             self._all_tabs.append(tab)
             self._tabs.put_nowait(tab)
 
-        if params:
-            self._log(f"Injected {len(params)} cookies for {platform}")
+        if self._cookie_params:
+            self._log(f"Injected {len(self._cookie_params)} cookies for {platform}")
         return self
+
+    async def _inject_cookies(self, tab) -> None:
+        """Inject the jar via Network.setCookies on the tab: zendriver's
+        browser.cookies uses Storage on the wrong browser context, so cookies set
+        that way never reach the tab's navigation."""
+        if not self._cookie_params:
+            return
+        try:
+            await tab.send(cdp.network.set_cookies(self._cookie_params))
+        except Exception as e:
+            self._log(f"Cookie injection failed on a tab: {e}", "warning")
+
+    async def _open_tab(self):
+        """Open a fresh about:blank tab with the jar injected. Time-bounded: on a
+        dead browser this call can otherwise hang forever, wedging the worker."""
+        assert self._browser is not None
+        tab = await asyncio.wait_for(
+            self._browser.get("about:blank", new_tab=True), timeout=self.HEALTH_CHECK_TIMEOUT)
+        await self._inject_cookies(tab)
+        return tab
 
     async def acquire_tab(self):
         """Get a tab from the pool (blocks until one is free)."""
         return await self._tabs.get()
 
     async def release_tab(self, tab) -> None:
+        """Return a tab to the pool, swapping in a fresh one if it's worn out or
+        unresponsive. Always re-pools exactly one tab: the pool doubles as the
+        concurrency gate, so losing a slot would eventually deadlock acquire_tab."""
+        if self._stopped:
+            # Teardown: skip the health-check/recycle (the browser is going away),
+            # but STILL re-pool so coroutines blocked on acquire_tab unblock and
+            # drain (they hit their own cancel check and return at once).
+            self._tabs.put_nowait(tab)
+            return
+        count = self._nav_counts.get(id(tab), 0) + 1
+        self._nav_counts[id(tab)] = count
+        if count >= self.RECYCLE_EVERY:
+            tab = await self._recycle(tab)
+        elif not await self._is_healthy(tab):
+            self._log("Replacing an unresponsive browser tab", "warning")
+            tab = await self._recycle(tab)
         self._tabs.put_nowait(tab)
 
+    async def _is_healthy(self, tab) -> bool:
+        """A detached/wedged tab throws or hangs on a trivial eval; a good tab
+        answers in milliseconds."""
+        try:
+            await asyncio.wait_for(tab.evaluate("1"), timeout=self.HEALTH_CHECK_TIMEOUT)
+            return True
+        except Exception:
+            return False
+
+    async def _recycle(self, old):
+        """Replace a tab with a fresh target (clean page + JS context + transport).
+        Opens the replacement first, so a failure (e.g. a dying browser) falls back
+        to the old tab rather than shrinking the pool."""
+        try:
+            fresh = await self._open_tab()
+        except Exception as e:
+            self._log(f"Tab recycle failed, keeping current tab: {e}", "warning")
+            return old
+        self._nav_counts.pop(id(old), None)
+        if old in self._all_tabs:
+            self._all_tabs.remove(old)
+        self._all_tabs.append(fresh)
+        try:
+            await asyncio.wait_for(old.close(), timeout=self.HEALTH_CHECK_TIMEOUT)
+        except Exception:
+            pass
+        return fresh
+
     async def stop(self) -> None:
+        self._stopped = True
         if self._browser is not None:
+            # Time-bounded: stopping an already-dead browser can hang, which would
+            # wedge the worker's teardown and leave it unable to reset its state.
             try:
-                await self._browser.stop()
+                await asyncio.wait_for(self._browser.stop(), timeout=self.HEALTH_CHECK_TIMEOUT)
             except Exception as e:
                 self._log(f"Browser stop failed: {e}", "warning")
             self._browser = None

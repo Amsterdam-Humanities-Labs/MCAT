@@ -158,7 +158,8 @@ class BaseScraper(ABC):
             print(f"Screenshot saved: {filepath.name}")
             return str(filepath)
         except Exception as e:
-            print(f"Warning: Screenshot failed for {url}: {e}")
+            reason = next(iter(str(e).splitlines()), "") or e.__class__.__name__
+            self._log(f"Screenshot failed for {url}: {reason}", "warning")
             return ""
 
     async def _wait_for_render(self, tab: Tab) -> None:
@@ -228,10 +229,16 @@ class BaseScraper(ABC):
             await self._apply_rate_limit()
 
             # Load page; on timeout/error keep going and inspect whatever rendered.
+            # Remember the failure: if nothing then renders, it's an Error (we
+            # never got a usable page), not an Unknown (a page we couldn't classify).
+            load_error = ""
             self._log(f"Loading page ({rid})")
             try:
                 await asyncio.wait_for(tab.get(url), timeout=self.PAGE_LOAD_TIMEOUT)
-            except Exception:
+            except Exception as e:
+                load_error = (f"page load timed out ({self.PAGE_LOAD_TIMEOUT:.0f}s)"
+                              if isinstance(e, asyncio.TimeoutError)
+                              else str(e) or e.__class__.__name__)
                 self._log(f"Page load issue, checking partial content ({rid})", "warning")
 
             # Capture the title before any consent redirect can replace it
@@ -257,9 +264,16 @@ class BaseScraper(ABC):
                     result.screenshot_path = await self._save_screenshot(tab, url, result.status)
                 return result
 
-            result.status = "Unknown"
-            result.info = "N/A"
-            self._log(f"No signal after {self.SIGNAL_TIMEOUT}s ({rid})", "warning")
+            if load_error:
+                # Nothing rendered after a failed load: we couldn't check the URL.
+                result.status = "Error"
+                result.info = load_error
+                result.error_message = load_error
+                self._log(f"No content after failed load ({rid}): {load_error}", "warning")
+            else:
+                result.status = "Unknown"
+                result.info = "N/A"
+                self._log(f"No signal after {self.SIGNAL_TIMEOUT}s ({rid})", "warning")
             if self.save_screenshots:
                 result.screenshot_path = await self._save_screenshot(tab, url, result.status)
             return result

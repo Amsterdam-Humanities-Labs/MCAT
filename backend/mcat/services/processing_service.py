@@ -28,6 +28,8 @@ class ProcessingService:
 
         self._state_lock: threading.RLock = threading.RLock()
         self._processing_state: ProcessingState = ProcessingState.IDLE
+        # Why the last start_processing was refused, for the API to relay to the UI.
+        self.last_start_error: str = ""
 
         self.current_job: ProcessingJob | None = None
         self.current_status: ProcessingStatus = ProcessingStatus()
@@ -61,15 +63,18 @@ class ProcessingService:
         on_error: Callable | None = None,
     ) -> bool:
         if not self.is_idle():
-            self._log_error("Cannot start: processing is already running")
+            self.last_start_error = "A run is already in progress"
+            self._log_error(f"Cannot start: {self.last_start_error}")
             return False
 
         if urls is None:
             validation = self.validate_processing_request(job)
             if not validation.valid:
-                self._log_error(f"Cannot start: {validation.error_summary}")
+                self.last_start_error = validation.error_summary
+                self._log_error(f"Cannot start: {self.last_start_error}")
                 return False
 
+        self.last_start_error = ""
         try:
             self.current_job = job
             self._custom_urls = urls
@@ -105,7 +110,8 @@ class ProcessingService:
             return True
 
         except Exception as e:
-            self._log_error(f"Failed to start: {e}")
+            self.last_start_error = f"Failed to start: {e}"
+            self._log_error(self.last_start_error)
             self._set_error_state(str(e))
             return False
 
