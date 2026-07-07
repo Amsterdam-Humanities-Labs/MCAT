@@ -6,6 +6,10 @@ from scrapers.base_scraper import BaseScraper, StatusResult
 class YouTubeScraper(BaseScraper):
     """YouTube video status checker (detection only; flow is in BaseScraper)."""
 
+    # Video pages are heavy (autoplaying player + long page), so captures need
+    # longer than the base default before timing out.
+    SCREENSHOT_TIMEOUT = 25.0
+
     # Platform action -> Moderated; everything else gone -> Unavailable.
     MODERATED_PHRASES = ("account has been terminated",)
     UNAVAILABLE_PHRASES = (
