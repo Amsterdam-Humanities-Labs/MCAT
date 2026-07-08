@@ -9,7 +9,10 @@ class TwitterScraper(BaseScraper):
     # Only phrases observed in live probing.
     MODERATED_PHRASES = ("suspended account",)      # "This Post is from a suspended account" (logged in)
     RESTRICTED_PHRASES = ("protected account",)     # "This Post is from a protected account" (owner-gated, follower-only)
-    UNAVAILABLE_PHRASES = ("nothing to see here",)  # logged-out "gone" page (title "X / ?")
+    UNAVAILABLE_PHRASES = (
+        "nothing to see here",   # logged-out "gone" page (title "X / ?")
+        "this page doesn",       # "Hmm...this page doesn't exist" (matched up to the apostrophe, which X curls)
+    )
 
     def get_platform_name(self) -> str:
         return "twitter"

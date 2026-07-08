@@ -106,7 +106,10 @@ Detection reads `body.innerText` (visible text only, not raw HTML, to avoid fals
 3. **Login Required** (Instagram) — a login wall with no other signal.
 4. **Unknown** — nothing matched.
 
-X (Twitter) is the exception: because it only renders a tweet when it's live, its scraper inverts steps 1 and 2 and checks the **positive signal first** — a rendered tweet is conclusive proof of `Live`.
+**Which signal is checked first flips by platform — always the one that can't be faked:**
+
+- **YouTube / Instagram / Facebook — negatives first.** Their removal notices are platform chrome a live post never contains, and a taken-down page *replaces* the post with that notice; meanwhile their positives (`og:title`, article DOM) leak onto dead pages. So the trustworthy signal is the negative — a takedown notice must override a stale "looks-live" one.
+- **X (Twitter) — positive first.** Its gone-phrases (`suspended account`, `nothing to see here`) are ordinary tweet text users actually post, so leading with them would mislabel a live tweet as gone. But X only renders the tweet card when it's genuinely live (never a card *and* a notice), so a rendered card is the one signal user text can't fake — checked first, with the body read for gone-phrases only if no card rendered.
 
 The guiding principle: **`Live` and every negative status (`Moderated`, `Unavailable`, `Restricted`) require their own affirmative evidence — none is ever a guess.** A page is never called `Live` until all negative checks fail *and* a positive signal is found. When neither is found, the result is **`Unknown`** (the genuine fallback) for a human to judge from the screenshot — the scraper never defaults absence-of-removal to "live."
 

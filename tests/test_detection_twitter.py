@@ -21,6 +21,8 @@ def _scraper():
     (dict(body_text="This Post is from a suspended account"), "Moderated"),
     (dict(body_text="This Post is from a protected account"), "Restricted"),
     (dict(body_text="Hmm...this page doesn't exist. nothing to see here"), "Unavailable"),
+    # X's real 404, curly apostrophe (matched up to the apostrophe)
+    (dict(body_text="Hmm…this page doesn’t exist. Try searching for something else."), "Unavailable"),
     (dict(title="X / ?"), "Unavailable"),
     # no signal
     (dict(body_text="just some text", title="random"), None),
