@@ -42,11 +42,11 @@ Commands are plain request/response; everything live (a run's progress, each che
 
 ```bash
 pnpm install
-cd backend && python3 -m venv --system-site-packages venv
+cd app/backend && python3 -m venv --system-site-packages venv
 venv/bin/pip install ".[dev]"
 ```
 
-Dependencies are declared in `backend/pyproject.toml` (`zendriver`, `pywebview`; `pyinstaller` + `pyright` under the `dev` extra) — that's the single source of truth, so there's no separate list to install by hand. On macOS, pywebview pulls its native WebKit backend (`pyobjc-*`) automatically. On Linux it uses the **system** WebKitGTK/PyGObject, which is why the venv is created with `--system-site-packages`.
+Dependencies are declared in `app/backend/pyproject.toml` (`zendriver`, `pywebview`; `pyinstaller` + `pyright` under the `dev` extra) — that's the single source of truth, so there's no separate list to install by hand. On macOS, pywebview pulls its native WebKit backend (`pyobjc-*`) automatically. On Linux it uses the **system** WebKitGTK/PyGObject, which is why the venv is created with `--system-site-packages`.
 
 ## Development
 
@@ -60,10 +60,10 @@ The backend starts on `127.0.0.1:9876` (fallback to next free port); Vite on `12
 ## Testing
 
 ```bash
-pnpm test          # Python suite via pytest (needs backend/venv set up)
+pnpm test          # Python suite via pytest (needs app/backend/venv set up)
 ```
 
-Covers `csv_handler` (I/O + delimiter handling), each platform's `_detect_status` detection branches (offline, via fake tabs), the scraping harness — batch orchestration and the per-URL flow: cancel / pause / retry / timeout, no browser — and the cookie store. CI runs it on every push and PR (`.github/workflows/test.yml`). The verified-URL fixtures under `tests/fixtures/live/verified/` are ground truth for an optional live (networked) detection check.
+Covers `csv_handler` (I/O + delimiter handling), each platform's `_detect_status` detection branches (offline, via fake tabs), the scraping harness — batch orchestration and the per-URL flow: cancel / pause / retry / timeout, no browser — and the cookie store. CI runs it on every push and PR (`.github/workflows/test.yml`). The verified-URL fixtures under `app/tests/fixtures/live/verified/` are ground truth for an optional live (networked) detection check.
 
 ## Usage
 
@@ -179,27 +179,29 @@ X renders a tweet only when it's live, so detection is **positive-first**: a ren
 
 ```
 MCAT/
-├── frontend/          # Svelte 5 UI (Vite)
-│   ├── src/
-│   │   ├── lib/       # Components, stores, api
-│   │   ├── types/     # Shared TypeScript types
-│   │   └── themes/    # Color themes
-│   └── public/fonts/  # Custom fonts
-├── backend/           # Python backend
-│   ├── mcat/
-│   │   ├── api/       # HTTP handlers, router (also serves the built SPA)
-│   │   ├── scrapers/  # Platform scrapers (detection only)
-│   │   ├── services/  # Project/run/processing/tracking/login services
-│   │   ├── core/      # Batch processor, zendriver browser session
-│   │   ├── models/    # Data models
-│   │   └── app.py     # Entry point
-│   ├── pyproject.toml # Dependencies (single source of truth)
-│   └── venv/          # Python virtual environment
-└── tests/
-    ├── mock_scraper.py          # Mock scraper for dev
-    ├── mock_scraper_factory.py  # Wires the mock into the batch pipeline
-    ├── fixtures/                # Test URLs and scenarios
-    └── test_cookie_store.py     # Cookie store round-trip test
+├── app/                       # the desktop app (pnpm workspace + Python)
+│   ├── frontend/          # Svelte 5 UI (Vite)
+│   │   ├── src/
+│   │   │   ├── lib/       # Components, stores, api
+│   │   │   ├── types/     # Shared TypeScript types
+│   │   │   └── themes/    # Color themes
+│   │   └── public/fonts/  # Custom fonts
+│   ├── backend/           # Python backend
+│   │   ├── mcat/
+│   │   │   ├── api/       # HTTP handlers, router (also serves the built SPA)
+│   │   │   ├── scrapers/  # Platform scrapers (detection only)
+│   │   │   ├── services/  # Project/run/processing/tracking/login services
+│   │   │   ├── core/      # Batch processor, zendriver browser session
+│   │   │   ├── models/    # Data models
+│   │   │   └── app.py     # Entry point
+│   │   ├── pyproject.toml # Dependencies (single source of truth)
+│   │   └── venv/          # Python virtual environment
+│   └── tests/
+│       ├── mock_scraper.py          # Mock scraper for dev
+│       ├── mock_scraper_factory.py  # Wires the mock into the batch pipeline
+│       ├── fixtures/                # Test URLs and scenarios
+│       └── test_cookie_store.py     # Cookie store round-trip test
+└── build/                     # Linux AppImage / macOS packaging config
 ```
 
 ## Building & installing
@@ -212,16 +214,16 @@ pnpm build:linux          # or: ./build/build-linux.sh   →   build/MCAT-x86_64
 
 A single double-clickable file that runs on any glibc-compatible distro. The pipeline (`build/build-linux.sh`, idempotent — safe to re-run) is four isolated steps:
 
-1. **Frontend** — `pnpm --filter frontend build` → `frontend/dist/`
-2. **PyInstaller** — reads `backend/mcat.spec` → `backend/dist/mcat/` (onedir: executable + Python libs + bundled frontend)
+1. **Frontend** — `pnpm --filter frontend build` → `app/frontend/dist/`
+2. **PyInstaller** — reads `app/backend/mcat.spec` → `app/backend/dist/mcat/` (onedir: executable + Python libs + bundled frontend)
 3. **AppDir** — copies the bundle into `build/MCAT.AppDir/` with the AppImage layout (`AppRun`, `*.desktop`, `*.png`, `usr/bin/`)
 4. **AppImage** — `appimagetool` on the AppDir → the final `.AppImage`
 
-Supporting files in `build/`: `AppRun` (launcher that invokes `usr/bin/mcat`), `mcat.desktop` (app metadata read by file managers), `mcat.png` (256×256 icon; falls back to a 1×1 placeholder if missing), and `appimagetool-x86_64.AppImage` (downloaded on first run). The staging `MCAT.AppDir/` and the final `.AppImage` are gitignored. Outside `build/`, the relevant files are `backend/mcat.spec` (PyInstaller config), `backend/hooks/hook-webview.py` (collects pywebview's GTK/WebKit typelibs), and `app.py`'s `sys.frozen` branch (repoints the frontend dir at the bundled location at runtime).
+Supporting files in `build/`: `AppRun` (launcher that invokes `usr/bin/mcat`), `mcat.desktop` (app metadata read by file managers), `mcat.png` (256×256 icon; falls back to a 1×1 placeholder if missing), and `appimagetool-x86_64.AppImage` (downloaded on first run). The staging `MCAT.AppDir/` and the final `.AppImage` are gitignored. Outside `build/`, the relevant files are `app/backend/mcat.spec` (PyInstaller config), `app/backend/hooks/hook-webview.py` (collects pywebview's GTK/WebKit typelibs), and `app.py`'s `sys.frozen` branch (repoints the frontend dir at the bundled location at runtime).
 
 **Linux troubleshooting:**
-- *"QT cannot be loaded" at launch* — the WebKit typelibs weren't collected; check `backend/hooks/hook-webview.py` (it tries WebKit2 4.1 then 4.0 — add your distro's version if different).
-- *Bundle much larger than expected (~200 MB+)* — verify `backend/mcat.spec`'s `excludes=` list; PyInstaller otherwise pulls in Qt/tkinter when pywebview is present.
+- *"QT cannot be loaded" at launch* — the WebKit typelibs weren't collected; check `app/backend/hooks/hook-webview.py` (it tries WebKit2 4.1 then 4.0 — add your distro's version if different).
+- *Bundle much larger than expected (~200 MB+)* — verify `app/backend/mcat.spec`'s `excludes=` list; PyInstaller otherwise pulls in Qt/tkinter when pywebview is present.
 - *"Frontend build not found" from PyInstaller* — you ran it without building the frontend; use `./build/build-linux.sh`, or run `pnpm --filter frontend build` first.
 - *No browser at runtime* — zendriver drives the **system** Chrome/Chromium, which must be installed; a fresh machine needs it present.
 
@@ -229,7 +231,7 @@ Supporting files in `build/`: `AppRun` (launcher that invokes `usr/bin/mcat`), `
 
 ```bash
 pnpm build            # build the frontend first
-cd backend && venv/bin/python -m PyInstaller --clean mcat.spec   # → backend/dist/MCAT.app
+cd app/backend && venv/bin/python -m PyInstaller --clean mcat.spec   # → app/backend/dist/MCAT.app
 ```
 
 The GitHub Actions workflow (`.github/workflows/build-macos.yml`) builds both arm64 (Apple Silicon, on `macos-26`) and x86_64 (Intel, on `macos-15-intel`) bundles on pushes to `build`. At runtime the app serves the built SPA from its own backend so the UI and API share one origin — required on macOS, where a `file://` page is blocked from reaching the `http://` backend.

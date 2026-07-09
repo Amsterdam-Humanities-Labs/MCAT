@@ -13,6 +13,6 @@ jobs:
         with:
           python-version: '3.12'
       - name: Install backend (with dev/test deps)
-        run: pip install "./backend[dev]"
+        run: pip install "./app/backend[dev]"
       - name: Run tests
         run: python -m pytest

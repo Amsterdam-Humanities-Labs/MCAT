@@ -47,28 +47,28 @@ jobs:
 
     - name: Set up Python venv and install dependencies
       run: |
-        cd backend
+        cd app/backend
         python -m venv venv
         venv/bin/pip install --upgrade pip
         venv/bin/pip install ".[dev]"
 
     - name: Build with PyInstaller
       run: |
-        cd backend
+        cd app/backend
         venv/bin/python -m PyInstaller --clean mcat.spec
 
     - name: Verify bundle architecture
       run: |
-        cd backend/dist
+        cd app/backend/dist
         file MCAT.app/Contents/MacOS/mcat
 
     - name: Zip the app bundle
       run: |
-        cd backend/dist
+        cd app/backend/dist
         zip -r MCAT-macOS-${{ matrix.arch }}.zip MCAT.app
 
     - name: Upload build artifact
       uses: actions/upload-artifact@v4
       with:
         name: MCAT-macOS-${{ matrix.arch }}
-        path: backend/dist/MCAT-macOS-${{ matrix.arch }}.zip
+        path: app/backend/dist/MCAT-macOS-${{ matrix.arch }}.zip
