@@ -1,7 +1,7 @@
 <script lang="ts">
   import { cn } from '$lib/utils';
-  import Button from './Button.svelte';
-  import Tooltip from './Tooltip.svelte';
+  import { Button } from '@mcat/ui';
+  import { Tooltip } from '@mcat/ui';
   import { WarningCircle } from 'phosphor-svelte';
   import type { AuthInfo } from '$types/project';
 

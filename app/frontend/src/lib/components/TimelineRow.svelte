@@ -9,13 +9,12 @@
 
   interface Props {
     run: Run;
-    index: number;
     isSelected: boolean;
     onClick?: () => void;
     class?: string;
   }
 
-  let { run, index, isSelected, onClick, class: className }: Props = $props();
+  let { run, isSelected, onClick, class: className }: Props = $props();
 
   const isAbandoned = $derived(run.status === 'abandoned');
   const dotColor = 'text-text-secondary';

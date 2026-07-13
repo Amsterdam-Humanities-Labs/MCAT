@@ -2,7 +2,7 @@
   import { cn } from '$lib/utils';
   import TransitionBadge from './TransitionBadge.svelte';
   import StatusBadge from './StatusBadge.svelte';
-  import Link from './Link.svelte';
+  import { Link } from '@mcat/ui';
 
   interface Column<T> {
     key: keyof T | string;

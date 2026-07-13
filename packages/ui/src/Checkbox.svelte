@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { cn } from '$lib/utils';
+  import { cn } from './utils';
   import { Check } from 'phosphor-svelte';
 
   interface Props {

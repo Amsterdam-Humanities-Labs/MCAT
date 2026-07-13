@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { cn } from '$lib/utils';
+  import { cn } from './utils';
   import { Select } from 'melt/builders';
   import { CaretDown } from 'phosphor-svelte';
 

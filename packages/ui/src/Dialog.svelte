@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { cn } from '$lib/utils';
+  import { cn } from './utils';
   import { Dialog } from 'melt/builders';
   import { X } from 'phosphor-svelte';
   import ButtonIcon from './ButtonIcon.svelte';

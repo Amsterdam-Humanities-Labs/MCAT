@@ -178,13 +178,12 @@ X renders a tweet only when it's live, so detection is **positive-first**: a ren
 ## Project structure
 
 ```
-MCAT/
-├── app/                       # the desktop app (pnpm workspace + Python)
+MCAT/                          # pnpm workspace monorepo
+├── app/                       # the desktop app (Svelte + Python)
 │   ├── frontend/          # Svelte 5 UI (Vite)
 │   │   ├── src/
-│   │   │   ├── lib/       # Components, stores, api
-│   │   │   ├── types/     # Shared TypeScript types
-│   │   │   └── themes/    # Color themes
+│   │   │   ├── lib/       # App components, stores, api
+│   │   │   └── types/     # Shared TypeScript types
 │   │   └── public/fonts/  # Custom fonts
 │   ├── backend/           # Python backend
 │   │   ├── mcat/
@@ -196,12 +195,14 @@ MCAT/
 │   │   │   └── app.py     # Entry point
 │   │   ├── pyproject.toml # Dependencies (single source of truth)
 │   │   └── venv/          # Python virtual environment
-│   └── tests/
-│       ├── mock_scraper.py          # Mock scraper for dev
-│       ├── mock_scraper_factory.py  # Wires the mock into the batch pipeline
-│       ├── fixtures/                # Test URLs and scenarios
-│       └── test_cookie_store.py     # Cookie store round-trip test
-└── build/                     # Linux AppImage / macOS packaging config
+│   ├── tests/
+│   │   ├── mock_scraper.py          # Mock scraper for dev
+│   │   ├── mock_scraper_factory.py  # Wires the mock into the batch pipeline
+│   │   ├── fixtures/                # Test URLs and scenarios
+│   │   └── test_cookie_store.py     # Cookie store round-trip test
+│   └── build/             # Linux AppImage / macOS packaging config
+└── packages/
+    └── ui/                # Shared Svelte primitives + theme (@mcat/ui)
 ```
 
 ## Building & installing
@@ -209,22 +210,22 @@ MCAT/
 ### Linux (AppImage)
 
 ```bash
-pnpm build:linux          # or: ./build/build-linux.sh   →   build/MCAT-x86_64.AppImage
+pnpm build:linux          # or: ./app/build/build-linux.sh   →   app/build/MCAT-x86_64.AppImage
 ```
 
-A single double-clickable file that runs on any glibc-compatible distro. The pipeline (`build/build-linux.sh`, idempotent — safe to re-run) is four isolated steps:
+A single double-clickable file that runs on any glibc-compatible distro. The pipeline (`app/build/build-linux.sh`, idempotent — safe to re-run) is four isolated steps:
 
 1. **Frontend** — `pnpm --filter frontend build` → `app/frontend/dist/`
 2. **PyInstaller** — reads `app/backend/mcat.spec` → `app/backend/dist/mcat/` (onedir: executable + Python libs + bundled frontend)
-3. **AppDir** — copies the bundle into `build/MCAT.AppDir/` with the AppImage layout (`AppRun`, `*.desktop`, `*.png`, `usr/bin/`)
+3. **AppDir** — copies the bundle into `app/build/MCAT.AppDir/` with the AppImage layout (`AppRun`, `*.desktop`, `*.png`, `usr/bin/`)
 4. **AppImage** — `appimagetool` on the AppDir → the final `.AppImage`
 
-Supporting files in `build/`: `AppRun` (launcher that invokes `usr/bin/mcat`), `mcat.desktop` (app metadata read by file managers), `mcat.png` (256×256 icon; falls back to a 1×1 placeholder if missing), and `appimagetool-x86_64.AppImage` (downloaded on first run). The staging `MCAT.AppDir/` and the final `.AppImage` are gitignored. Outside `build/`, the relevant files are `app/backend/mcat.spec` (PyInstaller config), `app/backend/hooks/hook-webview.py` (collects pywebview's GTK/WebKit typelibs), and `app.py`'s `sys.frozen` branch (repoints the frontend dir at the bundled location at runtime).
+Supporting files in `app/build/`: `AppRun` (launcher that invokes `usr/bin/mcat`), `mcat.desktop` (app metadata read by file managers), `mcat.png` (256×256 icon; falls back to a 1×1 placeholder if missing), and `appimagetool-x86_64.AppImage` (downloaded on first run). The staging `MCAT.AppDir/` and the final `.AppImage` are gitignored. Outside `app/build/`, the relevant files are `app/backend/mcat.spec` (PyInstaller config), `app/backend/hooks/hook-webview.py` (collects pywebview's GTK/WebKit typelibs), and `app.py`'s `sys.frozen` branch (repoints the frontend dir at the bundled location at runtime).
 
 **Linux troubleshooting:**
 - *"QT cannot be loaded" at launch* — the WebKit typelibs weren't collected; check `app/backend/hooks/hook-webview.py` (it tries WebKit2 4.1 then 4.0 — add your distro's version if different).
 - *Bundle much larger than expected (~200 MB+)* — verify `app/backend/mcat.spec`'s `excludes=` list; PyInstaller otherwise pulls in Qt/tkinter when pywebview is present.
-- *"Frontend build not found" from PyInstaller* — you ran it without building the frontend; use `./build/build-linux.sh`, or run `pnpm --filter frontend build` first.
+- *"Frontend build not found" from PyInstaller* — you ran it without building the frontend; use `./app/build/build-linux.sh`, or run `pnpm --filter frontend build` first.
 - *No browser at runtime* — zendriver drives the **system** Chrome/Chromium, which must be installed; a fresh machine needs it present.
 
 ### macOS (`.app`)

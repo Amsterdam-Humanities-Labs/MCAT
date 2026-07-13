@@ -11,16 +11,18 @@
 
 set -euo pipefail
 
-# Resolve paths relative to this script, not the caller's cwd
+# Resolve paths relative to this script, not the caller's cwd.
+# build/ lives under app/, so ROOT is the app dir; REPO_ROOT is the repo root.
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+REPO_ROOT="$(cd "${ROOT}/.." && pwd)"
 
 # -- Prerequisites -----------------------------------------------------------
 
 command -v pnpm >/dev/null || { echo "pnpm not found"; exit 1; }
-[[ -x "${ROOT}/app/backend/venv/bin/python" ]] \
+[[ -x "${ROOT}/backend/venv/bin/python" ]] \
     || { echo "backend venv not found — run: cd app/backend && python3 -m venv --system-site-packages venv"; exit 1; }
-"${ROOT}/app/backend/venv/bin/python" -c "import PyInstaller" 2>/dev/null \
+"${ROOT}/backend/venv/bin/python" -c "import PyInstaller" 2>/dev/null \
     || { echo "PyInstaller not importable in venv — run: app/backend/venv/bin/pip install pyinstaller"; exit 1; }
 
 APPIMAGETOOL="${SCRIPT_DIR}/appimagetool-x86_64.AppImage"
@@ -40,7 +42,7 @@ pnpm --filter frontend build
 # -- 2. Run PyInstaller ------------------------------------------------------
 
 echo ">> Running PyInstaller"
-cd "${ROOT}/app/backend"
+cd "${ROOT}/backend"
 rm -rf build dist
 venv/bin/python -m PyInstaller --clean mcat.spec
 
@@ -52,12 +54,12 @@ rm -rf "${APPDIR}"
 mkdir -p "${APPDIR}/usr/bin"
 
 # Copy the onedir bundle's contents into usr/bin
-cp -r "${ROOT}/app/backend/dist/mcat/." "${APPDIR}/usr/bin/"
+cp -r "${ROOT}/backend/dist/mcat/." "${APPDIR}/usr/bin/"
 
 # Bundle license texts so they ship with the app
 mkdir -p "${APPDIR}/usr/share"
-cp "${ROOT}/LICENSE" "${APPDIR}/usr/share/LICENSE"
-cp -r "${ROOT}/LICENSES" "${APPDIR}/usr/share/"
+cp "${REPO_ROOT}/LICENSE" "${APPDIR}/usr/share/LICENSE"
+cp -r "${REPO_ROOT}/LICENSES" "${APPDIR}/usr/share/"
 
 # Metadata files required at the AppDir root
 cp "${SCRIPT_DIR}/AppRun" "${APPDIR}/AppRun"

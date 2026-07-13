@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { cn } from '$lib/utils';
+  import { cn } from './utils';
   import { Tooltip } from 'melt/builders';
 
   interface Props {

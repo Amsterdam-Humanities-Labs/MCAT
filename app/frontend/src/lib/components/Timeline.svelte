@@ -43,7 +43,6 @@
       {#each sortedRuns as run, i (run.id)}
         <TimelineRow
           {run}
-          index={sortedRuns.length - i}
           isSelected={selectedRunId === run.id}
           onClick={() => onRunClick?.(run.id)}
         />

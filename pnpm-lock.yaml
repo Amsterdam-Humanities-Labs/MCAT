@@ -10,6 +10,9 @@ importers:
 
   app/frontend:
     dependencies:
+      '@mcat/ui':
+        specifier: workspace:*
+        version: link:../../packages/ui
       '@oddbird/popover-polyfill':
         specifier: ^0.6.1
         version: 0.6.1
@@ -59,6 +62,24 @@ importers:
       vite:
         specifier: ^7.2.4
         version: 7.3.1(@types/node@24.12.0)(jiti@2.6.1)(lightningcss@1.31.1)
+
+  packages/ui:
+    dependencies:
+      clsx:
+        specifier: ^2.1.1
+        version: 2.1.1
+      melt:
+        specifier: ^0.44.0
+        version: 0.44.0(@floating-ui/dom@1.7.6)(svelte@5.53.9)
+      phosphor-svelte:
+        specifier: ^3.1.0
+        version: 3.1.0(svelte@5.53.9)(vite@7.3.1(@types/node@24.12.0)(jiti@2.6.1)(lightningcss@1.31.1))
+      svelte:
+        specifier: ^5
+        version: 5.53.9
+      tailwind-merge:
+        specifier: ^3.4.0
+        version: 3.5.0
 
 packages:
 

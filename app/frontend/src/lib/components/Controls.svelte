@@ -4,7 +4,7 @@
   import ControlsInterval from './ControlsInterval.svelte';
   import ControlsHint from './ControlsHint.svelte';
   import ControlsTrackingStatus from './ControlsTrackingStatus.svelte';
-  import Checkbox from './Checkbox.svelte';
+  import { Checkbox } from '@mcat/ui';
 
   interface Props {
     runState: 'idle' | 'running' | 'paused';

@@ -6,10 +6,10 @@ app/frontend/public/fonts/*
 app/backend/build/
 app/backend/dist/
 
-# Build/ source directory is committed; its build artifacts are not
-build/MCAT.AppDir/
-build/MCAT-x86_64.AppImage
-build/appimagetool-x86_64.AppImage
+# Build source directory is committed; its build artifacts are not
+app/build/MCAT.AppDir/
+app/build/MCAT-x86_64.AppImage
+app/build/appimagetool-x86_64.AppImage
 
 # Frontend build output
 app/frontend/dist/

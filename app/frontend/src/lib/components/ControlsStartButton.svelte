@@ -1,6 +1,6 @@
 <script lang="ts">
   import { cn } from '$lib/utils';
-  import Button from './Button.svelte';
+  import { Button } from '@mcat/ui';
 
   interface Props {
     runState: 'idle' | 'running' | 'paused';

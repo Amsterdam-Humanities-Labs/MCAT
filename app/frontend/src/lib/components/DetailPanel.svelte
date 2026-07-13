@@ -3,7 +3,7 @@
   import type { Run } from '$types/project';
   import { api } from '$lib/api/client';
   import { Button } from '$lib/components';
-  import Tabs from './Tabs.svelte';
+  import { Tabs } from '@mcat/ui';
   import DetailChanges from './DetailChanges.svelte';
   import DetailResults from './DetailResults.svelte';
   import DetailRun from './DetailRun.svelte';

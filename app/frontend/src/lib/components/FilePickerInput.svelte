@@ -1,8 +1,8 @@
 <script lang="ts">
   import { cn } from '$lib/utils';
   import { api } from '$lib/api/client';
-  import Button from './Button.svelte';
-  import Input from './Input.svelte';
+  import { Button } from '@mcat/ui';
+  import { Input } from '@mcat/ui';
 
   interface FileFilter {
     name: string;

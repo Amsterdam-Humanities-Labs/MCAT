@@ -1,4 +1,4 @@
-import { api, getBackendUrl } from '../api/client';
+import { getBackendUrl } from '../api/client';
 import { initSSE, closeSSE } from '../api/sse';
 import { appStore } from './app.svelte';
 import { consoleStore } from './console.svelte';
