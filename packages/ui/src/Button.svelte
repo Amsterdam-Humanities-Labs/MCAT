@@ -3,6 +3,7 @@
   import { SpinnerGap } from 'phosphor-svelte';
 
   interface Props {
+    href?: string;
     variant?: 'primary' | 'secondary' | 'danger' | 'ghost';
     size?: 'sm' | 'md' | 'lg';
     disabled?: boolean;
@@ -14,6 +15,7 @@
   }
 
   let {
+    href,
     variant = 'secondary',
     size = 'md',
     disabled = false,
@@ -43,16 +45,31 @@
     md: 'px-4 py-2 text-base',
     lg: 'px-6 py-3 text-base',
   };
+
+  const classes = $derived(cn(baseClasses, variants[variant], sizes[size], className));
+
+  // Cross-origin links open in a new tab; internal ones use client-side nav.
+  const external = $derived(href ? /^(https?:)?\/\//.test(href) : false);
 </script>
 
-<button
-  {type}
-  disabled={disabled || loading}
-  class={cn(baseClasses, variants[variant], sizes[size], className)}
-  onclick={onclick}
->
-  {#if loading}
-    <SpinnerGap size={16} class="animate-spin -ml-1 mr-2" />
-  {/if}
-  {@render children?.()}
-</button>
+{#if href}
+  <a
+    {href}
+    target={external ? '_blank' : undefined}
+    rel={external ? 'noopener' : undefined}
+    class={classes}
+    {onclick}
+  >
+    {#if loading}
+      <SpinnerGap size={16} class="animate-spin -ml-1 mr-2" />
+    {/if}
+    {@render children?.()}
+  </a>
+{:else}
+  <button {type} disabled={disabled || loading} class={classes} {onclick}>
+    {#if loading}
+      <SpinnerGap size={16} class="animate-spin -ml-1 mr-2" />
+    {/if}
+    {@render children?.()}
+  </button>
+{/if}

@@ -14,6 +14,10 @@ app/build/appimagetool-x86_64.AppImage
 # Frontend build output
 app/frontend/dist/
 
+# Website (SvelteKit) build output
+website/.svelte-kit/
+website/build/
+
 # Python cache
 __pycache__/
 *.pyc
