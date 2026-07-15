@@ -1,7 +1,7 @@
 <script lang="ts">
   import { cn } from '$lib/utils';
-  import { Button } from '@mcat/ui';
-  import { Tooltip } from '@mcat/ui';
+  import { Button } from '@mcat/shared-ui';
+  import { Tooltip } from '@mcat/shared-ui';
   import { WarningCircle } from 'phosphor-svelte';
   import type { AuthInfo } from '$types/project';
 

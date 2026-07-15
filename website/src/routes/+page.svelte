@@ -1,6 +1,7 @@
 <script lang="ts">
-  import { Button } from '@mcat/ui';
-  import { H1, P } from '@mcat/ui/website';
+  import { Button } from '@mcat/shared-ui';
+  import H1 from '$components/H1.svelte';
+  import P from '$components/P.svelte';
   import type { PageData } from './$types';
 
   let { data }: { data: PageData } = $props();

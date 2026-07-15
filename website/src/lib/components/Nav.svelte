@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { cn } from '../utils';
-  import type { NavLink } from './types';
+  import { cn } from '@mcat/shared-ui';
+  import type { NavLink } from '$lib/nav';
 
   interface Props {
     links: NavLink[];

@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { Link } from '@mcat/ui';
-  import { H1 } from '@mcat/ui/website';
+  import { Link } from '@mcat/shared-ui';
+  import H1 from '$components/H1.svelte';
   import { docs } from '$lib/docs';
 
   const entries = Object.entries(docs).map(([slug, mod]) => ({

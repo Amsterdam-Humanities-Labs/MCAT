@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { cn } from '../utils';
-  import type { TocEntry } from './types';
+  import { cn } from '@mcat/shared-ui';
+  import type { TocEntry } from '$lib/scrollSpy.svelte';
 
   interface Props {
     toc: TocEntry[];

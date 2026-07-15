@@ -1,4 +1,7 @@
-import type { NavLink } from '@mcat/ui/website';
+export interface NavLink {
+  label: string;
+  href: string;
+}
 
 export const navLinks: NavLink[] = [
   { label: 'Home', href: '/' },

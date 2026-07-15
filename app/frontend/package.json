@@ -23,7 +23,7 @@
     "vite": "^7.2.4"
   },
   "dependencies": {
-    "@mcat/ui": "workspace:*",
+    "@mcat/shared-ui": "workspace:*",
     "@oddbird/popover-polyfill": "^0.6.1",
     "clsx": "^2.1.1",
     "melt": "^0.44.0",

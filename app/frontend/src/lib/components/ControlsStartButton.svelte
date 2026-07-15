@@ -1,6 +1,6 @@
 <script lang="ts">
   import { cn } from '$lib/utils';
-  import { Button } from '@mcat/ui';
+  import { Button } from '@mcat/shared-ui';
 
   interface Props {
     runState: 'idle' | 'running' | 'paused';

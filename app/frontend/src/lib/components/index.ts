@@ -1,8 +1,8 @@
-// Shared primitives live in @mcat/ui; re-exported here so app imports are unchanged.
+// Shared primitives live in @mcat/shared-ui; re-exported here so app imports are unchanged.
 export {
   Badge, Button, ButtonIcon, Checkbox, Dialog, DialogActions, ErrorBanner,
   FormField, InfoBox, Input, Link, Select, SelectField, Tabs, Tooltip,
-} from '@mcat/ui';
+} from '@mcat/shared-ui';
 
 // App-specific components
 export { default as Progress } from './Progress.svelte';

@@ -1,9 +1,9 @@
 @import "tailwindcss";
-@import "@mcat/ui/theme.css";
+@import "@mcat/shared-ui/theme.css";
 
 /* Tailwind only generates classes it sees; scan the shared UI package's source
-   so classes used by @mcat/ui components are emitted here too. */
-@source "../../packages/ui/src";
+   so classes used by @mcat/shared-ui components are emitted here too. */
+@source "../../packages/shared-ui/src";
 
 html {
   font-family: 'General Sans', system-ui, sans-serif;

@@ -1,5 +1,5 @@
 {
-  "name": "@mcat/ui",
+  "name": "@mcat/shared-ui",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -8,10 +8,6 @@
     ".": {
       "svelte": "./src/index.ts",
       "default": "./src/index.ts"
-    },
-    "./website": {
-      "svelte": "./src/website/index.ts",
-      "default": "./src/website/index.ts"
     },
     "./theme.css": "./src/theme.css"
   },

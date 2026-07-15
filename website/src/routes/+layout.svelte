@@ -2,13 +2,12 @@
   import '../app.css';
   import { page } from '$app/state';
   import { afterNavigate } from '$app/navigation';
-  import { Nav, NavToggle, Seo } from '@mcat/ui/website';
+  import Nav from '$components/Nav.svelte';
+  import NavToggle from '$components/NavToggle.svelte';
+  import Seo from '$components/Seo.svelte';
   import { navLinks } from '$lib/nav';
-  import { resolveSeo } from '$lib/seo';
 
   let { children } = $props();
-
-  const seo = $derived(resolveSeo(page.data.meta, page.url.pathname));
 
   // The layout owns the mobile-nav state; Nav/NavToggle receive it as props.
   let mobileNavOpen = $state(false);
@@ -18,7 +17,7 @@
   });
 </script>
 
-<Seo {...seo} />
+<Seo meta={page.data.meta} pathname={page.url.pathname} />
 
 <header class="sticky top-0 z-40 border-b border-border-light bg-bg-primary">
   <div class="mx-auto flex max-w-5xl items-center justify-between px-4 py-3">

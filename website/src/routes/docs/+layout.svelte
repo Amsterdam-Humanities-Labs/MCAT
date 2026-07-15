@@ -2,7 +2,7 @@
   import { page } from '$app/state';
   import { afterNavigate } from '$app/navigation';
   import { onMount } from 'svelte';
-  import { TableOfContents } from '@mcat/ui/website';
+  import TableOfContents from '$components/TableOfContents.svelte';
   import { ScrollSpy } from '$lib/scrollSpy.svelte';
 
   let { children } = $props();

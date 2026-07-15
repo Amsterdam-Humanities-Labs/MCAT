@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { H1, P } from '@mcat/ui/website';
+  import H1 from '$components/H1.svelte';
+  import P from '$components/P.svelte';
 </script>
 
 <H1>Policies</H1>

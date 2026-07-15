@@ -1,3 +1,9 @@
+export interface TocEntry {
+  depth: number;
+  text: string;
+  id: string;
+}
+
 // Owns the "currently-read" heading id as $state. The docs layout instantiates
 // one and passes `activeId` down to the TOC — no store import in the leaf.
 export class ScrollSpy {

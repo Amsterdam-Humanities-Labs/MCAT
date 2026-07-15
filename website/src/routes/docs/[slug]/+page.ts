@@ -1,7 +1,7 @@
 import { error } from '@sveltejs/kit';
 import { docs } from '$lib/docs';
 import type { PageMeta } from '$lib/seo';
-import type { TocEntry } from '@mcat/ui/website';
+import type { TocEntry } from '$lib/scrollSpy.svelte';
 import type { EntryGenerator, PageLoad } from './$types';
 
 export const entries: EntryGenerator = () =>

@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
   import type { HTMLAttributes } from 'svelte/elements';
-  import { cn } from '../utils';
+  import { cn } from '@mcat/shared-ui';
 
   interface Props extends HTMLAttributes<HTMLHeadingElement> {
     class?: string;

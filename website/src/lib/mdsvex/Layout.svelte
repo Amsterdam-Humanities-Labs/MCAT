@@ -1,8 +1,11 @@
 <script module>
   // mdsvex custom components: these named exports replace the matching markdown
   // elements, so all rendered doc content flows through our components.
-  export { H1 as h1, H2 as h2, H3 as h3, P as p } from '@mcat/ui/website';
-  export { Link as a } from '@mcat/ui';
+  export { default as h1 } from '$components/H1.svelte';
+  export { default as h2 } from '$components/H2.svelte';
+  export { default as h3 } from '$components/H3.svelte';
+  export { default as p } from '$components/P.svelte';
+  export { Link as a } from '@mcat/shared-ui';
 </script>
 
 <script>

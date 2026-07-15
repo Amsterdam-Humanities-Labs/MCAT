@@ -1,6 +1,6 @@
 <script lang="ts">
   import { List, X } from 'phosphor-svelte';
-  import { cn } from '../utils';
+  import { cn } from '@mcat/shared-ui';
 
   interface Props {
     open: boolean;

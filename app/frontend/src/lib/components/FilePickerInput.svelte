@@ -1,8 +1,8 @@
 <script lang="ts">
   import { cn } from '$lib/utils';
   import { api } from '$lib/api/client';
-  import { Button } from '@mcat/ui';
-  import { Input } from '@mcat/ui';
+  import { Button } from '@mcat/shared-ui';
+  import { Input } from '@mcat/shared-ui';
 
   interface FileFilter {
     name: string;

@@ -2,7 +2,7 @@ declare global {
   namespace App {
     interface PageData {
       meta?: import('./lib/seo').PageMeta;
-      headings?: import('@mcat/ui/website').TocEntry[];
+      headings?: import('./lib/scrollSpy.svelte').TocEntry[];
       showToc?: boolean;
     }
   }

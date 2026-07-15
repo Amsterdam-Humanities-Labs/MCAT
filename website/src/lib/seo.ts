@@ -11,15 +11,3 @@ export const site = {
   description: 'Track content-moderation status across platforms.',
   ogImage: '/og-default.png', // in static/
 };
-
-// Merge a page's metadata over the site defaults into final <Seo> values.
-export function resolveSeo(meta: PageMeta | undefined, pathname: string) {
-  const ogImage = meta?.ogImage ?? site.ogImage;
-  return {
-    title: meta?.title ?? site.name,
-    description: meta?.description ?? site.description,
-    canonical: site.url + pathname,
-    ogImage: ogImage.startsWith('http') ? ogImage : site.url + ogImage,
-    siteName: site.name,
-  };
-}

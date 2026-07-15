@@ -25,7 +25,7 @@
     "vite": "^7.2.4"
   },
   "dependencies": {
-    "@mcat/ui": "workspace:*",
+    "@mcat/shared-ui": "workspace:*",
     "phosphor-svelte": "^3.1.0"
   }
 }
