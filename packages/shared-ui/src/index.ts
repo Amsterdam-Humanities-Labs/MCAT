@@ -11,6 +11,7 @@ export { default as FormField } from './FormField.svelte';
 export { default as InfoBox } from './InfoBox.svelte';
 export { default as Input } from './Input.svelte';
 export { default as Link } from './Link.svelte';
+export { default as Panel } from './Panel.svelte';
 export { default as Select } from './Select.svelte';
 export { default as SelectField } from './SelectField.svelte';
 export { default as Tabs } from './Tabs.svelte';
