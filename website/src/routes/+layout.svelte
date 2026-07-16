@@ -4,7 +4,7 @@
   import { afterNavigate } from '$app/navigation';
   import Nav from '$components/Nav.svelte';
   import NavToggle from '$components/NavToggle.svelte';
-  import Seo from '$components/Seo.svelte';
+  import Head from '$components/Head.svelte';
   import { navLinks } from '$lib/nav';
 
   let { children } = $props();
@@ -17,7 +17,7 @@
   });
 </script>
 
-<Seo meta={page.data.meta} pathname={page.url.pathname} />
+<Head meta={page.data.meta} pathname={page.url.pathname} />
 
 <header class="sticky top-0 z-40 border-b border-border-light bg-bg-primary">
   <div class="mx-auto flex max-w-5xl items-center justify-between px-4 py-3">

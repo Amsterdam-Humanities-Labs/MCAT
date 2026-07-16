@@ -1,6 +1,7 @@
-// Collects the page's h2/h3 headings (after rehype-slug has assigned ids) into
-// frontmatter as `headings`, so it surfaces on the compiled module's `metadata`.
-// Markdown headings are top-level nodes, so a flat scan of the root is enough.
+// Scans a doc's h2/h3 headings (after rehype-slug has assigned ids) and stores
+// them in frontmatter as `headings`, so they surface on the compiled module's
+// `metadata` for the TOC. Markdown headings are top-level nodes, so a flat scan
+// of the root is enough.
 
 /**
  * @typedef {Object} HastNode
@@ -21,7 +22,7 @@ function textOf(node) {
   return '';
 }
 
-export function rehypeHeadings() {
+export function headingsScanner() {
   /**
    * @param {HastNode} tree
    * @param {{ data: Record<string, unknown> }} file

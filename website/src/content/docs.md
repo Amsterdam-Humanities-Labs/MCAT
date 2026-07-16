@@ -3,7 +3,7 @@ title: Getting Started
 description: Install MCAT and run your first tracking project.
 ---
 
-MCAT is a desktop app for tracking how content-moderation status changes over time. See the [documentation index](/docs) for the full list.
+MCAT is a desktop app for tracking how content-moderation status changes over time.
 
 ## Installation
 
