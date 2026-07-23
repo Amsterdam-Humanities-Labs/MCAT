@@ -54,15 +54,8 @@
   --color-badge-error-bg: #F2EAE4;
   --color-badge-error-border: #DCC8B4;
 
-  /* Diff colors (policy version comparison). `mark` tints inline word-level
-     highlights; `bg`/`border` tint whole blocks. */
-  --color-diff-added-bg: #E5F2E0;
-  --color-diff-added-border: #B8D8AD;
-  --color-diff-added-text: #2F6B22;
+  /* Diff colors — inline highlight for added/removed policy text. */
   --color-diff-added-mark: #C6E6BC;
-  --color-diff-removed-bg: #F8E5E5;
-  --color-diff-removed-border: #E8B8B8;
-  --color-diff-removed-text: #A52727;
   --color-diff-removed-mark: #F3C6C6;
 
   /* Link */

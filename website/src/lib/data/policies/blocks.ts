@@ -23,7 +23,7 @@ export function splitBlocks(md: string): Block[] {
   const blocks: Block[] = [];
   let para: string[] = [];
 
-  const flushPara = () => {
+  const flushParagraph = () => {
     if (!para.length) return;
     const text = para.join(' ').replace(/\s+/g, ' ').trim();
     if (text) blocks.push(makeBlock('paragraph', text, undefined, blocks.length));
@@ -35,7 +35,7 @@ export function splitBlocks(md: string): Block[] {
     const next = (lines[i + 1] ?? '').trim();
 
     if (trimmed === '') {
-      flushPara();
+      flushParagraph();
       continue;
     }
 
@@ -54,19 +54,19 @@ export function splitBlocks(md: string): Block[] {
     // ATX heading: #{1,6} text
     const atx = /^(#{1,6})\s+(.*)$/.exec(trimmed);
     if (atx) {
-      flushPara();
+      flushParagraph();
       blocks.push(makeBlock('heading', atx[2].trim(), atx[1].length, blocks.length));
       continue;
     }
 
     // Standalone rule / stray underline not consumed above → ignore
     if (/^(-{2,}|=+|\*{3,}|_{3,})$/.test(trimmed)) {
-      flushPara();
+      flushParagraph();
       continue;
     }
 
     para.push(trimmed);
   }
-  flushPara();
+  flushParagraph();
   return blocks;
 }

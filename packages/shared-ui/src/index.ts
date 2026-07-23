@@ -14,5 +14,6 @@ export { default as Link } from './Link.svelte';
 export { default as Panel } from './Panel.svelte';
 export { default as Select } from './Select.svelte';
 export { default as SelectField } from './SelectField.svelte';
+export { default as SelectGrid } from './SelectGrid.svelte';
 export { default as Tabs } from './Tabs.svelte';
 export { default as Tooltip } from './Tooltip.svelte';
