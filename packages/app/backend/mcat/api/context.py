@@ -89,15 +89,20 @@ class AppContext:
     def set_project(self, project: ProjectState) -> None:
         """Set current project and initialize processing service."""
         import os
-        self.current_project = project
         if self.processing_service:
             self.processing_service.cleanup()
 
         scraper_factory = None
         if os.environ.get("MCAT_MOCK"):
-            from tests.mock_scraper_factory import create_mock_scraper
+            import sys
+            from pathlib import Path
+            tests_dir = str(Path(__file__).parents[3] / "tests")
+            if tests_dir not in sys.path:
+                sys.path.insert(0, tests_dir)
+            from mock_scraper_factory import create_mock_scraper
             scraper_factory = create_mock_scraper
 
+        self.current_project = project
         self.processing_service = ProcessingService(
             platform=project.platform,
             log_callback=log_buffer.add,

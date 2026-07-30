@@ -1,5 +1,6 @@
 """Project management handlers."""
 
+import shutil
 from pathlib import Path
 from api.context import app_context, log_buffer
 from api.serializers import build_project_dict
@@ -21,7 +22,11 @@ def create(body: dict) -> dict:
         source_csv=Path(body["csv_path"]),
         url_column=body["url_column"],
     )
-    ctx.set_project(project)
+    try:
+        ctx.set_project(project)
+    except Exception:
+        shutil.rmtree(project.project_path, ignore_errors=True)
+        raise
     log_buffer.info(f"Browser user agent: {resolved_user_agent()}")
     return {"success": True, "project": build_project_dict()}
 

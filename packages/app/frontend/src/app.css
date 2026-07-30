@@ -2,7 +2,7 @@
 @import "@mcat/shared-ui/theme.css";
 
 /* Tailwind only generates classes it sees; scan the shared UI package's source. */
-@source "../../../packages/shared-ui/src";
+@source "../../../shared-ui/src";
 
 /* General Sans (400, 600) is loaded from Fontshare's CSS API via the <link>
    in index.html, so no local @font-face is needed. */

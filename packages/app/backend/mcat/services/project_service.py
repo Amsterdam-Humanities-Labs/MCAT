@@ -37,7 +37,7 @@ class ProjectService:
     ) -> ProjectState:
         project_path = location / name
         if project_path.exists():
-            raise FileExistsError(f"Project folder already exists: {project_path}")
+            raise ValueError(f"A project named '{name}' already exists at {location}")
 
         project_path.mkdir(parents=True)
 

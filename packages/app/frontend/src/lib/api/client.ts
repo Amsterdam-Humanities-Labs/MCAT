@@ -23,26 +23,39 @@ async function callBackend<T>(
   body?: unknown,
   retries = 3
 ): Promise<T> {
-  let lastError: Error | null = null;
+  const opts: RequestInit = { method };
+  if (method === 'POST') {
+    opts.headers = { 'Content-Type': 'application/json' };
+    opts.body = JSON.stringify(body ?? {});
+  }
 
+  let lastError: Error | null = null;
   for (let i = 0; i < retries; i++) {
+    let response: Response;
     try {
-      const opts: RequestInit = { method };
-      if (method === 'POST') {
-        opts.headers = { 'Content-Type': 'application/json' };
-        opts.body = JSON.stringify(body ?? {});
-      }
-      const response = await fetch(`${backendUrl}${endpoint}`, opts);
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${await response.text()}`);
-      }
-      return await response.json() as T;
+      response = await fetch(`${backendUrl}${endpoint}`, opts);
     } catch (e) {
+      // Network failure — retry with backoff.
       lastError = e as Error;
       if (i < retries - 1) {
         await new Promise(r => setTimeout(r, 500 * (i + 1)));
+        continue;
       }
+      throw lastError;
     }
+
+    // Response received; an HTTP error is a final answer, not retried.
+    if (!response.ok) {
+      let message = `Request failed (${response.status})`;
+      try {
+        const data = await response.json();
+        if (data?.error) message = data.error;
+      } catch {
+        // non-JSON body — keep the generic message
+      }
+      throw new Error(message);
+    }
+    return await response.json() as T;
   }
 
   throw lastError;

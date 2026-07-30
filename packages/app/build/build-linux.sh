@@ -12,10 +12,10 @@
 set -euo pipefail
 
 # Resolve paths relative to this script, not the caller's cwd.
-# build/ lives under app/, so ROOT is the app dir; REPO_ROOT is the repo root.
+# build/ lives under packages/app/, so ROOT is the app dir; REPO_ROOT is the repo root.
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
-REPO_ROOT="$(cd "${ROOT}/.." && pwd)"
+REPO_ROOT="$(cd "${ROOT}/../.." && pwd)"
 
 # -- Prerequisites -----------------------------------------------------------
 

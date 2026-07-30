@@ -6,29 +6,45 @@ It targets **YouTube, Instagram, Facebook, and X (Twitter)**, runs locally as a 
 
 Built with pywebview — a Python backend, a Svelte 5 frontend, and a zendriver-driven Chrome for scraping.
 
-## How it works
+## Contents
 
-MCAT runs as one local app: a Python backend serves the Svelte frontend and exposes a small HTTP API on `127.0.0.1`. The frontend sends **commands** over HTTP (create a project, start/pause a run, set up browser, schedule tracking) and receives **real-time updates** over a Server-Sent Events stream (`/events`) — run progress, activity-log lines, and project-state changes. A run executes on a background worker thread that drives a single Chrome process (via zendriver) with a pool of tabs, checks each URL, and streams results back as it goes.
+- [Project structure](#project-structure)
+- [Prerequisites](#prerequisites)
+- [Setup](#setup)
+- [Development](#development)
+- [Testing](#testing)
+- [Usage](#usage)
+  - [Input & output](#input--output)
+  - [Set up browser (authentication)](#set-up-browser-authentication)
+  - [Monitoring over time (tracking)](#monitoring-over-time-tracking)
+- [Scraping strategies](#scraping-strategies)
+  - [General approach](#general-approach)
+  - [YouTube](#youtube)
+  - [Instagram](#instagram)
+  - [Facebook](#facebook)
+  - [X (Twitter)](#x-twitter)
+- [Building & installing](#building--installing)
+  - [Linux (AppImage)](#linux-appimage)
+  - [macOS (.app)](#macos-app)
+- [License](#license)
 
-```mermaid
-flowchart LR
-    UI["Svelte frontend<br/>(pywebview window)"]
-    HTTP["Backend HTTP server"]
-    Worker["Worker thread<br/>(batch processor)"]
-    Browser["zendriver Chrome<br/>+ tab pool"]
-    Sites["YouTube · Instagram · Facebook · X"]
-    Files[("project files<br/>results.csv · screenshots")]
+## Project structure
 
-    UI -->|"commands: /process/start, /project/*, /auth/*"| HTTP
-    HTTP ==>|"SSE /events: progress · logs · state"| UI
-    HTTP -->|run a batch| Worker
-    Worker --> Browser
-    Browser -->|load + inspect| Sites
-    Worker -->|events| HTTP
-    Worker -->|write| Files
 ```
-
-Commands are plain request/response; everything live (a run's progress, each checked URL, log lines) flows back one-way over the single SSE stream, so the UI stays in sync without polling.
+MCAT/                              # pnpm workspace monorepo
+└── packages/
+    ├── app/                       # the desktop app (Svelte + Python)
+    │   ├── frontend/          # Svelte 5 UI (Vite)
+    │   │   └── src/           # lib (components, stores, api), types
+    │   ├── backend/           # Python backend
+    │   │   ├── mcat/          # api, scrapers, services, core, models, app.py
+    │   │   └── pyproject.toml # Dependencies (single source of truth)
+    │   ├── tests/             # pytest suite, mock scraper, fixtures
+    │   └── build/             # Linux AppImage / macOS packaging config
+    ├── website/                   # SvelteKit site — docs, policy diffing, downloads
+    │   └── src/               # routes, lib (components, data, types), content
+    └── shared-ui/                 # @mcat/shared-ui — Svelte primitives + theme
+```
 
 ## Prerequisites
 
@@ -42,17 +58,17 @@ Commands are plain request/response; everything live (a run's progress, each che
 
 ```bash
 pnpm install
-cd app/backend && python3 -m venv --system-site-packages venv
+cd packages/app/backend && python3 -m venv --system-site-packages venv
 venv/bin/pip install ".[dev]"
 ```
 
-Dependencies are declared in `app/backend/pyproject.toml` (`zendriver`, `pywebview`; `pyinstaller` + `pyright` under the `dev` extra) — that's the single source of truth, so there's no separate list to install by hand. On macOS, pywebview pulls its native WebKit backend (`pyobjc-*`) automatically. On Linux it uses the **system** WebKitGTK/PyGObject, which is why the venv is created with `--system-site-packages`.
+Dependencies are declared in `packages/app/backend/pyproject.toml` (`zendriver`, `pywebview`; `pyinstaller` + `pyright` under the `dev` extra) — that's the single source of truth, so there's no separate list to install by hand. On macOS, pywebview pulls its native WebKit backend (`pyobjc-*`) automatically. On Linux it uses the **system** WebKitGTK/PyGObject, which is why the venv is created with `--system-site-packages`.
 
 ## Development
 
 ```bash
-pnpm dev              # Start backend + Vite + pywebview window
-pnpm dev:mock         # Same, with a mock scraper (no real browser)
+pnpm dev:app          # Start backend + Vite + pywebview window
+pnpm dev:app:mock     # Same, with a mock scraper (no real browser)
 ```
 
 The backend starts on `127.0.0.1:9876` (fallback to next free port); Vite on `127.0.0.1:5180`. `pnpm dev` runs `app.py`, which spawns Vite itself in dev mode and hot-reloads the frontend. To inspect the UI in a normal browser, open `http://127.0.0.1:5180?port=<backend_port>`.
@@ -60,10 +76,10 @@ The backend starts on `127.0.0.1:9876` (fallback to next free port); Vite on `12
 ## Testing
 
 ```bash
-pnpm test          # Python suite via pytest (needs app/backend/venv set up)
+pnpm test          # Python suite via pytest (needs packages/app/backend/venv set up)
 ```
 
-Covers `csv_handler` (I/O + delimiter handling), each platform's `_detect_status` detection branches (offline, via fake tabs), the scraping harness — batch orchestration and the per-URL flow: cancel / pause / retry / timeout, no browser — and the cookie store. CI runs it on every push and PR (`.github/workflows/test.yml`). The verified-URL fixtures under `app/tests/fixtures/live/verified/` are ground truth for an optional live (networked) detection check.
+Covers `csv_handler` (I/O + delimiter handling), each platform's `_detect_status` detection branches (offline, via fake tabs), the scraping harness — batch orchestration and the per-URL flow: cancel / pause / retry / timeout, no browser — and the cookie store. CI runs it on every push and PR (`.github/workflows/test.yml`). The verified-URL fixtures under `packages/app/tests/fixtures/live/verified/` are ground truth for an optional live (networked) detection check.
 
 ## Usage
 
@@ -175,64 +191,34 @@ X renders a tweet only when it's live, so detection is **positive-first**: a ren
 | Unavailable | Text: "nothing to see here" (logged-out "gone" page); page title is exactly `"X / ?"` |
 | Unknown | No signal found after timeout |
 
-## Project structure
-
-```
-MCAT/                          # pnpm workspace monorepo
-├── app/                       # the desktop app (Svelte + Python)
-│   ├── frontend/          # Svelte 5 UI (Vite)
-│   │   ├── src/
-│   │   │   ├── lib/       # App components, stores, api
-│   │   │   └── types/     # Shared TypeScript types
-│   │   └── public/fonts/  # Custom fonts
-│   ├── backend/           # Python backend
-│   │   ├── mcat/
-│   │   │   ├── api/       # HTTP handlers, router (also serves the built SPA)
-│   │   │   ├── scrapers/  # Platform scrapers (detection only)
-│   │   │   ├── services/  # Project/run/processing/tracking/login services
-│   │   │   ├── core/      # Batch processor, zendriver browser session
-│   │   │   ├── models/    # Data models
-│   │   │   └── app.py     # Entry point
-│   │   ├── pyproject.toml # Dependencies (single source of truth)
-│   │   └── venv/          # Python virtual environment
-│   ├── tests/
-│   │   ├── mock_scraper.py          # Mock scraper for dev
-│   │   ├── mock_scraper_factory.py  # Wires the mock into the batch pipeline
-│   │   ├── fixtures/                # Test URLs and scenarios
-│   │   └── test_cookie_store.py     # Cookie store round-trip test
-│   └── build/             # Linux AppImage / macOS packaging config
-└── packages/
-    └── ui/                # Shared Svelte primitives + theme (@mcat/ui)
-```
-
 ## Building & installing
 
 ### Linux (AppImage)
 
 ```bash
-pnpm build:linux          # or: ./app/build/build-linux.sh   →   app/build/MCAT-x86_64.AppImage
+pnpm build:linux          # or: ./packages/app/build/build-linux.sh   →   packages/app/build/MCAT-x86_64.AppImage
 ```
 
-A single double-clickable file that runs on any glibc-compatible distro. The pipeline (`app/build/build-linux.sh`, idempotent — safe to re-run) is four isolated steps:
+A single double-clickable file that runs on any glibc-compatible distro. The pipeline (`packages/app/build/build-linux.sh`, idempotent — safe to re-run) is four isolated steps:
 
-1. **Frontend** — `pnpm --filter frontend build` → `app/frontend/dist/`
-2. **PyInstaller** — reads `app/backend/mcat.spec` → `app/backend/dist/mcat/` (onedir: executable + Python libs + bundled frontend)
-3. **AppDir** — copies the bundle into `app/build/MCAT.AppDir/` with the AppImage layout (`AppRun`, `*.desktop`, `*.png`, `usr/bin/`)
+1. **Frontend** — `pnpm --filter frontend build` → `packages/app/frontend/dist/`
+2. **PyInstaller** — reads `packages/app/backend/mcat.spec` → `packages/app/backend/dist/mcat/` (onedir: executable + Python libs + bundled frontend)
+3. **AppDir** — copies the bundle into `packages/app/build/MCAT.AppDir/` with the AppImage layout (`AppRun`, `*.desktop`, `*.png`, `usr/bin/`)
 4. **AppImage** — `appimagetool` on the AppDir → the final `.AppImage`
 
-Supporting files in `app/build/`: `AppRun` (launcher that invokes `usr/bin/mcat`), `mcat.desktop` (app metadata read by file managers), `mcat.png` (256×256 icon; falls back to a 1×1 placeholder if missing), and `appimagetool-x86_64.AppImage` (downloaded on first run). The staging `MCAT.AppDir/` and the final `.AppImage` are gitignored. Outside `app/build/`, the relevant files are `app/backend/mcat.spec` (PyInstaller config), `app/backend/hooks/hook-webview.py` (collects pywebview's GTK/WebKit typelibs), and `app.py`'s `sys.frozen` branch (repoints the frontend dir at the bundled location at runtime).
+Supporting files in `packages/app/build/`: `AppRun` (launcher that invokes `usr/bin/mcat`), `mcat.desktop` (app metadata read by file managers), `mcat.png` (256×256 icon; falls back to a 1×1 placeholder if missing), and `appimagetool-x86_64.AppImage` (downloaded on first run). The staging `MCAT.AppDir/` and the final `.AppImage` are gitignored. Outside `packages/app/build/`, the relevant files are `packages/app/backend/mcat.spec` (PyInstaller config), `packages/app/backend/hooks/hook-webview.py` (collects pywebview's GTK/WebKit typelibs), and `app.py`'s `sys.frozen` branch (repoints the frontend dir at the bundled location at runtime).
 
 **Linux troubleshooting:**
-- *"QT cannot be loaded" at launch* — the WebKit typelibs weren't collected; check `app/backend/hooks/hook-webview.py` (it tries WebKit2 4.1 then 4.0 — add your distro's version if different).
-- *Bundle much larger than expected (~200 MB+)* — verify `app/backend/mcat.spec`'s `excludes=` list; PyInstaller otherwise pulls in Qt/tkinter when pywebview is present.
-- *"Frontend build not found" from PyInstaller* — you ran it without building the frontend; use `./app/build/build-linux.sh`, or run `pnpm --filter frontend build` first.
+- *"QT cannot be loaded" at launch* — the WebKit typelibs weren't collected; check `packages/app/backend/hooks/hook-webview.py` (it tries WebKit2 4.1 then 4.0 — add your distro's version if different).
+- *Bundle much larger than expected (~200 MB+)* — verify `packages/app/backend/mcat.spec`'s `excludes=` list; PyInstaller otherwise pulls in Qt/tkinter when pywebview is present.
+- *"Frontend build not found" from PyInstaller* — you ran it without building the frontend; use `./packages/app/build/build-linux.sh`, or run `pnpm --filter frontend build` first.
 - *No browser at runtime* — zendriver drives the **system** Chrome/Chromium, which must be installed; a fresh machine needs it present.
 
 ### macOS (`.app`)
 
 ```bash
 pnpm build            # build the frontend first
-cd app/backend && venv/bin/python -m PyInstaller --clean mcat.spec   # → app/backend/dist/MCAT.app
+cd packages/app/backend && venv/bin/python -m PyInstaller --clean mcat.spec   # → packages/app/backend/dist/MCAT.app
 ```
 
 The GitHub Actions workflow (`.github/workflows/build-macos.yml`) builds both arm64 (Apple Silicon, on `macos-26`) and x86_64 (Intel, on `macos-15-intel`) bundles on pushes to `build`. At runtime the app serves the built SPA from its own backend so the UI and API share one origin — required on macOS, where a `file://` page is blocked from reaching the `http://` backend.

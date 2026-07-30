@@ -3,7 +3,7 @@
 
 /* Tailwind only generates classes it sees; scan the shared UI package's source
    so classes used by @mcat/shared-ui components are emitted here too. */
-@source "../../packages/shared-ui/src";
+@source "../../shared-ui/src";
 
 html {
   font-family: 'General Sans', system-ui, sans-serif;

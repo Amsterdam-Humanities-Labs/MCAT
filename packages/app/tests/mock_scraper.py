@@ -71,12 +71,12 @@ class MockScraper(BaseScraper):
         status = self.scenario.get(url_id, self.scenario.get("default", "Live"))
 
         result.status = status
-        if status == "Removed":
-            result.info = "Content removed by platform"
-        elif status == "Restricted":
-            result.info = "Age-restricted content"
-        elif status == "Private":
-            result.info = "Private video"
+        result.info = {
+            "Unavailable": "Content no longer available",
+            "Moderated": "Taken down by the platform",
+            "Restricted": "Age-restricted content",
+            "Login Required": "Requires sign-in to view",
+        }.get(status, "")
 
         if self.save_screenshots:
             result.screenshot_path = self._save_screenshot(url, status)

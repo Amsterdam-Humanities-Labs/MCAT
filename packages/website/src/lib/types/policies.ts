@@ -54,7 +54,6 @@ export interface PolicyDetail {
   changes: ChangeStat[];
 }
 
-// ── Diff ────────────────────────────────────────────────────────────────
 export type DiffKind = 'equal' | 'added' | 'removed' | 'changed';
 
 export interface WordPart {

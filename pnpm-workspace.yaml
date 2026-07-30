@@ -1,4 +1,3 @@
 packages:
-  - 'app/frontend'
-  - 'website'
+  - 'packages/app/frontend'
   - 'packages/*'

@@ -8,11 +8,11 @@ importers:
 
   .: {}
 
-  app/frontend:
+  packages/app/frontend:
     dependencies:
       '@mcat/shared-ui':
         specifier: workspace:*
-        version: link:../../packages/shared-ui
+        version: link:../../shared-ui
       '@oddbird/popover-polyfill':
         specifier: ^0.6.1
         version: 0.6.1
@@ -81,11 +81,11 @@ importers:
         specifier: ^3.4.0
         version: 3.5.0
 
-  website:
+  packages/website:
     dependencies:
       '@mcat/shared-ui':
         specifier: workspace:*
-        version: link:../packages/shared-ui
+        version: link:../shared-ui
       diff:
         specifier: ^5.2.0
         version: 5.2.2
@@ -1671,11 +1671,11 @@ snapshots:
 
   '@types/hast@3.0.5':
     dependencies:
-      '@types/unist': 2.0.11
+      '@types/unist': 3.0.3
 
   '@types/mdast@4.0.4':
     dependencies:
-      '@types/unist': 2.0.11
+      '@types/unist': 3.0.3
 
   '@types/node@24.12.0':
     dependencies:

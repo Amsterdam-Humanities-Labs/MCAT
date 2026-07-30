@@ -1,0 +1,49 @@
+{
+  "run_1": {
+    "_comment": "Baseline: mostly live, some unavailable/restricted/moderated, one unknown",
+    "TEST003": "Unavailable",
+    "TEST007": "Unavailable",
+    "TEST010": "Restricted",
+    "TEST015": "Moderated",
+    "TEST018": "Unknown",
+    "default": "Live"
+  },
+  "run_2": {
+    "_comment": "New takedowns and a login gate; one restored",
+    "TEST001": "Unavailable",
+    "TEST003": "Unavailable",
+    "TEST005": "Moderated",
+    "TEST007": "Live",
+    "TEST010": "Restricted",
+    "TEST012": "Login Required",
+    "TEST015": "Moderated",
+    "TEST018": "Unknown",
+    "default": "Live"
+  },
+  "run_3": {
+    "_comment": "More moderation, an error, unknown resolved to live",
+    "TEST001": "Unavailable",
+    "TEST003": "Unavailable",
+    "TEST005": "Moderated",
+    "TEST008": "Unavailable",
+    "TEST010": "Restricted",
+    "TEST012": "Login Required",
+    "TEST015": "Moderated",
+    "TEST018": "Live",
+    "TEST022": "Error",
+    "default": "Live"
+  },
+  "run_4": {
+    "_comment": "One restored, new unavailable, error resolved to unknown",
+    "TEST001": "Live",
+    "TEST003": "Unavailable",
+    "TEST005": "Moderated",
+    "TEST008": "Unavailable",
+    "TEST010": "Restricted",
+    "TEST015": "Moderated",
+    "TEST020": "Unavailable",
+    "TEST022": "Unknown",
+    "TEST025": "Restricted",
+    "default": "Live"
+  }
+}

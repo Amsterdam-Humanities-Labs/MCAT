@@ -2,14 +2,14 @@
   "name": "mcat",
   "private": true,
   "scripts": {
-    "dev:app": "cd app/backend && venv/bin/python mcat/app.py",
-    "dev:app:mock": "cd app/backend && MCAT_MOCK=1 venv/bin/python mcat/app.py",
+    "dev:app": "cd packages/app/backend && venv/bin/python mcat/app.py",
+    "dev:app:mock": "cd packages/app/backend && MCAT_MOCK=1 venv/bin/python mcat/app.py",
     "dev:website": "pnpm --filter website dev",
     "build": "pnpm --filter frontend build",
-    "build:linux": "./app/build/build-linux.sh",
+    "build:linux": "./packages/app/build/build-linux.sh",
     "check": "pnpm --filter frontend check",
-    "test": "app/backend/venv/bin/python -m pytest",
-    "clean": "rm -rf app/frontend/dist app/backend/build app/backend/dist app/build/MCAT.AppDir app/build/MCAT-x86_64.AppImage",
-    "start": "cd app/backend && venv/bin/python mcat/app.py"
+    "test": "packages/app/backend/venv/bin/python -m pytest",
+    "clean": "rm -rf packages/app/frontend/dist packages/app/backend/build packages/app/backend/dist packages/app/build/MCAT.AppDir packages/app/build/MCAT-x86_64.AppImage",
+    "start": "cd packages/app/backend && venv/bin/python mcat/app.py"
   }
 }
