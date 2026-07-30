@@ -79,7 +79,7 @@
     {/if}
   {:else}
     {#if run.changes_count > 0}
-      <span class="text-text-primary font-bold shrink-0">{run.changes_count} changes</span>
+      <span class="text-text-primary font-semibold shrink-0">{run.changes_count} changes</span>
     {:else}
       <span class="text-text-primary shrink-0">No changes</span>
     {/if}

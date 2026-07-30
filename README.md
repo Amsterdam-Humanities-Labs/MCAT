@@ -1,6 +1,8 @@
 # MCAT
 
-**MCAT (Moderation Content Analysis Tool)** is a desktop app for researchers studying platform content moderation. Given a list of post/video URLs, it checks whether each is still **live**, **restricted** (age-gated, geo-blocked, private), **moderated** (taken down by the platform), or **unavailable** (gone) by loading it in a real browser and inspecting the rendered page — and it can **re-check on a schedule** to capture *when* a piece of content's status changes over time.
+![MCAT — tracking content-moderation status across platforms](static/mcat_preview.jpg)
+
+**MCAT (Moderation Content Analysis Tool)** is a desktop app for researchers studying platform content moderation. Given a list of post/video URLs, it checks whether each is still **live**, **restricted**, **moderated**, or **unavailable** by loading it in a real browser and inspecting the rendered page — and it can **re-check on a schedule** to capture *when* a piece of content's status changes over time.
 
 It targets **YouTube, Instagram, Facebook, and X (Twitter)**, runs locally as a native window, and writes results to a plain CSV alongside per-URL screenshots, so findings stay auditable and easy to analyze. Nothing leaves your machine except the page loads themselves.
 
@@ -13,8 +15,12 @@ Built with pywebview — a Python backend, a Svelte 5 frontend, and a zendriver-
 - [Setup](#setup)
 - [Development](#development)
 - [Testing](#testing)
+- [Building & installing](#building--installing)
+  - [Linux (AppImage)](#linux-appimage)
+  - [macOS (.app)](#macos-app)
 - [Usage](#usage)
   - [Input & output](#input--output)
+  - [Content states](#content-states)
   - [Set up browser (authentication)](#set-up-browser-authentication)
   - [Monitoring over time (tracking)](#monitoring-over-time-tracking)
 - [Scraping strategies](#scraping-strategies)
@@ -23,9 +29,6 @@ Built with pywebview — a Python backend, a Svelte 5 frontend, and a zendriver-
   - [Instagram](#instagram)
   - [Facebook](#facebook)
   - [X (Twitter)](#x-twitter)
-- [Building & installing](#building--installing)
-  - [Linux (AppImage)](#linux-appimage)
-  - [macOS (.app)](#macos-app)
 - [License](#license)
 
 ## Project structure
@@ -81,6 +84,25 @@ pnpm test          # Python suite via pytest (needs packages/app/backend/venv se
 
 Covers `csv_handler` (I/O + delimiter handling), each platform's `_detect_status` detection branches (offline, via fake tabs), the scraping harness — batch orchestration and the per-URL flow: cancel / pause / retry / timeout, no browser — and the cookie store. CI runs it on every push and PR (`.github/workflows/test.yml`). The verified-URL fixtures under `packages/app/tests/fixtures/live/verified/` are ground truth for an optional live (networked) detection check.
 
+## Building & installing
+
+### Linux (AppImage)
+
+```bash
+pnpm build:linux          # → packages/app/build/MCAT-x86_64.AppImage
+```
+
+### macOS (`.app`)
+
+```bash
+pnpm build                                                                    # frontend
+cd packages/app/backend && venv/bin/python -m PyInstaller --clean mcat.spec   # → dist/MCAT.app
+xattr -dr com.apple.quarantine dist/MCAT.app                                  # unsigned; clear Gatekeeper
+mv dist/MCAT.app /Applications
+```
+
+Store projects outside the app (e.g. `~/Documents`) — updating the app deletes anything beside it.
+
 ## Usage
 
 ### Input & output
@@ -96,14 +118,23 @@ https://x.com/user/status/...
 
 **Output** is written incrementally to `results.csv` in the run folder: the original columns plus `mcat_status`, `mcat_detail`, `mcat_screenshot`, `mcat_timestamp`, `mcat_error`, and `mcat_user`. When screenshots are enabled, they're saved under `screenshots/<status>/`.
 
+### Content states
+
+Every checked URL gets one `mcat_status`; the specific reason (age-restricted, geo-blocked, removed by uploader, suspended account, …) is recorded separately in `mcat_detail` rather than spawning its own state.
+
+| State | Meaning | Platforms |
+|---|---|---|
+| **Live** | Loads and is publicly viewable | all |
+| **Restricted** | Present but access-gated — age-restricted, geo-blocked, or private | YouTube, X |
+| **Moderated** | Taken down by platform enforcement — suspended account or terminated channel | YouTube, X |
+| **Unavailable** | Gone — deleted by the uploader, 404, or expired | all |
+| **Login Required** | An auth wall blocked the check; the content itself may still be live | Instagram |
+| **Unknown** | Loaded but nothing matched — left for a human to judge from the screenshot | all |
+| **Error** | The check itself failed — no load, timeout, or crash | all |
+
 ### Set up browser (authentication)
 
-**Set up browser** opens a visible Chrome window on the platform so you can dismiss the cookie-consent modal and, where needed, log in. Whatever cookies result (consent cookies, plus session cookies if you logged in) are captured and stored per-project in `<project>/cookies/<platform>.json`, then injected into the tab pool when a run starts. Cookies are captured live during the session (so login cookies are available immediately) and again when the window is closed.
-
-- **No passwords are ever stored** — only cookies, and the activity log prints cookie *names* only, never values.
-- **Use a dedicated / throwaway account, never your real one.** Automated logins can get flagged or locked.
-- Instagram and Facebook may need login to view content; if their session cookies expire, the scraper reports `Login Required` (Instagram) or an undecided `Unknown` (Facebook), and you re-run Set up browser. YouTube needs no login but shows a consent modal — running Set up browser once captures its `SOCS` consent cookie (~13-month lifetime) so the modal never renders. Recommended in the EU, where an un-set-up YouTube project gets redirected to the consent page and detection degrades.
-- X (Twitter) should be **run logged in**. Logged out, X throttles even live tweets to a generic "nothing to see here" page, so a live post can be misread as `Unavailable`; Set up browser → log in to X so the run sees the real tweet.
+**Set up browser** opens a visible Chrome window so you can dismiss the cookie-consent modal and, where needed, log in; the resulting cookies are stored per-project in `<project>/cookies/<platform>.json` and injected into the tab pool at run start. No passwords are stored — only cookies, and the activity log prints cookie *names*, never values — so use a dedicated / throwaway account, never your real one. Instagram and Facebook may need a login (when their session cookies expire the scraper reports `Login Required` or an undecided `Unknown`, so re-run it); YouTube needs no login but should be run once to capture its `SOCS` consent cookie (~13-month life), especially in the EU where an un-set-up project is redirected to the consent page; and X should be run **logged in**, since logged out it throttles even live tweets to a generic page that misreads as `Unavailable`.
 
 ### Monitoring over time (tracking)
 
@@ -113,117 +144,32 @@ Enable **tracking** to re-run the checks automatically on an interval (minutes /
 
 ### General approach
 
-Each scraper drives a Chrome tab via **zendriver** (Chrome DevTools Protocol — no chromedriver) to load the URL and inspect the rendered page. A single Chrome process hosts a pool of tabs (default 3, via `max_zendriver_tabs`); URLs run concurrently across the pool with async I/O, and the whole session is torn down with one `browser.stop()` per run. `tab.get()` awaits page load (30s timeout); on timeout the scraper inspects whatever rendered. After load, detection signals are polled every 0.5s (up to 15s) rather than using a fixed delay, and every tab/CDP call is wrapped in a per-operation timeout so one wedged page can't stall the batch.
+Each scraper drives a Chrome tab via **zendriver** (Chrome DevTools Protocol — no chromedriver) to load the URL and inspect the rendered page. A single Chrome process hosts a pool of tabs (default 3, via `max_zendriver_tabs`); URLs run concurrently with async I/O, `tab.get()` awaits load (30s timeout), and every tab/CDP call is wrapped in a per-operation timeout so one wedged page can't stall the batch. Signals are polled every 0.5s (up to 15s) rather than on a fixed delay.
 
-Detection reads `body.innerText` (visible text only, not raw HTML, to avoid false positives from JS template strings) and triages in a fixed **order of precedence**:
+Detection reads `body.innerText` (visible text, not raw HTML — avoids false positives from JS template strings) in a fixed order: **negative signals first** (evidence the content is gone, moderated, or restricted — a takedown notice must never be overridden by a "looks-live" signal), then **positive signals** (the rendered post, `og:title`, the SPA title), then a **login wall**, then **Unknown**.
 
-1. **Negative signals first** — affirmative evidence the content is *gone, moderated, or restricted* (removal/suspension phrases, error icons, age/geo/private markers). Highest priority: a takedown notice must never be overridden by a "looks live" signal.
-2. **Positive signals** — affirmative evidence the content is *present* (the rendered post element, `og:title`, the SPA's title element).
-3. **Login Required** (Instagram) — a login wall with no other signal.
-4. **Unknown** — nothing matched.
+**Which signal is trusted first flips by platform — always the one that can't be faked:**
 
-**Which signal is checked first flips by platform — always the one that can't be faked:**
+- **YouTube / Instagram / Facebook — negatives first.** A taken-down page *replaces* the post with a removal notice (platform chrome a live post never contains), while their positives leak onto dead pages — so the negative is the trustworthy signal.
+- **X (Twitter) — positives first.** Its gone-phrases (`suspended account`, `nothing to see here`) are ordinary tweet text users post, but X renders a tweet card *only* when the post is genuinely live — so the card is the one signal user text can't fake.
 
-- **YouTube / Instagram / Facebook — negatives first.** Their removal notices are platform chrome a live post never contains, and a taken-down page *replaces* the post with that notice; meanwhile their positives (`og:title`, article DOM) leak onto dead pages. So the trustworthy signal is the negative — a takedown notice must override a stale "looks-live" one.
-- **X (Twitter) — positive first.** Its gone-phrases (`suspended account`, `nothing to see here`) are ordinary tweet text users actually post, so leading with them would mislabel a live tweet as gone. But X only renders the tweet card when it's genuinely live (never a card *and* a notice), so a rendered card is the one signal user text can't fake — checked first, with the body read for gone-phrases only if no card rendered.
-
-The guiding principle: **`Live` and every negative status (`Moderated`, `Unavailable`, `Restricted`) require their own affirmative evidence — none is ever a guess.** A page is never called `Live` until all negative checks fail *and* a positive signal is found. When neither is found, the result is **`Unknown`** (the genuine fallback) for a human to judge from the screenshot — the scraper never defaults absence-of-removal to "live."
-
-Statuses the system can emit:
-
-| Status | Meaning |
-|--------|---------|
-| `Live` | content is present and accessible |
-| `Restricted` | present but gated — age-gated, geo-blocked, or private |
-| `Moderated` | taken down by platform enforcement — a suspended account or terminated channel |
-| `Unavailable` | gone, with no attributable cause — deleted, 404, or expired |
-| `Login Required` | an auth wall blocked the check; the content itself may still be live |
-| `Unknown` / `Error` / `Cancelled` | universal: nothing matched / the probe failed / the run was stopped |
-
-Following *simplicity in the status, nuance in the detail*, the specific reason — `age-restricted`, `geo-blocked`, `private`, `removed by uploader`, `suspended account` — is recorded in `mcat_detail` rather than spawning its own status. When screenshots are enabled, a `Live` post additionally waits for its main image to paint before capture, so the screenshot shows the post rather than a loading skeleton.
-
-Consent modals are never dismissed in-scraper — the consent cookie captured during **Set up browser** is injected into every tab, so the modal simply never renders.
+The principle: **`Live` and every negative state require their own affirmative evidence — never a guess.** A page is called `Live` only when all negative checks fail *and* a positive is found; otherwise the result is `Unknown`, left for a human to judge from the screenshot. Consent modals are never dismissed in-scraper — the cookie captured during **Set up browser** is injected into every tab so the modal never renders.
 
 ### YouTube
 
-The page title is captured immediately after `tab.get()` returns, before YouTube redirects incognito browsers to its consent page. This initial title is a fallback `Live` signal when the SPA doesn't fully render. Set up browser injects the consent cookie and prevents the redirect entirely.
-
-| Status | Signal (reason recorded in `mcat_detail`) |
-|--------|--------|
-| Unavailable | Text: "video unavailable", "this video isn't available", "removed by the user" |
-| Moderated | Text: "account has been terminated" |
-| Restricted | Text: "age-restricted" / "sign in to confirm your age" (age); "not available in your country" (geo); "private video" (private); DOM: elements with `warning` or `restricted` in class name |
-| Live | DOM: `h1.ytd-watch-metadata` via `innerText` (handles hashtag-only titles); fallback: page title matches `"<Title> - YouTube"` |
-| Unknown | No signal found after timeout |
+Captures the page title immediately after load — before YouTube redirects an un-set-up (incognito) browser to its consent page — as a fallback `Live` signal. Negatives first: visible text is matched for removal, age/geo/private, and channel-termination markers; `Live` needs the rendered video-title element (or a `"<Title> - YouTube"` page title).
 
 ### Instagram
 
-Works without login (Instagram shows post previews to anonymous visitors). With authentication, the scraper gets a full view of the content.
-
-| Status | Signal |
-|--------|--------|
-| Unavailable | Page title contains "isn't available"; error SVG `svg[aria-label="error"]`; text: "post isn't available", "sorry, this page isn't available", "page not found" |
-| Live | Meta tag `og:title` contains `" on Instagram:"`; fallback: `article[role="presentation"]` (logged-in view) |
-| Login Required | Login wall detected ("log in" + "sign up" in body text) with no other signal |
-| Unknown | No signal found after timeout |
+Works without login — Instagram shows post previews to anonymous visitors (auth gives a fuller view). Negatives first via the page title and an error SVG; `Live` is confirmed by the `og:title` post caption (or the logged-in article DOM). A bare login wall with no other signal is the one case that returns `Login Required`.
 
 ### Facebook
 
-Posts are partially visible without login. Unavailable posts load fast (~0.7s) with a clear error; live posts take longer (~4–9s) as the SPA renders.
-
-There is deliberately no login-wall branch: every anonymous page embeds a login form, so there is no reliable per-post login signal. An undecided page returns `Unknown` for a human to judge from the screenshot.
-
-| Status | Signal |
-|--------|--------|
-| Unavailable | Text: "this content isn't available", "this page isn't available", "this content has been removed", "the link you followed may be broken", "page not found" |
-| Live | DOM: `div[role="article"]`; fallback: `og:title` meta or page title `"... \| Facebook"`, but only when they carry real content (generic "Facebook" / "Log in to Facebook" titles are ignored) |
-| Unknown | No signal found after timeout |
+The coarsest of the four — in practice it only distinguishes `Live` from `Unavailable`. Posts are partially visible logged-out: unavailable pages load fast (~0.7s) with a clear error, live pages render slowly (~4–9s). There's deliberately no login-wall branch (every anonymous page embeds a login form, so there's no reliable per-post signal), so an undecided page returns `Unknown`.
 
 ### X (Twitter)
 
-X renders a tweet only when it's live, so detection is **positive-first**: a rendered tweet is conclusive proof of `Live`, checked before the negative phrases. Run logged in — logged out, X throttles even live tweets to a generic "nothing to see here" page that's indistinguishable from a real takedown. Only phrases confirmed by live probing are matched.
-
-| Status | Signal |
-|--------|--------|
-| Live | Page title contains `" on X:"`; `og:title` contains `" on X"`; DOM: `article[data-testid="tweet"]` |
-| Moderated | Text: "suspended account" (logged-in: "This Post is from a suspended account") |
-| Restricted | Text: "protected account" ("This Post is from a protected account" — owner-gated, visible only to approved followers) |
-| Unavailable | Text: "nothing to see here" (logged-out "gone" page); page title is exactly `"X / ?"` |
-| Unknown | No signal found after timeout |
-
-## Building & installing
-
-### Linux (AppImage)
-
-```bash
-pnpm build:linux          # or: ./packages/app/build/build-linux.sh   →   packages/app/build/MCAT-x86_64.AppImage
-```
-
-A single double-clickable file that runs on any glibc-compatible distro. The pipeline (`packages/app/build/build-linux.sh`, idempotent — safe to re-run) is four isolated steps:
-
-1. **Frontend** — `pnpm --filter frontend build` → `packages/app/frontend/dist/`
-2. **PyInstaller** — reads `packages/app/backend/mcat.spec` → `packages/app/backend/dist/mcat/` (onedir: executable + Python libs + bundled frontend)
-3. **AppDir** — copies the bundle into `packages/app/build/MCAT.AppDir/` with the AppImage layout (`AppRun`, `*.desktop`, `*.png`, `usr/bin/`)
-4. **AppImage** — `appimagetool` on the AppDir → the final `.AppImage`
-
-Supporting files in `packages/app/build/`: `AppRun` (launcher that invokes `usr/bin/mcat`), `mcat.desktop` (app metadata read by file managers), `mcat.png` (256×256 icon; falls back to a 1×1 placeholder if missing), and `appimagetool-x86_64.AppImage` (downloaded on first run). The staging `MCAT.AppDir/` and the final `.AppImage` are gitignored. Outside `packages/app/build/`, the relevant files are `packages/app/backend/mcat.spec` (PyInstaller config), `packages/app/backend/hooks/hook-webview.py` (collects pywebview's GTK/WebKit typelibs), and `app.py`'s `sys.frozen` branch (repoints the frontend dir at the bundled location at runtime).
-
-**Linux troubleshooting:**
-- *"QT cannot be loaded" at launch* — the WebKit typelibs weren't collected; check `packages/app/backend/hooks/hook-webview.py` (it tries WebKit2 4.1 then 4.0 — add your distro's version if different).
-- *Bundle much larger than expected (~200 MB+)* — verify `packages/app/backend/mcat.spec`'s `excludes=` list; PyInstaller otherwise pulls in Qt/tkinter when pywebview is present.
-- *"Frontend build not found" from PyInstaller* — you ran it without building the frontend; use `./packages/app/build/build-linux.sh`, or run `pnpm --filter frontend build` first.
-- *No browser at runtime* — zendriver drives the **system** Chrome/Chromium, which must be installed; a fresh machine needs it present.
-
-### macOS (`.app`)
-
-```bash
-pnpm build            # build the frontend first
-cd packages/app/backend && venv/bin/python -m PyInstaller --clean mcat.spec   # → packages/app/backend/dist/MCAT.app
-```
-
-The GitHub Actions workflow (`.github/workflows/build-macos.yml`) builds both arm64 (Apple Silicon, on `macos-26`) and x86_64 (Intel, on `macos-15-intel`) bundles on pushes to `build`. At runtime the app serves the built SPA from its own backend so the UI and API share one origin — required on macOS, where a `file://` page is blocked from reaching the `http://` backend.
-
-**Installing on macOS:** move `MCAT.app` into `/Applications`, and keep your **projects in `~/Documents`** (or anywhere outside the app) — never store project data next to the app, or replacing the app on update will delete your runs. The bundles are unsigned, so first launch needs a Gatekeeper override: `xattr -dr com.apple.quarantine MCAT.app`, then open it.
+Positive-first: X renders a tweet card only when the post is genuinely live, so a rendered card is conclusive `Live`, checked before any negative phrase. Run logged in — logged out, X throttles even live tweets to a generic "nothing to see here" page indistinguishable from a real takedown.
 
 ## License
 

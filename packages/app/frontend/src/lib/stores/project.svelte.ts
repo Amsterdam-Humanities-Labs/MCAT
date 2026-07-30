@@ -55,7 +55,7 @@ function createProjectStore() {
         }
         return response.success;
       } catch (e) {
-        error = String(e);
+        error = e instanceof Error ? e.message : String(e);
         return false;
       } finally {
         loading = false;
@@ -72,7 +72,7 @@ function createProjectStore() {
         }
         return response.success;
       } catch (e) {
-        error = String(e);
+        error = e instanceof Error ? e.message : String(e);
         return false;
       } finally {
         loading = false;
@@ -86,7 +86,7 @@ function createProjectStore() {
         await api.closeProject();
         project = null;
       } catch (e) {
-        error = String(e);
+        error = e instanceof Error ? e.message : String(e);
       } finally {
         loading = false;
       }

@@ -40,7 +40,7 @@
 </script>
 
 <div class={cn("h-14 px-4 flex items-center gap-4 bg-bg-toolbar border-b border-border-mid", className)}>
-  <span class="text-text-primary font-bold">{projectName}</span>
+  <span class="text-text-primary font-semibold">{projectName}</span>
   <span class="text-border-mid">|</span>
   <span class="text-text-secondary">{platform.charAt(0).toUpperCase() + platform.slice(1)}</span>
   <span class="text-border-mid">|</span>

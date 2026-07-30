@@ -55,9 +55,7 @@
         consoleStore.success('Project created successfully');
         appStore.setView('project');
       } else {
-        const message = projectStore.error ?? 'Failed to create project';
-        wizardStore.setError(message);
-        consoleStore.error(message);
+        wizardStore.setError(projectStore.error ?? 'Failed to create project');
       }
     } catch (e) {
       appStore.setGlobalError(String(e));
