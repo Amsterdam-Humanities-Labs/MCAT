@@ -1,5 +1,6 @@
 <script lang="ts">
   import { cn } from '@mcat/shared-ui';
+  import { base } from '$app/paths';
   import type { NavLink } from '$lib/nav';
 
   interface Props {
@@ -11,8 +12,9 @@
 
   let { links, currentPath, orientation = 'horizontal', class: className }: Props = $props();
 
+  const path = $derived(currentPath.slice(base.length) || '/');
   const isActive = (href: string) =>
-    href === '/' ? currentPath === '/' : currentPath.startsWith(href);
+    href === '/' ? path === '/' : path.startsWith(href);
 </script>
 
 <nav class={className}>
@@ -20,7 +22,7 @@
     {#each links as { label, href } (href)}
       <li>
         <a
-          {href}
+          href={base + href}
           class={cn(
             'text-text-body hover:text-text-primary',
             isActive(href) && 'text-text-primary underline underline-offset-4',

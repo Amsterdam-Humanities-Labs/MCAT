@@ -24,6 +24,9 @@ const config = {
   ],
   kit: {
     adapter: adapter(),
+    paths: {
+      base: process.env.BASE_PATH ?? '',
+    },
     alias: {
       $components: 'src/lib/components',
       $content: 'src/content',

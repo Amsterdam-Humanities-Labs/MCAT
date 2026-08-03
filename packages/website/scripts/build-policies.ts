@@ -1,4 +1,4 @@
-import { readdir, readFile, writeFile, mkdir, rm } from 'node:fs/promises';
+import { readdir, readFile, writeFile, mkdir, rm, access } from 'node:fs/promises';
 import { join } from 'node:path';
 import { splitBlocks } from '../src/lib/data/policies/blocks';
 import { diffVersions, countWords } from '../src/lib/data/policies/diff';
@@ -59,6 +59,13 @@ function dedupe(parsed: { date: string; label: string; blocks: Block[] }[]) {
 }
 
 async function main() {
+  try {
+    await access(CONTENT);
+  } catch {
+    console.log(`Policy corpus not found at ${CONTENT}; keeping committed ${OUT}.`);
+    return;
+  }
+
   await rm(OUT, { recursive: true, force: true });
   await mkdir(OUT, { recursive: true });
 

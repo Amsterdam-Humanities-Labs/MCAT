@@ -18,10 +18,7 @@ packages/app/frontend/dist/
 packages/website/.svelte-kit/
 packages/website/build/
 
-# Generated policy data (rebuilt from src/content/policies by scripts/build-policies.ts)
-packages/website/static/policies/
-
-# Policy source corpus — kept locally, not tracked
+# Policy source corpus — kept local, not tracked (derived static/policies/ is committed).
 packages/website/src/content/policies/
 
 # Python cache

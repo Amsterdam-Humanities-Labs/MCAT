@@ -1,3 +1,4 @@
+import { base } from '$app/paths';
 import type { PolicyDetail } from '../../types/policies';
 
 const cache = new Map<string, Promise<PolicyDetail>>();
@@ -7,7 +8,7 @@ const cache = new Map<string, Promise<PolicyDetail>>();
 export function loadPolicy(slug: string, fetcher: typeof fetch = fetch): Promise<PolicyDetail> {
   let pending = cache.get(slug);
   if (!pending) {
-    pending = fetcher(`/policies/${slug}.json`).then((res) => {
+    pending = fetcher(`${base}/policies/${slug}.json`).then((res) => {
       if (!res.ok) throw new Error(`Failed to load policy "${slug}": ${res.status}`);
       return res.json() as Promise<PolicyDetail>;
     });

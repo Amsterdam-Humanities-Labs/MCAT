@@ -1,0 +1,63 @@
+name: Release app (macOS arm64)
+
+on:
+  push:
+    tags: ['app-v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: macos-26
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install pnpm
+        run: npm install -g pnpm@9
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build frontend
+        run: pnpm --filter frontend build
+
+      - name: Set up Python venv and install
+        run: |
+          cd packages/app/backend
+          python -m venv venv
+          venv/bin/pip install --upgrade pip
+          venv/bin/pip install ".[dev]"
+
+      - name: Build with PyInstaller
+        run: |
+          cd packages/app/backend
+          venv/bin/python -m PyInstaller --clean mcat.spec
+
+      - name: Verify bundle architecture
+        run: |
+          cd packages/app/backend/dist
+          file MCAT.app/Contents/MacOS/mcat
+
+      - name: Zip the app bundle
+        run: |
+          cd packages/app/backend/dist
+          zip -r MCAT-macOS-arm64.zip MCAT.app
+
+      - name: Publish release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: packages/app/backend/dist/MCAT-macOS-arm64.zip

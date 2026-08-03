@@ -2,6 +2,7 @@
   import { page } from '$app/state';
   import { browser } from '$app/environment';
   import { goto } from '$app/navigation';
+  import { base } from '$app/paths';
   import { SelectGrid, SelectField, Link } from '@mcat/shared-ui';
   import H1 from '$components/H1.svelte';
   import P from '$components/P.svelte';
@@ -44,7 +45,7 @@
   );
 </script>
 
-<Link href="/policies">← Compare a different policy</Link>
+<Link href="{base}/policies">← Compare a different policy</Link>
 <H1 class="mt-2">{data.title}</H1>
 <P class="mt-2 text-text-secondary">{data.platformLabel}</P>
 

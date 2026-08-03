@@ -1,13 +1,14 @@
 <script lang="ts">
   import { Button } from '@mcat/shared-ui';
+  import { base } from '$app/paths';
   import H1 from '$components/H1.svelte';
   import P from '$components/P.svelte';
   import type { PageData } from './$types';
 
   let { data }: { data: PageData } = $props();
 
-  // TODO: point at the real repo once releases are published.
-  const downloadUrl = 'https://github.com/OWNER/MCAT/releases/latest';
+  const downloadUrl =
+    'https://github.com/Amsterdam-Humanities-Labs/MCAT/releases/latest/download/MCAT-macOS-arm64.zip';
 </script>
 
 <section class="grid gap-8 md:grid-cols-2 md:items-center">
@@ -16,7 +17,7 @@
     <P>{data.tagline}</P>
     <div class="flex flex-wrap gap-3">
       <Button href={downloadUrl} variant="primary">Download</Button>
-      <Button href="/docs" variant="secondary">Documentation</Button>
+      <Button href="{base}/docs" variant="secondary">Documentation</Button>
     </div>
   </div>
 

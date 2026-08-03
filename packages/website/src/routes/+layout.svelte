@@ -1,6 +1,7 @@
 <script lang="ts">
   import '../app.css';
   import { page } from '$app/state';
+  import { base } from '$app/paths';
   import { afterNavigate } from '$app/navigation';
   import Nav from '$components/Nav.svelte';
   import NavToggle from '$components/NavToggle.svelte';
@@ -22,7 +23,7 @@
 <header class="sticky top-0 z-40 border-b border-border-light bg-bg-primary">
   <div class="mx-auto flex max-w-5xl items-center justify-between px-4 py-3">
     <a
-      href="/"
+      href="{base}/"
       class="border-2 border-text-primary px-2.5 py-0.5 text-lg font-semibold text-text-primary"
     >
       MCAT

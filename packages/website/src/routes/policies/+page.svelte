@@ -1,5 +1,6 @@
 <script lang="ts">
   import { goto } from '$app/navigation';
+  import { base } from '$app/paths';
   import { SelectGrid, SelectField } from '@mcat/shared-ui';
   import H1 from '$components/H1.svelte';
   import P from '$components/P.svelte';
@@ -18,7 +19,7 @@
   );
 
   function selectPolicy(slug: string) {
-    if (slug) goto(`/policies/${slug}`);
+    if (slug) goto(`${base}/policies/${slug}`);
   }
 </script>
 
