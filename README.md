@@ -36,17 +36,22 @@ Built with pywebview: a Python backend, a Svelte 5 frontend, and a zendriver-dri
 ```
 MCAT/                              # pnpm workspace monorepo
 └── packages/
-    ├── app/                       # desktop app, Svelte + Python
-    │   ├── frontend/          # Svelte 5 UI, Vite
-    │   │   └── src/           # lib and types
-    │   ├── backend/           # Python backend
-    │   │   ├── mcat/          # api, scrapers, services, core, models, app.py
-    │   │   └── pyproject.toml # dependencies, single source of truth
-    │   ├── tests/             # pytest suite, mock scraper, fixtures
-    │   └── build/             # Linux AppImage / macOS packaging config
-    ├── website/                   # SvelteKit site: docs, policy diffing, downloads
-    │   └── src/               # routes, lib, content
-    └── shared-ui/                 # @mcat/shared-ui: Svelte primitives + theme
+    ├── app/                       # desktop app, Svelte 5 frontend and Python backend
+    │   ├── frontend/              # Svelte 5 UI, Vite
+    │   │   └── src/               # components, stores, api, types
+    │   ├── backend/
+    │   │   ├── mcat/              # api, scrapers, services, core, models, app.py
+    │   │   └── pyproject.toml     # dependencies, single source of truth
+    │   ├── tests/                 # pytest suite, mock scraper, fixtures
+    │   └── build/                 # Linux AppImage and macOS packaging config
+    ├── website/                   # SvelteKit static site, docs and policy diffing
+    │   ├── src/
+    │   │   ├── routes/            # home, docs, policies
+    │   │   ├── lib/               # components, data, types, seo, scroll-spy
+    │   │   └── content/           # markdown pages plus the policy corpus, corpus is local only
+    │   ├── static/policies/       # generated diff data, committed and served as is
+    │   └── scripts/               # build-policies.ts, corpus to deduped diff data
+    └── shared-ui/                 # @mcat/shared-ui: Svelte 5 primitives and theme tokens
 ```
 
 ## Prerequisites

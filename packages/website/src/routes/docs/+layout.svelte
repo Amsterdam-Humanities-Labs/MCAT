@@ -2,6 +2,7 @@
   import { page } from '$app/state';
   import { afterNavigate } from '$app/navigation';
   import { onMount } from 'svelte';
+  import TocPanel from '$components/TocPanel.svelte';
   import TableOfContents from '$components/TableOfContents.svelte';
   import { ScrollSpy } from '$lib/scrollSpy.svelte';
 
@@ -9,6 +10,8 @@
 
   const spy = new ScrollSpy();
   let contentEl = $state<HTMLElement>();
+  let tocExpanded = $state(true);
+  let headerHeight = $state(56);
 
   const headings = $derived(page.data.headings ?? []);
   const showToc = $derived((page.data.showToc ?? false) && headings.length > 0);
@@ -20,25 +23,19 @@
 
   onMount(() => {
     refresh();
+    tocExpanded = window.matchMedia('(min-width: 768px)').matches;
+    headerHeight = document.querySelector('header')?.offsetHeight ?? headerHeight;
     return () => spy.disconnect();
   });
   afterNavigate(() => refresh());
 </script>
 
 {#if showToc}
-  <div class="gap-10 md:grid md:grid-cols-[1fr_200px]">
-    <div class="min-w-0" bind:this={contentEl}>
-      <details class="mb-6 md:hidden">
-        <summary class="cursor-pointer text-text-secondary">On this page</summary>
-        <TableOfContents toc={headings} activeId={spy.activeId} class="mt-2" />
-      </details>
-      {@render children()}
-    </div>
-    <aside class="hidden md:block">
-      <div class="sticky top-24">
-        <TableOfContents toc={headings} activeId={spy.activeId} />
-      </div>
-    </aside>
+  <TocPanel bind:expanded={tocExpanded} topOffset={headerHeight}>
+    <TableOfContents {headings} activeId={spy.activeId} />
+  </TocPanel>
+  <div bind:this={contentEl}>
+    {@render children()}
   </div>
 {:else}
   {@render children()}

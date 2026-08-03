@@ -30,6 +30,7 @@
   "dependencies": {
     "@mcat/shared-ui": "workspace:*",
     "diff": "^5.2.0",
+    "fuse.js": "^7.5.0",
     "phosphor-svelte": "^3.1.0"
   }
 }
