@@ -2,10 +2,9 @@
   import { cn } from '$lib/utils';
   import type { Run } from '$types/project';
   import { formatTimestamp } from '$lib/utils/format';
-  import { statusOrder, STATUS_META } from '$lib/status';
+  import { statusOrder, STATUS_META, StatusBadge } from '@mcat/shared-ui';
   import { CaretUp, CaretDown, CheckCircleIcon, CircleDashedIcon } from 'phosphor-svelte';
   import TransitionBadge from './TransitionBadge.svelte';
-  import StatusBadge from './StatusBadge.svelte';
 
   interface Props {
     run: Run;
@@ -46,13 +45,13 @@
 
 <button
   type="button"
-  class={cn("w-full flex items-center gap-3 px-4 py-2.5 text-left cursor-ns-resize hover:bg-interactive-hover transition-colors text-base bg-bg-primary", isSelected ? 'shadow-[0_-4px_8px_-2px_rgba(0,0,0,0.25)] hover:bg-interactive-row' : 'border-b border-solid border-border-light', className)}
+  class={cn("w-full flex items-center gap-3 px-4 py-2.5 text-left cursor-ns-resize hover:bg-bg-active transition-colors text-base bg-bg-primary", isSelected ? 'shadow-[0_-4px_8px_-2px_rgba(0,0,0,0.25)]' : 'border-b border-solid border-border-light', className)}
   onclick={onClick}
 >
   <!-- Dot -->
   <span class="relative inline-flex items-center justify-center w-5 h-5 shrink-0">
     {#if isSelected}
-      <span class="absolute inset-0 rounded-full border-2 border-timeline-selection"></span>
+      <span class="absolute inset-0 rounded-full border-2 border-accent-primary"></span>
     {/if}
     {#if isAbandoned}
       <CircleDashedIcon size={16} class={dotColor} />

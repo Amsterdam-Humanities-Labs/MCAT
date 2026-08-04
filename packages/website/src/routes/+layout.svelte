@@ -5,6 +5,7 @@
   import { afterNavigate } from '$app/navigation';
   import Nav from '$components/Nav.svelte';
   import NavToggle from '$components/NavToggle.svelte';
+  import Footer from '$components/Footer.svelte';
   import Head from '$components/Head.svelte';
   import { navLinks } from '$lib/nav';
 
@@ -20,29 +21,33 @@
 
 <Head meta={page.data.meta} pathname={page.url.pathname} />
 
-<header class="sticky top-0 z-40 border-b border-border-light bg-bg-primary">
-  <div class="mx-auto flex max-w-5xl items-center justify-between px-4 py-3">
-    <a href="{base}/" class="text-lg font-semibold text-text-primary"> MCAT </a>
+<div class="flex min-h-screen flex-col">
+  <header class="sticky top-0 z-40 border-b border-border-light bg-bg-primary">
+    <div class="mx-auto flex max-w-5xl items-center justify-between px-4 py-3">
+      <a href="{base}/" class="text-lg font-medium text-accent-primary"> MCAT </a>
 
-    <Nav links={navLinks} currentPath={page.url.pathname} class="hidden md:block" />
+      <Nav links={navLinks} currentPath={page.url.pathname} class="hidden md:block" />
 
-    <NavToggle
-      open={mobileNavOpen}
-      onclick={() => (mobileNavOpen = !mobileNavOpen)}
-      class="md:hidden"
-    />
-  </div>
+      <NavToggle
+        open={mobileNavOpen}
+        onclick={() => (mobileNavOpen = !mobileNavOpen)}
+        class="md:hidden"
+      />
+    </div>
 
-  {#if mobileNavOpen}
-    <Nav
-      links={navLinks}
-      currentPath={page.url.pathname}
-      orientation="vertical"
-      class="border-t border-border-light px-4 py-3 md:hidden"
-    />
-  {/if}
-</header>
+    {#if mobileNavOpen}
+      <Nav
+        links={navLinks}
+        currentPath={page.url.pathname}
+        orientation="vertical"
+        class="border-t border-border-light px-4 py-3 md:hidden"
+      />
+    {/if}
+  </header>
 
-<main class="mx-auto max-w-5xl px-4 py-8">
-  {@render children()}
-</main>
+  <main class="mx-auto w-full max-w-5xl flex-1 px-4 py-8">
+    {@render children()}
+  </main>
+
+  <Footer />
+</div>

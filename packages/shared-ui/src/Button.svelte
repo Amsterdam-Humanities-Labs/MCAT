@@ -31,11 +31,11 @@
 
   const variants = {
     primary:
-      'bg-accent-primary hover:bg-interactive-primary text-white focus:ring-accent-primary',
+      'bg-accent-primary hover:bg-accent-primary-hover text-white focus:ring-accent-primary',
     secondary:
-      'bg-bg-detail hover:bg-interactive-input text-accent-primary border border-accent-primary focus:ring-accent-primary',
+      'bg-bg-toolbar hover:bg-accent-primary/10 text-accent-primary border border-accent-primary focus:ring-accent-primary',
     danger:
-      'bg-transparent hover:bg-interactive-danger text-status-removed border border-status-removed focus:ring-status-removed',
+      'bg-bg-toolbar hover:bg-interactive-danger text-status-removed border border-status-removed focus:ring-status-removed',
     ghost:
       'bg-transparent hover:bg-interactive-hover text-text-body focus:ring-border-mid',
   };

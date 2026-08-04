@@ -28,13 +28,17 @@
   <div
     class={cn(
       'px-3 py-2 text-base text-text-body',
-      block?.type === 'heading' && 'font-semibold',
+      block?.type === 'heading' && 'font-medium',
       className,
     )}
   >
     {#each parts as part, i (i)}
-      <span class={part.added ? 'bg-diff-added-mark' : part.removed ? 'bg-diff-removed-mark' : ''}
-        >{part.value}</span
+      <span
+        class={part.added
+          ? 'bg-diff-added-mark text-diff-added-text'
+          : part.removed
+            ? 'bg-diff-removed-mark text-diff-removed-text'
+            : ''}>{part.value}</span
       >
     {/each}
   </div>

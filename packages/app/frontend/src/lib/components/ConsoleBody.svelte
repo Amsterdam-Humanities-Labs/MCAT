@@ -29,7 +29,7 @@
 <div
   bind:this={containerEl}
   onscroll={handleScroll}
-  class={cn("overflow-auto p-3 bg-bg-timeline flex-1", className)}
+  class={cn("overflow-auto p-3 bg-bg-log flex-1", className)}
   style="max-height: 300px"
 >
   {#if entries.length > 0}

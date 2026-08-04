@@ -1,8 +1,7 @@
 <script lang="ts" generics="T">
   import { cn } from '$lib/utils';
   import TransitionBadge from './TransitionBadge.svelte';
-  import StatusBadge from './StatusBadge.svelte';
-  import { Link } from '@mcat/shared-ui';
+  import { Link, StatusBadge } from '@mcat/shared-ui';
 
   interface Column<T> {
     key: keyof T | string;
@@ -65,7 +64,7 @@
         {/each}
       </tr>
     </thead>
-    <tbody class="divide-y divide-border-mid">
+    <tbody class="divide-y divide-border-row">
       {#if displayedRows.length === 0}
         <tr>
           <td

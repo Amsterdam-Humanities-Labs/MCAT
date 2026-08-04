@@ -73,7 +73,7 @@
 
 <div class={cn('h-screen flex items-center justify-center bg-bg-timeline', className)}>
 <div class="max-w-lg w-full">
-  <div class="bg-bg-controls border border-border-mid rounded-lg overflow-hidden">
+  <div class="bg-bg-toolbar border border-border-mid rounded-lg overflow-hidden">
     <!-- Header -->
     <div class="px-6 py-4 border-b border-border-mid">
       <h2 class="text-lg font-semibold text-text-primary m-0">
@@ -148,7 +148,7 @@
     </div>
 
     <!-- Footer -->
-    <div class="px-6 py-4 border-t border-border-mid flex justify-between">
+    <div class="px-6 py-4 border-t border-border-mid flex justify-between bg-bg-active">
       <Button variant="secondary" onclick={handleCancel}>
         Cancel
       </Button>

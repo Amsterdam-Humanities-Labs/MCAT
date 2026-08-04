@@ -19,7 +19,7 @@
 </script>
 
 {#if hasData}
-  <div class={cn("px-4 py-3 border-b border-border-mid bg-bg-controls", className)}>
+  <div class={cn("px-4 py-3 border-b border-border-mid bg-bg-primary", className)}>
     <ProgressBar {total} {statusCounts} />
     <div class="mt-2 flex items-center gap-4">
       <span class="text-text-body">

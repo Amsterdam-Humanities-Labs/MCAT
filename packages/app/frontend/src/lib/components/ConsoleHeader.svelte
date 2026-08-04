@@ -13,7 +13,7 @@
 </script>
 
 <button
-  class={cn("h-9 px-4 flex items-center gap-3 bg-bg-controls border-y border-border-mid w-full cursor-ns-resize hover:bg-bg-toolbar transition-colors", className)}
+  class={cn("h-9 px-4 flex items-center gap-3 bg-bg-primary border-y border-border-mid w-full cursor-ns-resize hover:bg-bg-active transition-colors", className)}
   onclick={onToggle}
 >
   <span class="text-text-primary">Activity Log</span>

@@ -18,8 +18,16 @@
 </script>
 
 <nav class={className}>
-  <ul class={cn('flex list-none gap-6', orientation === 'vertical' && 'flex-col gap-3')}>
-    {#each links as { label, href } (href)}
+  <ul
+    class={cn(
+      'flex list-none gap-3',
+      orientation === 'horizontal' ? 'items-center' : 'flex-col items-start',
+    )}
+  >
+    {#each links as { label, href }, i (href)}
+      {#if i > 0 && orientation === 'horizontal'}
+        <li aria-hidden="true" class="text-text-hint">|</li>
+      {/if}
       <li>
         <a
           href={base + href}

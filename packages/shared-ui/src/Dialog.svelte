@@ -44,7 +44,7 @@
   class={cn(
     'fixed left-1/2 top-1/2 z-50 -translate-x-1/2 -translate-y-1/2',
     'w-full max-w-lg max-h-[85vh] overflow-auto',
-    'bg-bg-toolbar border border-border-mid rounded-lg shadow-xl',
+    'bg-bg-active border border-border-mid rounded-lg shadow-xl',
     'p-0 m-0 opacity-0 scale-95 transition-all duration-200',
     'data-[open]:opacity-100 data-[open]:scale-100',
     className
