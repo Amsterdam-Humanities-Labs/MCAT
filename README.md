@@ -2,7 +2,7 @@
 
 ![MCAT desktop app](static/mcat_preview.jpg)
 
-**MCAT**, the Moderation Content Analysis Tool, is a desktop app for researchers studying platform content moderation. Given a list of post/video URLs, it checks whether each is still **live**, **restricted**, **moderated**, or **unavailable** by loading it in a real browser and inspecting the rendered page. It can also **re-check on a schedule** to capture *when* a piece of content's status changes over time.
+**MCAT**, the Moderation Content Analysis Tool,is a desktop app for social media content moderation analysis. Given a list of post/video URLs of most popular social networks, it checks whether each is still **live**, **restricted**, **moderated**, or **unavailable** by loading the post in browser and inspecting the rendered page. It can also **re-check on a schedule** to capture *when* a piece of content's status changes over time.
 
 It targets **YouTube, Instagram, Facebook, and X**, runs locally as a native window, and writes results to a plain CSV alongside per-URL screenshots, so findings stay auditable and easy to analyze. Nothing leaves your machine except the page loads themselves.
 
