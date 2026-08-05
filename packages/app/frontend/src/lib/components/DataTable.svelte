@@ -50,13 +50,13 @@
 
 </script>
 
-<div class={cn('overflow-auto border border-border-mid rounded', className)}>
+<div class={cn('overflow-auto max-h-[600px] border border-border-mid rounded', className)}>
   <table class="min-w-full text-base whitespace-nowrap">
     <thead class="bg-bg-controls sticky top-0">
       <tr>
         {#each columns as col}
           <th
-            class="px-4 py-3 text-left font-medium text-text-primary border-b border-border-mid"
+            class="px-4 py-3 text-left font-medium text-text-primary shadow-[inset_0_-1px_0_0_var(--color-border-mid)]"
             style={col.width ? `width: ${col.width}` : undefined}
           >
             {col.header}

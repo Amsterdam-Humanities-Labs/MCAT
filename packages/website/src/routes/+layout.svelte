@@ -11,6 +11,8 @@
 
   let { children } = $props();
 
+  const isHome = $derived(page.route.id === '/');
+
   // The layout owns the mobile-nav state; Nav/NavToggle receive it as props.
   let mobileNavOpen = $state(false);
 
@@ -21,7 +23,7 @@
 
 <Head meta={page.data.meta} pathname={page.url.pathname} />
 
-<div class="flex min-h-screen flex-col bg-bg-controls">
+<div class="flex min-h-screen flex-col {isHome ? 'bg-bg-active' : 'bg-bg-controls'}">
   <header class="sticky top-0 z-40 border-b border-border-light bg-bg-toolbar">
     <div class="mx-auto flex max-w-5xl items-center justify-between px-4 py-3">
       <a

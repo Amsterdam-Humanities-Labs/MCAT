@@ -12,7 +12,7 @@
   <img
     src="{base}/mcat_preview.jpg"
     alt="MCAT desktop app"
-    class="w-full rounded border border-border-light"
+    class="w-full rounded border border-border-light shadow-[0_0_30px_0_rgba(0,0,0,0.2)]"
   />
 
   <div class="flex flex-col gap-5">
