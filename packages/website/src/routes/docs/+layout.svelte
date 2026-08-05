@@ -31,11 +31,13 @@
 </script>
 
 {#if showToc}
-  <TocPanel bind:expanded={tocExpanded} topOffset={headerHeight}>
-    <TableOfContents {headings} activeId={spy.activeId} />
-  </TocPanel>
-  <div bind:this={contentEl}>
-    {@render children()}
+  <div class="relative">
+    <TocPanel bind:expanded={tocExpanded} topOffset={headerHeight}>
+      <TableOfContents {headings} activeId={spy.activeId} />
+    </TocPanel>
+    <div bind:this={contentEl}>
+      {@render children()}
+    </div>
   </div>
 {:else}
   {@render children()}

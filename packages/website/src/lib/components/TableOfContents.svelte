@@ -43,8 +43,8 @@
   </div>
 
   {#if filtered.length}
-    <nav class="text-base" aria-label="On this page">
-      <ul class="flex flex-col">
+    <nav aria-label="On this page">
+      <ul class="flex flex-col gap-1">
         {#each filtered as entry (entry.id)}
           <TocItem href={`#${entry.id}`} depth={entry.depth} active={activeId === entry.id}>
             {entry.text}

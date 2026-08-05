@@ -7,21 +7,25 @@ description: Install MCAT and learn what each content state means.
   import { StatusBadge } from '@mcat/shared-ui';
 </script>
 
+# Documentation
+
 MCAT is a desktop app for tracking how content-moderation status changes over time. There is no installer: download a build and run it.
 
 ## Installation
 
 ### macOS
 
-[Download the latest macOS build](https://github.com/Amsterdam-Humanities-Labs/MCAT/releases/latest/download/MCAT-macOS-arm64.zip), unzip it, and move `MCAT.app` to your Applications folder. The build is for Apple Silicon. On first launch, right click the app and choose Open, since it is not notarized yet.
+MCAT is currently available for macOS only, on Apple Silicon Macs (M1 or later). Intel Macs are not supported.
 
-### Linux
+**[Download the latest macOS build →](https://github.com/Amsterdam-Humanities-Labs/MCAT/releases/latest/download/MCAT-macOS-arm64.zip)**
 
-There is no prebuilt Linux download yet. For now, build it from source by following the Building and installing section of the [README](https://github.com/Amsterdam-Humanities-Labs/MCAT#building--installing).
+1. Unzip the download and move MCAT.app into your Applications folder.
+2. Open it. macOS will refuse and warn you the app is from an unidentified developer — this is expected. MCAT is research software distributed outside the App Store, so it isn't signed by Apple.
+3. Open **System Settings → Privacy & Security** and scroll to the **Security** section at the bottom. You'll see a note that MCAT was blocked; click **Open Anyway** and enter your password.
 
-### Windows
+### Linux and Windows
 
-A Windows build is on the way.
+Linux and Windows support is coming. In the meantime, you can build from source by following the build section on [GitHub](https://github.com/Amsterdam-Humanities-Labs/MCAT#building--installing).
 
 ## Content states
 

@@ -21,10 +21,15 @@
 
 <Head meta={page.data.meta} pathname={page.url.pathname} />
 
-<div class="flex min-h-screen flex-col">
-  <header class="sticky top-0 z-40 border-b border-border-light bg-bg-primary">
+<div class="flex min-h-screen flex-col bg-bg-controls">
+  <header class="sticky top-0 z-40 border-b border-border-light bg-bg-toolbar">
     <div class="mx-auto flex max-w-5xl items-center justify-between px-4 py-3">
-      <a href="{base}/" class="text-lg font-medium text-accent-primary"> MCAT </a>
+      <a
+        href="{base}/"
+        class="inline-block border-b-2 border-transparent pb-[2.5px] text-[22px] font-medium text-text-primary hover:border-accent-primary"
+      >
+        MCAT
+      </a>
 
       <Nav links={navLinks} currentPath={page.url.pathname} class="hidden md:block" />
 

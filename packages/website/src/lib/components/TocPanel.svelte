@@ -20,7 +20,7 @@
 
 <div
   class={cn(
-    'fixed left-0 z-30 w-72 border-r border-border-light bg-bg-primary shadow-[5px_0_20px_5px_rgba(0,0,0,0.07)] transition-transform duration-200 ease-out',
+    'fixed left-0 w-72 border-r border-border-light bg-bg-toolbar shadow-[5px_0_20px_5px_rgba(0,0,0,0.07)] transition-transform duration-200 ease-out',
     expanded ? 'translate-x-0' : '-translate-x-full',
   )}
   style="top: {topOffset}px; height: calc(100dvh - {topOffset}px);"

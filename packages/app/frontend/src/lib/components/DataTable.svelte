@@ -76,7 +76,7 @@
         </tr>
       {:else}
         {#each displayedRows as row}
-          <tr class="hover:bg-interactive-row transition-colors">
+          <tr class="hover:bg-bg-active transition-colors">
             {#each columns as col}
               {@const value = getCellValue(row, col.key)}
               <td class="px-4 py-3 text-text-body">

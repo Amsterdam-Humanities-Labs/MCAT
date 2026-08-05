@@ -13,7 +13,7 @@
   let { rows, labelA, labelB, class: className }: Props = $props();
 </script>
 
-<Panel title={`${labelA} → ${labelB}`} bodyClass="p-0" class={className}>
+<Panel bodyClass="p-0" class={className}>
   <!-- One grid for both columns: each row's old/new cells share a grid row.
        Collapses to a single column on mobile. -->
   <div class="grid grid-cols-1 md:grid-cols-2 md:gap-x-4">
