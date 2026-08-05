@@ -1,0 +1,122 @@
+/* MCAT theme — brown (warm cream surfaces, brown accent, blue links).
+   The original palette. Same token set as theme.css (purple); to use it,
+   point the app/website app.css @import at this file instead of theme.css.
+   Tokens the original brown theme lacked are derived from the brown palette
+   and marked "derived". */
+@theme {
+  /* ---- Backgrounds ---------------------------------------------------- */
+  --color-bg-primary: #FAF6F0;
+  --color-bg-toolbar: #F5EDE0;      /* project header, baseline strip     */
+  --color-bg-controls: #EAE0CE;
+  --color-bg-detail: #F3EDE4;
+  --color-bg-log: #E4D9C6;          /* derived — activity log panel       */
+  --color-bg-row-zebra: #F7F1E8;    /* derived — alternating table row    */
+  --color-bg-active: #EDE5D8;        /* derived — live / dynamic surface   */
+
+  /* ---- Borders -------------------------------------------------------- */
+  --color-border-light: #D6C7AE;
+  --color-border-mid: #C5B28C;
+  --color-border-input: #AC9468;
+  --color-border-row: #E2D6C0;      /* derived — lighter than border-light */
+
+  /* ---- Text ----------------------------------------------------------- */
+  --color-text-primary: #1A1209;
+  --color-text-body: #2A1E0E;
+  --color-text-secondary: #46341F;
+  --color-text-hint: #574230;
+
+  /* ---- Accents -------------------------------------------------------- */
+  --color-accent-primary: #5E3F20;
+  --color-accent-primary-hover: #4A3018; /* derived — darker accent       */
+  --color-accent-secondary: #C9A96E;
+  --color-accent-secondary-bg: #EDE5D8;
+  --color-accent-tab-active: #E8DCC8;
+  --color-link: #234E76;
+  --color-link-hover: #183A5C;      /* derived — darker link              */
+
+  /* ---- Window chrome (derived) ---------------------------------------- */
+  --color-chrome: #2A1E0E;
+  --color-chrome-text: #EAE0CE;
+  --color-chrome-control: #C5B28C;
+
+  /* ---- Status: text + solid fill -------------------------------------- */
+  --color-status-live: #2F6B22;
+  --color-status-restricted: #A85E08;
+  --color-status-moderated: #8A3D6B;
+  --color-status-unavailable: #A52727;
+  --color-status-login: #3A5A78;
+  --color-status-unknown: #6E6258;
+  --color-status-error: #6B472A;
+  --color-status-removed: #A52727;
+
+  /* ---- Status pills: fill + border + label (label derived = status) --- */
+  --color-badge-live-bg: #E5F2E0;
+  --color-badge-live-border: #B8D8AD;
+  --color-badge-live-text: #2F6B22;
+
+  --color-badge-restricted-bg: #FDF0DD;
+  --color-badge-restricted-border: #F0D4A0;
+  --color-badge-restricted-text: #A85E08;
+
+  --color-badge-moderated-bg: #F3E5EF;
+  --color-badge-moderated-border: #DCB8D0;
+  --color-badge-moderated-text: #8A3D6B;
+
+  --color-badge-unavailable-bg: #F8E5E5;
+  --color-badge-unavailable-border: #E8B8B8;
+  --color-badge-unavailable-text: #A52727;
+
+  --color-badge-login-bg: #E5ECF3;
+  --color-badge-login-border: #B8CCDC;
+  --color-badge-login-text: #3A5A78;
+
+  --color-badge-unknown-bg: #ECE8E0;
+  --color-badge-unknown-border: #CFC6B6;
+  --color-badge-unknown-text: #6E6258;
+
+  --color-badge-error-bg: #F2EAE4;
+  --color-badge-error-border: #DCC8B4;
+  --color-badge-error-text: #6B472A;
+
+  /* removed — alias of unavailable */
+  --color-badge-removed-bg: #F8E5E5;
+  --color-badge-removed-border: #E8B8B8;
+  --color-badge-removed-text: #A52727;
+
+  /* ---- Diff ----------------------------------------------------------- */
+  --color-diff-added-mark: #C6E6BC;
+  --color-diff-added-text: #1E3A18;
+  --color-diff-removed-mark: #F3C6C6;
+  --color-diff-removed-text: #5C1E1E;
+
+  /* ---- Destructive (derived — = status-removed) ----------------------- */
+  --color-danger-text: #A52727;
+  --color-danger-border: #A52727;
+  --color-danger-bg: #FAF6F0;
+
+  /* ---- Console / log -------------------------------------------------- */
+  --color-console-timestamp: #46341F;
+  --color-console-text: #2A1E0E;     /* derived — = text-body             */
+  --color-console-warning-count: #8A4422;
+
+  /* ---- Progress ------------------------------------------------------- */
+  --color-progress-track: #E8DCC8;
+
+  /* ---- Interactive states --------------------------------------------- */
+  --color-interactive-hover: #EDE5D8;
+  --color-interactive-active: #5A3E20;
+  --color-interactive-primary: #5F4325;
+  --color-interactive-input: #F0E8DA;
+  --color-interactive-danger: #F5E8E8;
+
+  /* ---- Timeline ------------------------------------------------------- */
+  --color-bg-timeline: #E0D1BC;
+  --color-timeline-dot: #5A3F22;
+  --color-timeline-dot-muted: #AC9468;
+  --color-timeline-dot-abandoned: #C5B28C;
+  --color-timeline-axis: #C4AD8A;
+
+  /* ---- Radii ---------------------------------------------------------- */
+  --radius-pill: 5px;
+  --radius-pill-lg: 6px;
+}

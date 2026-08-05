@@ -11,7 +11,6 @@ export { default as FilePickerInput } from './FilePickerInput.svelte';
 export { default as FolderPickerInput } from './FolderPickerInput.svelte';
 export { default as ConsolePanel } from './ConsolePanel.svelte';
 export { default as DataTable } from './DataTable.svelte';
-export { default as StatusBadge } from './StatusBadge.svelte';
 export { default as TransitionBadge } from './TransitionBadge.svelte';
 export { default as Toolbar } from './Toolbar.svelte';
 export { default as Controls } from './Controls.svelte';

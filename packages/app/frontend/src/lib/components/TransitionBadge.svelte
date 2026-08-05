@@ -1,6 +1,6 @@
 <script lang="ts">
   import { cn } from '$lib/utils';
-  import { statusLabel, statusBadge } from '$lib/status';
+  import { statusLabel, statusBadge } from '@mcat/shared-ui';
 
   interface Props {
     from: string;

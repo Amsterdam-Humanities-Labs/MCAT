@@ -20,7 +20,7 @@
   {href}
   target={external ? '_blank' : undefined}
   rel={external ? 'noopener' : undefined}
-  class={cn("text-accent-primary underline decoration-accent-primary/40 hover:decoration-accent-primary", className)}
+  class={cn("text-link underline decoration-link/40 hover:text-link-hover hover:decoration-link-hover", className)}
 >
   {#if children}
     {@render children()}

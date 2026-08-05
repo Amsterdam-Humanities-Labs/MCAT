@@ -13,19 +13,25 @@
   let { links, currentPath, orientation = 'horizontal', class: className }: Props = $props();
 
   const path = $derived(currentPath.slice(base.length) || '/');
-  const isActive = (href: string) =>
-    href === '/' ? path === '/' : path.startsWith(href);
+  const isActive = (href: string) => (href === '/' ? path === '/' : path.startsWith(href));
 </script>
 
 <nav class={className}>
-  <ul class={cn('flex list-none gap-6', orientation === 'vertical' && 'flex-col gap-3')}>
+  <ul
+    class={cn(
+      'flex list-none',
+      orientation === 'vertical'
+        ? 'flex-col items-start gap-3'
+        : 'w-full flex-wrap items-center justify-center gap-x-6 gap-y-2',
+    )}
+  >
     {#each links as { label, href } (href)}
       <li>
         <a
           href={base + href}
           class={cn(
-            'text-text-body hover:text-text-primary',
-            isActive(href) && 'text-text-primary underline underline-offset-4',
+            'inline-block border-b-2 border-transparent pb-[2.5px] text-lg text-text-body hover:border-accent-primary hover:text-text-primary',
+            isActive(href) && 'border-accent-primary text-text-primary',
           )}
         >
           {label}

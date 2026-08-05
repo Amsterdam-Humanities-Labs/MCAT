@@ -1,7 +1,7 @@
 <script lang="ts">
   import { cn } from '$lib/utils';
   import type { Run } from '$types/project';
-  import { STATUS_META } from '$lib/status';
+  import { STATUS_META } from '@mcat/shared-ui';
   import { normalizeRows, buildResultColumns } from '$lib/utils/resultTable';
   import DataTable from './DataTable.svelte';
 

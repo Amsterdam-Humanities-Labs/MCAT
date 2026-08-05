@@ -30,7 +30,7 @@
 
 </script>
 
-<div class={cn("flex-1 flex flex-col overflow-hidden bg-bg-timeline min-h-0", className)}>
+<div class={cn("flex-1 flex flex-col overflow-hidden bg-bg-primary min-h-0", className)}>
   <div class="flex-1 overflow-y-auto">
     <div class="flex flex-col">
       {#if currentRun}

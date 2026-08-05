@@ -1,6 +1,6 @@
 <script lang="ts">
   import { cn } from '$lib/utils';
-  import { statusMeta } from '$lib/status';
+  import { statusMeta } from '@mcat/shared-ui';
   import type { LogLevel } from '$types/console';
 
   interface Props {

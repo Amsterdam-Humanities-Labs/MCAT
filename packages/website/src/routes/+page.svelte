@@ -6,9 +6,6 @@
   import type { PageData } from './$types';
 
   let { data }: { data: PageData } = $props();
-
-  const downloadUrl =
-    'https://github.com/Amsterdam-Humanities-Labs/MCAT/releases/latest/download/MCAT-macOS-arm64.zip';
 </script>
 
 <section class="flex flex-col gap-8">
@@ -22,7 +19,7 @@
     <H1>{data.headline}</H1>
     <P>{data.tagline}</P>
     <div class="flex flex-wrap gap-3">
-      <Button href={downloadUrl} variant="primary">Download for macOS</Button>
+      <Button href="{base}/download" variant="primary">Download</Button>
       <Button href="{base}/docs" variant="secondary">Documentation</Button>
     </div>
   </div>

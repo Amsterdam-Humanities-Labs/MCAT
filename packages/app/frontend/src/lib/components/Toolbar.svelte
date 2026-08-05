@@ -58,7 +58,7 @@
       </Button>
     {:else}
       <Tooltip text="Never use your real platform account. Scraping can get it banned, so create a separate account just for MCAT.">
-        <WarningCircle size={18} class="text-status-restricted" />
+        <WarningCircle size={18} class="text-status-removed" />
       </Tooltip>
       <Button variant="secondary" size="sm" onclick={onSetupBrowser}>
         Set up browser

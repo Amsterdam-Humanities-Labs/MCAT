@@ -6,7 +6,7 @@
 @source "../../shared-ui/src";
 
 html {
-  font-family: 'General Sans', system-ui, sans-serif;
+  font-family: 'Author', Georgia, serif;
   font-size: 16px;
   background: var(--color-bg-primary);
   color: var(--color-text-body);

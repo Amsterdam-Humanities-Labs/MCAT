@@ -16,9 +16,9 @@
   <a
     {href}
     class={cn(
-      'block py-1 text-text-secondary hover:text-text-primary',
-      depth === 3 && 'pl-4',
-      active && 'text-text-primary underline underline-offset-4',
+      'inline-block border-b-2 border-transparent pb-[2.5px] text-lg text-text-secondary hover:border-accent-primary hover:text-text-primary',
+      depth === 3 && 'ml-4',
+      active && 'border-accent-primary text-text-primary',
     )}
   >
     {@render children()}

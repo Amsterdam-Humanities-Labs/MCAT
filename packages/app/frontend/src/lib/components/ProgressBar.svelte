@@ -1,6 +1,6 @@
 <script lang="ts">
   import { cn } from '$lib/utils';
-  import { STATUS_META } from '$lib/status';
+  import { STATUS_META } from '@mcat/shared-ui';
   import type { RunStatusSummary } from '$types/project';
 
   interface Props {

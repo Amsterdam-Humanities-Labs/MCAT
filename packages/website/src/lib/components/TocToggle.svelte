@@ -14,7 +14,7 @@
 <button
   {onclick}
   class={cn(
-    'flex h-[45px] w-[30px] items-center justify-center rounded-r-full border border-l-0 border-border-light bg-bg-primary pr-1 text-text-secondary hover:bg-interactive-hover',
+    'flex h-[30px] w-[30px] items-center justify-center rounded-r-pill border border-border-light bg-bg-toolbar text-text-secondary hover:bg-accent-primary hover:text-chrome-text',
     className,
   )}
   aria-label={expanded ? 'Collapse contents' : 'Expand contents'}

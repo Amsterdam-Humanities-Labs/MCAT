@@ -101,6 +101,7 @@
     onResetBrowser={handleResetBrowser}
   />
 
+  <div class="relative z-10 shadow-[0_4px_8px_-2px_rgba(0,0,0,0.2)]">
   <Controls
     {runState}
     {intervalEnabled}
@@ -127,6 +128,7 @@
       baselineCounts={projectStore.baselineRun?.status_summary ?? null}
     />
   {/if}
+  </div>
 
   <Timeline
     runs={project.runs ?? []}

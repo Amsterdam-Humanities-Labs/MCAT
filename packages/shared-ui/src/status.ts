@@ -4,10 +4,9 @@
  * surfaces (badges, progress bar/legend, console, timeline) need.
  *
  * Class strings are written out literally (not interpolated) so Tailwind's
- * content scan generates them. The actual color values live once, in
- * src/themes/theme.css; inline-style consumers use `var(--color-status-*)`.
+ * content scan generates them. The color values live once, in theme.css;
+ * inline-style consumers use `var(--color-status-*)`.
  */
-import type { RunStatusSummary } from '$types/project';
 
 export type StatusKey =
   | 'live'
@@ -18,11 +17,21 @@ export type StatusKey =
   | 'unknown'
   | 'error';
 
+/** Fields on the app's RunStatusSummary that count each status. */
+export type StatusSummaryKey =
+  | 'live'
+  | 'unavailable'
+  | 'moderated'
+  | 'restricted'
+  | 'login_required'
+  | 'unknown'
+  | 'errors';
+
 export interface StatusMeta {
   key: StatusKey;
   label: string;
   /** Field in RunStatusSummary that counts this status. */
-  summaryKey: keyof RunStatusSummary;
+  summaryKey: StatusSummaryKey;
   /** `bg-status-*` — progress segments and legend dots. */
   bg: string;
   /** `text-status-*` — colored status text. */
@@ -37,25 +46,25 @@ const NEUTRAL_BADGE = 'bg-bg-controls text-text-secondary border-border-light';
 export const STATUS_META: StatusMeta[] = [
   { key: 'live', label: 'Live', summaryKey: 'live',
     bg: 'bg-status-live', text: 'text-status-live',
-    badge: 'bg-badge-live-bg text-status-live border-badge-live-border' },
+    badge: 'bg-badge-live-bg text-badge-live-text border-badge-live-border' },
   { key: 'restricted', label: 'Restricted', summaryKey: 'restricted',
     bg: 'bg-status-restricted', text: 'text-status-restricted',
-    badge: 'bg-badge-restricted-bg text-status-restricted border-badge-restricted-border' },
+    badge: 'bg-badge-restricted-bg text-badge-restricted-text border-badge-restricted-border' },
   { key: 'moderated', label: 'Moderated', summaryKey: 'moderated',
     bg: 'bg-status-moderated', text: 'text-status-moderated',
-    badge: 'bg-badge-moderated-bg text-status-moderated border-badge-moderated-border' },
+    badge: 'bg-badge-moderated-bg text-badge-moderated-text border-badge-moderated-border' },
   { key: 'unavailable', label: 'Unavailable', summaryKey: 'unavailable',
     bg: 'bg-status-unavailable', text: 'text-status-unavailable',
-    badge: 'bg-badge-unavailable-bg text-status-unavailable border-badge-unavailable-border' },
+    badge: 'bg-badge-unavailable-bg text-badge-unavailable-text border-badge-unavailable-border' },
   { key: 'login_required', label: 'Login Required', summaryKey: 'login_required',
     bg: 'bg-status-login', text: 'text-status-login',
-    badge: 'bg-badge-login-bg text-status-login border-badge-login-border' },
+    badge: 'bg-badge-login-bg text-badge-login-text border-badge-login-border' },
   { key: 'unknown', label: 'Unknown', summaryKey: 'unknown',
     bg: 'bg-status-unknown', text: 'text-status-unknown',
-    badge: 'bg-badge-unknown-bg text-status-unknown border-badge-unknown-border' },
+    badge: 'bg-badge-unknown-bg text-badge-unknown-text border-badge-unknown-border' },
   { key: 'error', label: 'Error', summaryKey: 'errors',
     bg: 'bg-status-error', text: 'text-status-error',
-    badge: 'bg-badge-error-bg text-status-error border-badge-error-border' },
+    badge: 'bg-badge-error-bg text-badge-error-text border-badge-error-border' },
 ];
 
 // Legacy mcat_status values (collapsed by the taxonomy) → their canonical status,

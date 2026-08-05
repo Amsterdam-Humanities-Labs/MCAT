@@ -53,7 +53,7 @@
       sizeClasses[size],
       'focus:outline-none focus:ring-2 focus:ring-accent-primary focus:ring-offset-2 focus:ring-offset-bg-primary',
       checked
-        ? 'bg-accent-primary border-accent-primary hover:bg-interactive-primary'
+        ? 'bg-accent-primary border-accent-primary hover:bg-accent-primary-hover'
         : 'bg-bg-detail border-border-mid hover:border-border-light'
     )}
   >
