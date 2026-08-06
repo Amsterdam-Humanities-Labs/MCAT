@@ -36,6 +36,18 @@
   const dateA = $derived(query.get('a') || versions[0]?.date || '');
   const dateB = $derived(query.get('b') || versions.at(-1)?.date || '');
 
+  // Once a policy's versions load, write the default compare pair to the URL so it's shareable.
+  $effect(() => {
+    if (!detail || !versions.length) return;
+    const hasA = query.get('a');
+    const hasB = query.get('b');
+    if (hasA && hasB) return;
+    const params = new URLSearchParams(query);
+    if (!hasA) params.set('a', versions[0].date);
+    if (!hasB) params.set('b', versions[versions.length - 1].date);
+    updateUrl(params);
+  });
+
   const platformOptions = $derived(data.manifest.map((g) => ({ value: g.id, label: g.label })));
   const policyOptions = $derived(
     (data.manifest.find((g) => g.id === platform)?.policies ?? []).map((p) => ({

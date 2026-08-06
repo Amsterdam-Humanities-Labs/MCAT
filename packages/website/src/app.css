@@ -5,9 +5,19 @@
    so classes used by @mcat/shared-ui components are emitted here too. */
 @source "../../shared-ui/src";
 
+/* Body copy runs a notch above the 1rem root. The root stays 16px so rem-based
+   chrome (nav, logo, headings) keeps its sizing. */
+@theme {
+  --text-base: 1.1rem;
+}
+
 html {
   font-family: 'Author', Georgia, serif;
   font-size: 16px;
   background: var(--color-bg-primary);
   color: var(--color-text-body);
+}
+
+body {
+  font-size: 1.1rem;
 }

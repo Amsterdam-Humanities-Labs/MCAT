@@ -84,14 +84,6 @@ function createWizardStore() {
         const info = await api.loadCsv(path);
         state.columns = info.columns;
         state.csv_path = path;
-
-        // Auto-detect URL column
-        const detection = await api.detectUrlColumn(info.columns);
-        if (detection.recommended) {
-          state.url_column = detection.recommended;
-        } else if (detection.candidates.length > 0) {
-          state.url_column = detection.candidates[0];
-        }
       } catch (e) {
         state.error = `Failed to load CSV: ${e}`;
       } finally {

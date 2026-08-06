@@ -8,6 +8,7 @@
   export { default as ul } from '$components/Ul.svelte';
   export { default as ol } from '$components/Ol.svelte';
   export { default as li } from '$components/Li.svelte';
+  export { default as table } from '$components/Table.svelte';
   export { Link as a } from '@mcat/shared-ui';
 </script>
 
@@ -15,6 +16,8 @@
   let { children } = $props();
 </script>
 
-<article class="flex flex-col gap-4 [&_h2]:pt-6 [&_h3]:pt-4">
+<article
+  class="flex flex-col gap-4 [&_h2]:pt-6 [&_h3]:pt-4 [&_th]:border-b [&_th]:border-border-mid [&_th]:py-2 [&_th]:pr-4 [&_th]:font-medium [&_th]:text-text-primary [&_td]:border-b [&_td]:border-border-light [&_td]:py-2 [&_td]:pr-4 [&_td]:align-top [&_td]:text-text-body"
+>
   {@render children()}
 </article>

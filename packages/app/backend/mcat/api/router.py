@@ -22,7 +22,6 @@ POST_ROUTES = {
     "/run/changed-results": run.get_changed_results,
     "/run/results": run.get_results,
     "/csv/load": csv.load,
-    "/csv/detect-url-column": csv.detect_url_column,
     "/tracking/start": tracking.start_tracking,
     "/tracking/stop": tracking.stop_tracking,
     "/tracking/status": tracking.get_tracking_status,

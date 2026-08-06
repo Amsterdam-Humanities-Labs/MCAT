@@ -99,8 +99,6 @@ export const api = {
   // CSV Operations
   loadCsv: (path: string) =>
     callBackend<CsvInfo>('/csv/load', 'POST', { path }),
-  detectUrlColumn: (columns: string[]) =>
-    callBackend<{ candidates: string[]; recommended: string | null }>('/csv/detect-url-column', 'POST', { columns }),
 
   // Import
   previewImport: (csv_path: string) =>

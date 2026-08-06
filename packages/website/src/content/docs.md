@@ -4,14 +4,15 @@ description: Install MCAT and learn what each content state means.
 ---
 
 <script>
+  import { base } from '$app/paths';
   import { StatusBadge } from '@mcat/shared-ui';
 </script>
 
 # Documentation
 
-MCAT is a desktop app for tracking how content-moderation status changes over time. There is no installer: download a build and run it.
-
 ## Installation
+
+MCAT requires Google Chrome installed on the device.
 
 ### macOS
 
@@ -26,6 +27,107 @@ MCAT is currently available for macOS only, on Apple Silicon Macs (M1 or later).
 ### Linux and Windows
 
 Linux and Windows support is coming. In the meantime, you can build from source by following the build section on [GitHub](https://github.com/Amsterdam-Humanities-Labs/MCAT#building--installing).
+
+## First run
+
+MCAT takes a CSV of URLs in and writes a CSV of results out. 
+
+### Prepare your CSV
+
+The only requirements are a header row and one column of URLs. The column can be named anything. Every other column passes through to the output untouched, so keep your titles, IDs, and dates. The smallest valid CSV file is:
+
+```
+url
+https://www.youtube.com/watch?v=QI87UoRlfIY
+https://www.youtube.com/watch?v=_eMrAZLorQs
+```
+
+To try a first run without assembling a list yourself, download one of these samples.
+
+- [youtube-sample-10.csv]({base}/examples/youtube-sample-10.csv)
+- [instagram-sample-10.csv]({base}/examples/instagram-sample-10.csv)
+- [facebook-sample-10.csv]({base}/examples/facebook-sample-10.csv)
+- [x-sample-10.csv]({base}/examples/x-sample-10.csv)
+
+### Create a project
+
+A project is a folder containing the main project.json all necessary information for the project. It contains the input CSV and results from all runs also stored as CSV. **It is recommended to avoid editing or updating any of the projects CSVs directly, since this can lead to project corruption**. Copy the desired CSV and edit it elsewhere on your disk.
+
+In the app, click **New Project** and fill in five fields:
+
+- **Project Name**: the folder name.
+- **Project Location**: where to put it. Keep it outside the app, updating MCAT later on deletes anything stored beside it.
+- **Platform**: YouTube, Instagram, Facebook, or X. One platform per project.
+- **Source CSV**: your input file.
+- **URL Column**: pick the column that holds the URLs.
+
+### Setting up MCAT with consent and login cookies 
+
+Cookies allow MCAT to see a platform as a logged user would, they remove login walls and consent walls from the scraped data. It als
+
+**When working with MCAT always use a platform throwaway account, never your personal one. MCAT never stores passwords, only cookies.**
+
+MCAT stores two kinds of cookies:
+
+**Consent cookies** record that you answered the platform's cookie or privacy banner. They belong to the browser, not to you, and carry no account information. Dismissing the banner once is what they preserve.
+
+**Login cookies** are the session token the platform issues after you sign in. They are what proves to the platform that a request comes from your account, and they are the reason MCAT can see what a logged-in visitor sees.
+
+Click **Set up browser**. A Chrome window opens. Dismiss the cookie banner and log in where needed. MCAT stores the resulting cookies inside the project and reuses them for the duration of the project or until cookie naturally expires.
+
+#### How are session cookies tored 
+
+MCAT stores cookies in `cookies/<platform>.json` of the project folder, one file per platform, readable only by your user account. Cookies never leave your machine. MCAT has no account, no server, and no telemetry, and the file is only ever read back to rebuild the same browser session. 
+
+Storing this file is not much riskier than what your browser already does with your sessions, but MCAT's copy lives inside a project folder. Two habits worth keeping: delete the `cookies` folder before sharing or publishing a project, since nothing else in the project depends on it, and click **Logout** when you are done with a platform, which deletes the stored cookies for it.
+
+### Run it
+
+Leave **Save screenshots** on unless you have a reason not to. The screenshot lets you check MCAT's verdict by eye, and it's the only evidence of what the page looked like at that moment.
+
+Click **Start**. The progress bar fills by state as URLs resolve, and the activity log prints each check. **Pause** stops after the in-flight checks finish. **Resume** picks up where it left off. **Abandon** discards the run.
+
+### Read the results
+
+Each run appears in the timeline. Click one to expand it:
+
+- **All Results**: every URL and the state it resolved to.
+- **Changes**: what moved since the previous run. Empty on the first run.
+- **Run Info**: when it ran, how long it took, which account was used.
+
+**Run Folder** opens the run on disk:
+
+```
+my-project/
+├── project.json
+├── urls.csv
+└── runs/
+    └── 2026-01-14_1030/
+        ├── results.csv
+        └── screenshots/
+            ├── live/
+            ├── unavailable/
+            └── …
+```
+
+`results.csv` is your original columns plus:
+
+| Column | What it holds |
+|---|---|
+| `mcat_status` | The content state |
+| `mcat_detail` | The specific reason, e.g. age-restricted, removed by uploader |
+| `mcat_screenshot` | Path to the screenshot for this check |
+| `mcat_timestamp` | When it was checked |
+| `mcat_error` | Why a check failed, when it did |
+| `mcat_user` | Which account was used |
+
+Rows are written as the run goes, so a crash still leaves you everything completed so far.
+
+### Check again over time
+
+One run is a snapshot. The point of MCAT is the second run and the ones after it.
+
+Set **Repeat every** to an interval in minutes, hours, or days. MCAT re-checks the same URLs on that schedule, and each new run diffs itself against the one before, so the Changes tab shows exactly what got taken down, restricted, or restored in between. Tracking stops when you turn it off or close the project.
 
 ## Content states
 
