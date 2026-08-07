@@ -3,7 +3,6 @@ import type {
   CreateProjectRequest,
   StartProcessingRequest,
   CsvInfo,
-  ImportPreview,
 } from '../../types';
 import type { Project } from '../../types/project';
 
@@ -99,12 +98,6 @@ export const api = {
   // CSV Operations
   loadCsv: (path: string) =>
     callBackend<CsvInfo>('/csv/load', 'POST', { path }),
-
-  // Import
-  previewImport: (csv_path: string) =>
-    callBackend<ImportPreview>('/project/import-preview', 'POST', { csv_path }),
-  confirmImport: () =>
-    callBackend<{ added: number; project: Project }>('/project/import-confirm', 'POST'),
 
   // Tracking
   startTracking: (interval_value: number, interval_unit: string = 'minutes') =>

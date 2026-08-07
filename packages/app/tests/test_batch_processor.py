@@ -40,6 +40,19 @@ def _csv(tmp_path, urls):
     return str(p)
 
 
+def _csv_rows(tmp_path, rows, columns=("url", "note")):
+    """CSV from explicit rows, so a blank URL cell still yields a parsed row.
+
+    The single-column helper cannot express this: a blank there is an empty
+    line, which DictReader skips.
+    """
+    p = tmp_path / "in.csv"
+    lines = [",".join(columns)]
+    lines += [",".join(r.get(c, "") for c in columns) for r in rows]
+    p.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    return str(p)
+
+
 def _proc(scraper):
     return BatchProcessor(scraper_factory=lambda platform: scraper)
 
@@ -99,6 +112,32 @@ async def test_pause_holds_then_resume_completes(tmp_path):
     proc.resume_processing()
     result = await task
     assert result.success and len(_results(out)) == 2
+
+
+async def test_blank_url_cell_keeps_results_on_their_own_rows(tmp_path):
+    """A blank URL cell must not shift later results onto the wrong row.
+
+    Asserts per-row correspondence rather than aggregate counts: the bug leaves
+    the totals correct while pairing each status with the wrong url.
+    """
+    rows = [
+        {"url": "http://a", "note": "first"},
+        {"url": "", "note": "orphan"},
+        {"url": "http://c", "note": "third"},
+        {"url": "http://d", "note": "fourth"},
+    ]
+    smap = {"http://a": "Live", "http://c": "Unavailable", "http://d": "Moderated"}
+    out = tmp_path / "out"; out.mkdir()
+
+    result = await _proc(ScriptedScraper(status_map=smap)).process_csv_async(
+        _csv_rows(tmp_path, rows), "test", {"post": "url"}, output_folder=str(out))
+
+    assert result.success
+    written = _results(out)
+    assert len(written) == 3
+    for r in written:
+        assert r["mcat_status"] == smap[r["url"]]
+    assert "orphan" not in [r.get("note") for r in written]
 
 
 async def test_bad_column_mapping_fails(tmp_path):

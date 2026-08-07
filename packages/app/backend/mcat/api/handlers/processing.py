@@ -21,6 +21,14 @@ def start(body: dict) -> dict:
     if login_in_progress():
         return {"success": False, "error": "Browser setup is finishing, try again in a moment"}
 
+    # Check eligibility before minting the run record. Creating it first and
+    # abandoning it on refusal clears current_run, which a live run's
+    # on_completed needs, stranding that run as in_progress.
+    if not ctx.processing_service.is_idle():
+        reason = ctx.processing_service.last_start_error or "A run is already in progress"
+        log_buffer.error(reason)
+        return {"success": False, "error": reason}
+
     urls = body.get("urls")
     project = ctx.current_project
     screenshots = project.config.screenshots_enabled

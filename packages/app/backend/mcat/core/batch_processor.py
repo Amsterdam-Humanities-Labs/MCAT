@@ -7,7 +7,7 @@ from pathlib import Path
 from config.settings import config
 from models.processing_models import ProcessingResult
 from models.types import STATUS_BUCKETS, bucket_for
-from utils.csv_handler import load_csv, get_columns, get_urls_from_column, validate_column_mapping, count_statuses, IncrementalCSVWriter
+from utils.csv_handler import load_csv, get_columns, normalize_url, validate_column_mapping, count_statuses, IncrementalCSVWriter
 from core.browser_manager import BrowserSession
 from scrapers.base_scraper import BaseScraper
 from scrapers.youtube_scraper import YouTubeScraper
@@ -77,10 +77,12 @@ class BatchProcessor:
                 csv_writer.write_header()
 
             url_column = column_mapping.get('post', '')
-            urls = get_urls_from_column(rows, url_column)
-            self._log(f"Extracted {len(urls)} URLs from column '{url_column}'")
+            # Each URL carries its own source row, so a skipped blank cell cannot
+            # shift later results onto the wrong row.
+            targets = [(row, normalize_url(row[url_column])) for row in rows if row.get(url_column)]
+            self._log(f"Extracted {len(targets)} URLs from column '{url_column}'")
 
-            if not urls:
+            if not targets:
                 result.error_message = f"No URLs found in column '{url_column}'"
                 return result
 
@@ -103,8 +105,8 @@ class BatchProcessor:
             if save_screenshots and output_folder:
                 scraper.enable_screenshots(True, output_folder)
 
-            self._log(f"Starting batch processing of {len(urls)} URLs...")
-            await self._process_batch_async(urls, scraper, csv_writer, rows, url_column, auth_user)
+            self._log(f"Starting batch processing of {len(targets)} URLs...")
+            await self._process_batch_async(targets, scraper, csv_writer, auth_user)
             self._log(f"Batch processing completed", "success")
 
             if self.cancel_flag.is_set():
@@ -171,20 +173,17 @@ class BatchProcessor:
         if self.log_callback:
             self.log_callback(message, level)
 
-    async def _process_batch_async(self, urls: list[str], scraper: BaseScraper,
+    async def _process_batch_async(self, targets: list[tuple[dict, str]], scraper: BaseScraper,
                                    csv_writer: IncrementalCSVWriter | None = None,
-                                   original_rows: list[dict] | None = None,
-                                   url_column: str | None = None,
                                    auth_user: str = "anonymous") -> None:
-        """Process URLs concurrently (bounded by the tab pool) with incremental
-        CSV writing. Single-threaded asyncio, so the stats/progress block runs
-        with no await inside it and needs no lock."""
+        """Process (row, url) pairs concurrently (bounded by the tab pool) with
+        incremental CSV writing. Single-threaded asyncio, so the stats/progress
+        block runs with no await inside it and needs no lock."""
         processed = 0
-        total = len(urls)
+        total = len(targets)
         stats = {bucket: 0 for bucket in STATUS_BUCKETS}
-        original_rows = original_rows or []
 
-        async def process_single_url(url: str, row_index: int) -> None:
+        async def process_single_url(row: dict, url: str) -> None:
             nonlocal processed
             if self.cancel_flag.is_set():
                 return
@@ -195,8 +194,8 @@ class BatchProcessor:
                 if self.cancel_flag.is_set() or result.status.lower() == 'cancelled':
                     return
 
-                if csv_writer and original_rows:
-                    original_row = original_rows[row_index].copy()
+                if csv_writer:
+                    original_row = row.copy()
                     original_row.update({
                         'mcat_status': result.status,
                         'mcat_detail': result.info,
@@ -235,7 +234,7 @@ class BatchProcessor:
                 stats['errors'] += 1
                 processed += 1
 
-        await asyncio.gather(*(process_single_url(url, idx) for idx, url in enumerate(urls)))
+        await asyncio.gather(*(process_single_url(row, url) for row, url in targets))
 
     def pause_processing(self) -> None:
         self.resume_event.clear()

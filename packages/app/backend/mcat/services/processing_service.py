@@ -13,7 +13,7 @@ from models.processing_models import ProcessingJob, ProcessingStatus, Processing
 from models.file_models import ValidationResult
 from models.types import STATUS_BUCKETS
 from core.batch_processor import BatchProcessor
-from utils.csv_handler import save_csv
+from utils.csv_handler import save_csv, normalize_url
 from events import event_bus
 from services.processing_validator import validate_job
 from services.progress_queue import ProgressQueue
@@ -254,8 +254,15 @@ class ProcessingService:
             rows = job.file_info.rows or []
             if self._custom_urls:
                 url_column = job.column_mapping.post_column
+                # The selection holds normalized URLs, so the rows must be
+                # normalized too or scheme-less and padded cells never match.
                 custom_set = set(self._custom_urls)
-                filtered = [r for r in rows if r.get(url_column) in custom_set]
+                filtered = [r for r in rows if normalize_url(r.get(url_column, "")) in custom_set]
+                if not filtered:
+                    raise ValueError(
+                        f"None of the {len(custom_set)} selected URLs matched a row "
+                        f"in column '{url_column}'"
+                    )
                 save_csv(filtered, temp_csv_path)
             else:
                 save_csv(rows, temp_csv_path)

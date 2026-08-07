@@ -12,8 +12,6 @@ POST_ROUTES = {
     "/project/close": lambda body: project.close(),
     "/project/screenshots": project.set_screenshots,
     "/project/tracking-config": project.set_tracking_config,
-    "/project/import-preview": project.preview_import,
-    "/project/import-confirm": project.confirm_import,
     "/process/start": processing.start,
     "/process/pause": processing.pause,
     "/process/resume": processing.resume,

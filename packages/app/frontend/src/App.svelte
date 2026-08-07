@@ -5,7 +5,6 @@
   import { appStore } from '$lib/stores/app.svelte';
   import { projectStore } from '$lib/stores/project.svelte';
   import { wizardStore } from '$lib/stores/wizard.svelte';
-  import { dialogsStore } from '$lib/stores/dialogs.svelte';
   import { consoleStore } from '$lib/stores/console.svelte';
   import { processingStore } from '$lib/stores/processing.svelte';
   import { pollingController } from '$lib/stores/polling.svelte';
@@ -13,7 +12,6 @@
   import StartScreen from '$lib/views/StartScreen.svelte';
   import ProjectWizard from '$lib/views/ProjectWizard.svelte';
   import ProjectView from '$lib/views/ProjectView.svelte';
-  import AddUrlsDialog from '$lib/views/dialogs/AddUrlsDialog.svelte';
 
   interface Props {
     class?: string;
@@ -78,17 +76,6 @@
     }
   }
 
-  async function handleImportUrls() {
-    try {
-      const result = await api.confirmImport();
-      if (result.project) projectStore.setProject(result.project);
-      consoleStore.success(`Added ${result.added} new URLs`);
-      dialogsStore.closeAddUrls();
-    } catch (e) {
-      appStore.setGlobalError(String(e));
-    }
-  }
-
   onMount(() => pollingController.start());
   onDestroy(() => pollingController.stop());
 </script>
@@ -124,11 +111,4 @@
       onclose={handleCloseProject}
     />
   {/if}
-
-  <!-- Dialogs -->
-  <AddUrlsDialog
-    open={dialogsStore.addUrlsOpen}
-    onclose={() => dialogsStore.closeAddUrls()}
-    onimport={handleImportUrls}
-  />
 </main>

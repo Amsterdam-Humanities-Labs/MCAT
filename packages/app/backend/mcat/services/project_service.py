@@ -9,7 +9,6 @@ from pathlib import Path
 from utils.csv_handler import load_csv, save_csv, get_columns, assign_url_indices
 from models.project_models import ProjectConfig
 from models.project_state import ProjectState
-from models.import_result import UrlImportResult
 
 
 class ProjectService:
@@ -92,60 +91,6 @@ class ProjectService:
     def get_urls(self, project_state: ProjectState) -> list[str]:
         rows = load_csv(str(project_state.urls_csv_path))
         return [r[project_state.url_column] for r in rows if r.get(project_state.url_column)]
-
-    def preview_url_import(self, project_state: ProjectState, csv_path: Path) -> UrlImportResult:
-        result = UrlImportResult()
-
-        try:
-            new_rows = load_csv(str(csv_path))
-            url_column = project_state.url_column
-
-            new_columns = get_columns(new_rows)
-            if url_column not in new_columns:
-                result.error_message = f"URL column '{url_column}' not found in CSV"
-                return result
-
-            new_urls = set(r[url_column] for r in new_rows if r.get(url_column))
-            result.total_in_file = len(new_urls)
-
-            existing_rows = load_csv(str(project_state.urls_csv_path))
-            existing_urls = set(r[url_column] for r in existing_rows if r.get(url_column))
-
-            duplicates = new_urls & existing_urls
-            urls_to_add = new_urls - existing_urls
-
-            result.duplicates_skipped = len(duplicates)
-            result.new_urls = len(urls_to_add)
-
-            if urls_to_add:
-                result.rows_to_add = [r for r in new_rows if r.get(url_column) in urls_to_add]
-
-        except Exception as e:
-            result.error_message = str(e)
-
-        return result
-
-    def confirm_url_import(self, project_state: ProjectState, import_result: UrlImportResult) -> int:
-        if not import_result.is_valid:
-            raise ValueError("Invalid import result")
-
-        if not import_result.rows_to_add:
-            return 0
-
-        existing_rows = load_csv(str(project_state.urls_csv_path))
-        existing_columns = get_columns(existing_rows)
-
-        for row in import_result.rows_to_add:
-            padded = {col: row.get(col, "") for col in existing_columns}
-            existing_rows.append(padded)
-
-        save_csv(existing_rows, str(project_state.urls_csv_path))
-        project_state._url_count = len(existing_rows)
-
-        # New rows were padded with a blank mcat_index; assign them fresh numbers.
-        self.ensure_url_indices(project_state)
-
-        return len(import_result.rows_to_add)
 
     def validate_project_structure(self, project_path: Path) -> tuple[bool, str]:
         if not project_path.exists():
