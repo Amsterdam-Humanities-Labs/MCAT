@@ -62,58 +62,63 @@ class ProcessingService:
         on_completed: Callable | None = None,
         on_error: Callable | None = None,
     ) -> bool:
-        if not self.is_idle():
-            self.last_start_error = "A run is already in progress"
-            self._log_error(f"Cannot start: {self.last_start_error}")
-            return False
-
-        if urls is None:
-            validation = self.validate_processing_request(job)
-            if not validation.valid:
-                self.last_start_error = validation.error_summary
+        # The lock is held from the idle check through the state change, so two
+        # near-simultaneous starts cannot both pass and share one BatchProcessor.
+        # _state_lock is reentrant, so the nested acquisitions below are fine.
+        with self._state_lock:
+            if not self.is_idle():
+                self.last_start_error = "A run is already in progress"
                 self._log_error(f"Cannot start: {self.last_start_error}")
                 return False
 
-        self.last_start_error = ""
-        try:
-            self.current_job = job
-            self._custom_urls = urls
-            self._on_completed = on_completed
-            self._on_error = on_error
-            self.current_status = ProcessingStatus(state=ProcessingState.PROCESSING)
-            self.current_status.total_count = len(urls) if urls else job.file_info.row_count
+            if urls is None:
+                validation = self.validate_processing_request(job)
+                if not validation.valid:
+                    self.last_start_error = validation.error_summary
+                    self._log_error(f"Cannot start: {self.last_start_error}")
+                    return False
 
-            self._cancel_event.clear()
-            self._pause_event.set()
+            self.last_start_error = ""
+            try:
+                self.current_job = job
+                self._custom_urls = urls
+                self._on_completed = on_completed
+                self._on_error = on_error
+                self.current_status = ProcessingStatus(state=ProcessingState.PROCESSING)
+                self.current_status.total_count = len(urls) if urls else job.file_info.row_count
 
-            # Build the batch processor on the calling thread, before the worker
-            # starts, so a cancel/cleanup arriving during startup can reach it via
-            # self._batch_processor instead of being dropped. Construction is cheap;
-            # the driver pool is created lazily inside process_csv.
-            self._batch_processor = BatchProcessor(scraper_factory=self._scraper_factory)
-            self._batch_processor.set_progress_callback(self._queue_progress_update)
-            if self._log_callback:
-                self._batch_processor.set_log_callback(self._log_callback)
+                self._cancel_event.clear()
+                self._pause_event.set()
 
-            self._processing_thread = threading.Thread(
-                target=self._processing_worker,
-                args=(job,),
-                name=f"ProcessingWorker-{job.platform}",
-                daemon=False
-            )
+                # Build the batch processor on the calling thread, before the worker
+                # starts, so a cancel/cleanup arriving during startup can reach it via
+                # self._batch_processor instead of being dropped. Construction is cheap;
+                # the driver pool is created lazily inside process_csv.
+                self._batch_processor = BatchProcessor(scraper_factory=self._scraper_factory)
+                self._batch_processor.set_progress_callback(self._queue_progress_update)
+                if self._log_callback:
+                    self._batch_processor.set_log_callback(self._log_callback)
 
-            with self._state_lock:
+                # Daemon so a wedged batch can never hold the interpreter open;
+                # shutdown still joins it with a timeout for a clean teardown.
+                self._processing_thread = threading.Thread(
+                    target=self._processing_worker,
+                    args=(job,),
+                    name=f"ProcessingWorker-{job.platform}",
+                    daemon=True
+                )
+
                 self._processing_state = ProcessingState.PROCESSING
 
-            self._publish_status()
-            self._processing_thread.start()
-            return True
+                self._publish_status()
+                self._processing_thread.start()
+                return True
 
-        except Exception as e:
-            self.last_start_error = f"Failed to start: {e}"
-            self._log_error(self.last_start_error)
-            self._set_error_state(str(e))
-            return False
+            except Exception as e:
+                self.last_start_error = f"Failed to start: {e}"
+                self._log_error(self.last_start_error)
+                self._set_error_state(str(e))
+                return False
 
     def pause_processing(self) -> bool:
         with self._state_lock:
@@ -194,14 +199,23 @@ class ProcessingService:
         with self._state_lock:
             return self._processing_state == ProcessingState.IDLE
 
+    def join(self, timeout: float | None = None) -> bool:
+        """Wait for the worker to finish. True if no worker is left running."""
+        thread = self._processing_thread
+        if thread is None or not thread.is_alive():
+            return True
+        thread.join(timeout)
+        return not thread.is_alive()
+
     def cleanup(self) -> None:
         self._cancel_event.set()
         self._pause_event.set()
 
+        # cancel_processing (not just the flags) is what stops the browser from
+        # the worker's loop, so an in-flight page load unwinds now instead of
+        # running out its 30s timeout.
         if self._batch_processor:
-            self._batch_processor.cancel_flag.set()
-            self._batch_processor.resume_event.set()
-            self._batch_processor.cleanup()
+            self._batch_processor.cancel_processing()
 
         with self._state_lock:
             self._processing_state = ProcessingState.IDLE

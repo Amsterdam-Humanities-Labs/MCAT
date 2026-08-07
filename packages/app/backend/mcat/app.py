@@ -82,6 +82,26 @@ def start_vite():
     return proc, vite_port
 
 
+WORKER_JOIN_TIMEOUT = 10.0
+
+
+def shutdown_backend():
+    """Stop the current run and wait briefly for its worker to unwind.
+
+    webview.start() returns once the window closes. Without this the worker is a
+    daemon, so the interpreter exits while it is mid-teardown and leaves its
+    Chrome reparented and unreaped.
+    """
+    try:
+        from api.context import app_context
+        service = app_context.processing_service
+        app_context.close_project()
+        if service is not None and not service.join(timeout=WORKER_JOIN_TIMEOUT):
+            print(f"Worker still running after {WORKER_JOIN_TIMEOUT:.0f}s; exiting anyway", flush=True)
+    except Exception as e:
+        print(f"Shutdown cleanup failed: {e}", flush=True)
+
+
 def main():
     port = find_available_port(DEFAULT_PORT, MAX_PORT_ATTEMPTS)
     print(f"Starting MCAT backend on port {port}...", flush=True)
@@ -127,6 +147,7 @@ def main():
         except KeyboardInterrupt:
             pass
     finally:
+        shutdown_backend()
         if vite_proc:
             vite_proc.terminate()
             vite_proc.wait()
