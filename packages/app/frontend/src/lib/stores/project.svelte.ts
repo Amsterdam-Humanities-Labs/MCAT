@@ -1,6 +1,5 @@
 import type { Project, CreateProjectRequest } from '../../types';
 import { api } from '../api/client';
-import { runDetailsStore } from './runDetails.svelte';
 
 function createProjectStore() {
   let project = $state<Project | null>(null);
@@ -52,7 +51,6 @@ function createProjectStore() {
       try {
         const response = await api.createProject(data);
         if (response.project) {
-          runDetailsStore.reset();
           project = response.project;
         }
         return response.success;
@@ -70,7 +68,6 @@ function createProjectStore() {
       try {
         const response = await api.openProject(path);
         if (response.project) {
-          runDetailsStore.reset();
           project = response.project;
         }
         return response.success;
@@ -87,7 +84,6 @@ function createProjectStore() {
       error = null;
       try {
         await api.closeProject();
-        runDetailsStore.reset();
         project = null;
       } catch (e) {
         error = e instanceof Error ? e.message : String(e);
