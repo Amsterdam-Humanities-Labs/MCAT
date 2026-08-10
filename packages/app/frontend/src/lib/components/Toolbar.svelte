@@ -11,10 +11,10 @@
     urlCount: number;
     projectPath: string;
     auth?: AuthInfo;
-    onOpenFolder?: () => void;
-    onClose?: () => void;
-    onSetupBrowser?: () => void;
-    onResetBrowser?: () => void;
+    onOpenFolder?: () => unknown;
+    onClose?: () => unknown;
+    onSetupBrowser?: () => unknown;
+    onResetBrowser?: () => unknown;
     class?: string;
   }
 

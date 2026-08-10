@@ -10,7 +10,8 @@
     loading?: boolean;
     type?: 'button' | 'submit' | 'reset';
     class?: string;
-    onclick?: (e: MouseEvent) => void;
+    // Return value is only inspected for thenable-ness, never consumed.
+    onclick?: (e: MouseEvent) => unknown;
     children?: import('svelte').Snippet;
   }
 
@@ -48,6 +49,24 @@
 
   const classes = $derived(cn(baseClasses, variants[variant], sizes[size], className));
 
+  // A handler that returns a promise disables the button until it settles, so
+  // async work cannot be fired twice by a second click. Handlers returning void
+  // are unaffected.
+  let pending = $state(false);
+  const busy = $derived(loading || pending);
+
+  async function handleClick(e: MouseEvent) {
+    if (pending) return;
+    const result = onclick?.(e);
+    if (typeof (result as { then?: unknown } | undefined)?.then !== 'function') return;
+    pending = true;
+    try {
+      await result;
+    } finally {
+      pending = false;
+    }
+  }
+
   // Cross-origin links open in a new tab; internal ones use client-side nav.
   const external = $derived(href ? /^(https?:)?\/\//.test(href) : false);
 </script>
@@ -66,8 +85,8 @@
     {@render children?.()}
   </a>
 {:else}
-  <button {type} disabled={disabled || loading} class={classes} {onclick}>
-    {#if loading}
+  <button {type} disabled={disabled || busy} class={classes} onclick={handleClick}>
+    {#if busy}
       <SpinnerGap size={16} class="animate-spin -ml-1 mr-2" />
     {/if}
     {@render children?.()}

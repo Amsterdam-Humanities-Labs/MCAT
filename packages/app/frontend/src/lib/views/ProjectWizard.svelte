@@ -16,7 +16,7 @@
     wizard: typeof WizardStoreType;
     class?: string;
     oncancel?: () => void;
-    oncomplete?: (data: ReturnType<typeof WizardStoreType.getCreateData>) => void;
+    oncomplete?: (data: ReturnType<typeof WizardStoreType.getCreateData>) => unknown;
   }
 
   let {
@@ -52,7 +52,9 @@
     }
   }
 
-  function handleCreate() {
+  // Returns the promise so Button stays disabled until creation settles;
+  // otherwise a second click hits the backend's "already exists" guard.
+  async function handleCreate() {
     form.touchAll();
 
     if (form.valid) {
@@ -60,7 +62,7 @@
       wizard.setPlatform(form.getValue('platform') as Platform);
       wizard.setLocation(form.getValue('location'));
       wizard.setUrlColumn(form.getValue('url_column'));
-      oncomplete?.(wizard.getCreateData());
+      await oncomplete?.(wizard.getCreateData());
     }
   }
 

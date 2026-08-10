@@ -4,8 +4,8 @@
 
   interface Props {
     class?: string;
-    onnewproject?: () => void;
-    onopenproject?: () => void;
+    onnewproject?: () => unknown;
+    onopenproject?: () => unknown;
   }
 
   let {

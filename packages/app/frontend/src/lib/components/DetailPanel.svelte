@@ -2,6 +2,7 @@
   import { cn } from '$lib/utils';
   import type { Run } from '$types/project';
   import { api } from '$lib/api/client';
+  import { runDetailsStore } from '$lib/stores/runDetails.svelte';
   import { Button } from '$lib/components';
   import { Tabs } from '@mcat/shared-ui';
   import DetailChanges from './DetailChanges.svelte';
@@ -20,18 +21,10 @@
 
   let activeTab = $state(run.is_baseline ? 'results' : 'changes');
 
-  // Changed results data (eager — small payload)
-  let changedColumns = $state<string[]>([]);
-  let changedRows = $state<Record<string, unknown>[]>([]);
-  let changedLoading = $state(true);
-  let changedError = $state<string | null>(null);
-
-  // All results data (lazy — could be 1k+ rows)
-  let resultsColumns = $state<string[]>([]);
-  let resultsRows = $state<Record<string, unknown>[]>([]);
-  let resultsLoading = $state(true);
-  let resultsError = $state<string | null>(null);
-  let resultsLoaded = $state(false);
+  // Both payloads live in the store, so they survive this panel being collapsed.
+  const changed = $derived(runDetailsStore.changes(projectPath, run.id));
+  const results = $derived(runDetailsStore.results(projectPath, run.id));
+  const changedRows = $derived(changed?.rows ?? []);
 
   const tabItems = $derived(
     run.is_baseline
@@ -46,29 +39,14 @@
         ]
   );
 
-  // Load changed results eagerly
+  // Eager: small payload. The store no-ops when it is already cached.
   $effect(() => {
-    if (run.is_baseline) {
-      changedLoading = false;
-      return;
-    }
-    changedLoading = true;
-    changedError = null;
-    api.getRunChangedResults(run.id)
-      .then((res) => { changedColumns = res.columns; changedRows = res.rows; })
-      .catch((e) => { changedError = String(e); })
-      .finally(() => { changedLoading = false; });
+    if (!run.is_baseline) runDetailsStore.loadChanges(projectPath, run.id);
   });
 
-  // Load all results lazily
+  // Lazy: a run can be 1k+ rows, so only fetch once its tab is opened.
   $effect(() => {
-    if (activeTab !== 'results' || resultsLoaded) return;
-    resultsLoading = true;
-    resultsError = null;
-    api.getRunResults(run.id)
-      .then((res) => { resultsColumns = res.columns; resultsRows = res.rows; resultsLoaded = true; })
-      .catch((e) => { resultsError = String(e); })
-      .finally(() => { resultsLoading = false; });
+    if (activeTab === 'results') runDetailsStore.loadResults(projectPath, run.id);
   });
 
   async function handleOpenFolder() {
@@ -105,9 +83,22 @@
   <!-- Tab content -->
   <div class="px-4 pb-2">
     {#if activeTab === 'changes'}
-      <DetailChanges {run} columns={changedColumns} rows={changedRows} loading={changedLoading} error={changedError} onOpenScreenshot={handleOpenScreenshot} />
+      <DetailChanges
+        {run}
+        columns={changed?.columns ?? []}
+        rows={changedRows}
+        loading={changed?.loading ?? true}
+        error={changed?.error ?? null}
+        onOpenScreenshot={handleOpenScreenshot}
+      />
     {:else if activeTab === 'results'}
-      <DetailResults columns={resultsColumns} rows={resultsRows} loading={resultsLoading} error={resultsError} onOpenScreenshot={handleOpenScreenshot} />
+      <DetailResults
+        columns={results?.columns ?? []}
+        rows={results?.rows ?? []}
+        loading={results?.loading ?? true}
+        error={results?.error ?? null}
+        onOpenScreenshot={handleOpenScreenshot}
+      />
     {:else if activeTab === 'run'}
       <DetailRun {run} {runNumber} {totalUrls} />
     {/if}

@@ -15,10 +15,10 @@
     lastRunDuration: number | null;
     nextCheck: string | null;
     runNumber: number;
-    onStart?: () => void;
-    onPause?: () => void;
-    onResume?: () => void;
-    onAbandon?: () => void;
+    onStart?: () => unknown;
+    onPause?: () => unknown;
+    onResume?: () => unknown;
+    onAbandon?: () => unknown;
     onIntervalToggle?: (enabled: boolean) => void;
     onIntervalChange?: (value: number, unit: 'minutes' | 'hours' | 'days') => void;
     onScreenshotsToggle?: (enabled: boolean) => void;

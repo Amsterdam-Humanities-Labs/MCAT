@@ -4,10 +4,10 @@
 
   interface Props {
     runState: 'idle' | 'running' | 'paused';
-    onStart?: () => void;
-    onPause?: () => void;
-    onResume?: () => void;
-    onAbandon?: () => void;
+    onStart?: () => unknown;
+    onPause?: () => unknown;
+    onResume?: () => unknown;
+    onAbandon?: () => unknown;
     class?: string;
   }
 
