@@ -41,6 +41,40 @@ def _session(tabs):
     return s
 
 
+class _HangingTab(_StubTab):
+    """A tab whose CDP send never resolves — a target that died mid-round-trip."""
+
+    def __init__(self):
+        super().__init__(healthy=True)
+        self.send_started = False
+
+    async def send(self, _cmd):
+        self.send_started = True
+        await asyncio.Event().wait()      # never set
+
+
+async def test_cookie_injection_is_bounded(monkeypatch):
+    """An unresolved set_cookies must time out, not hang the worker for good."""
+    monkeypatch.setattr(BrowserSession, "HEALTH_CHECK_TIMEOUT", 0.05)
+    s = _session([])
+    s._cookie_params = [object()]         # non-empty, so injection is attempted
+    tab = _HangingTab()
+
+    await asyncio.wait_for(s._inject_cookies(tab), timeout=2.0)
+
+    assert tab.send_started
+
+
+async def test_cookie_injection_skipped_without_cookies():
+    """A project that never ran Set up browser must not pay the timeout."""
+    s = _session([])
+    tab = _HangingTab()
+
+    await asyncio.wait_for(s._inject_cookies(tab), timeout=2.0)
+
+    assert tab.send_started is False
+
+
 async def test_healthy_tab_repooled_unchanged():
     t = _StubTab(healthy=True)
     s = _session([t])

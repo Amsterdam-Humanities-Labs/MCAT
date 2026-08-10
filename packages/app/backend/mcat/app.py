@@ -94,10 +94,12 @@ def shutdown_backend():
     """
     try:
         from api.context import app_context
+        from api.handlers.auth import shutdown_login
         service = app_context.processing_service
         app_context.close_project()
         if service is not None and not service.join(timeout=WORKER_JOIN_TIMEOUT):
             print(f"Worker still running after {WORKER_JOIN_TIMEOUT:.0f}s; exiting anyway", flush=True)
+        shutdown_login(timeout=WORKER_JOIN_TIMEOUT)
     except Exception as e:
         print(f"Shutdown cleanup failed: {e}", flush=True)
 

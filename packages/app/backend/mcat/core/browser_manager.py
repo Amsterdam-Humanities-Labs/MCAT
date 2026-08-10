@@ -121,7 +121,13 @@ class BrowserSession:
     # A tab is replaced once it fails a health probe or has done this many
     # navigations — long-lived tabs on heavy pages accumulate detached frames and
     # renderer bloat. The probe timeout bounds how long a wedged tab is waited on.
+    #
+    # Keep any timeout at or above the zendriver wait it wraps: several of its
+    # methods await an event for 10s and only then run their own cleanup, so a
+    # tighter outer cap cancels them mid-wait and skips it.
     HEALTH_CHECK_TIMEOUT: float = 5.0
+    # A cold Chrome launch legitimately takes seconds, so this bounds a hang only.
+    BROWSER_START_TIMEOUT: float = 30.0
     RECYCLE_EVERY: int = 50
 
     def __init__(self, log_callback: Callable | None = None) -> None:
@@ -150,12 +156,15 @@ class BrowserSession:
     ) -> "BrowserSession":
         self = cls(log_callback)
         self._log(f"Starting browser with {pool_size} tabs...")
-        browser = await zd.start(
-            headless=headless,
-            sandbox=False,
-            user_agent=resolved_user_agent(),
-            browser_args=BROWSER_ARGS,
-            browser_executable_path=browser_executable_path,
+        browser = await asyncio.wait_for(
+            zd.start(
+                headless=headless,
+                sandbox=False,
+                user_agent=resolved_user_agent(),
+                browser_args=BROWSER_ARGS,
+                browser_executable_path=browser_executable_path,
+            ),
+            timeout=cls.BROWSER_START_TIMEOUT,
         )
         self._browser = browser
 
@@ -188,7 +197,13 @@ class BrowserSession:
         if not self._cookie_params:
             return
         try:
-            await tab.send(cdp.network.set_cookies(self._cookie_params))
+            # Bounded: a raw CDP transaction whose target dies mid-round-trip is
+            # never resolved by zendriver's listener, so an unbounded await here
+            # hangs the worker for good.
+            await asyncio.wait_for(
+                tab.send(cdp.network.set_cookies(self._cookie_params)),
+                timeout=self.HEALTH_CHECK_TIMEOUT,
+            )
         except Exception as e:
             self._log(f"Cookie injection failed on a tab: {e}", "warning")
 

@@ -18,12 +18,20 @@ class LoginService:
     synchronous for the API handlers.
     """
 
+    # Bounds a hung teardown only; the visible window is already closed by then.
+    STOP_TIMEOUT: float = 10.0
+
     def __init__(self, cookie_store: CookieStore, log_callback: Callable | None = None, on_login: Callable | None = None):
         self._cookie_store: CookieStore = cookie_store
         self._log_callback: Callable | None = log_callback
         self._on_login: Callable | None = on_login
         self._active: bool = False
         self._lock: threading.Lock = threading.Lock()
+        # Set while the setup window is live, so app shutdown can stop the
+        # browser from the flow's own loop instead of orphaning it.
+        self._loop: asyncio.AbstractEventLoop | None = None
+        self._browser: "zd.Browser | None" = None
+        self._thread: threading.Thread | None = None
 
     @property
     def is_active(self) -> bool:
@@ -42,8 +50,25 @@ class LoginService:
                 return {"success": False, "error": f"Login not supported for {platform}"}
             self._active = True
 
-        threading.Thread(target=self._run, args=(platform,), daemon=True).start()
+        self._thread = threading.Thread(target=self._run, args=(platform,), daemon=True)
+        self._thread.start()
         return {"success": True, "platform": platform}
+
+    def shutdown(self, timeout: float = 10.0) -> None:
+        """Close a setup window still open at app exit, then wait for its capture.
+
+        Stopping the browser drops the CDP connection, so the poll loop exits and
+        the flow's finally still persists whatever cookies were captured.
+        """
+        loop, browser = self._loop, self._browser
+        if loop is not None and browser is not None:
+            try:
+                loop.call_soon_threadsafe(lambda: loop.create_task(browser.stop()))
+            except Exception:
+                pass
+        thread = self._thread
+        if thread is not None and thread.is_alive():
+            thread.join(timeout)
 
     def _run(self, platform: str) -> None:
         try:
@@ -66,6 +91,7 @@ class LoginService:
         # spoofed Windows UA; zendriver's native UA matches the host OS).
         # --test-type suppresses Chrome's "unsupported flag --no-sandbox" infobar
         # in the visible setup window (chromedriver used to hide it automatically).
+        self._loop = asyncio.get_running_loop()
         browser = await zd.start(
             headless=False, sandbox=False,
             browser_args=["--window-size=1200,800", "--disable-dev-shm-usage", "--test-type",
@@ -76,6 +102,7 @@ class LoginService:
                           # prompt on launch (cookies are captured over CDP).
                           "--use-mock-keychain", "--password-store=basic"],
         )
+        self._browser = browser
         last_cookies: list[dict] = []
         # First non-empty read after the page settles — the pre-action baseline
         # the close-time diff compares against (no fixed delay; the get() above
@@ -126,10 +153,17 @@ class LoginService:
                     f"(the window may have closed before the page finished loading).",
                     "warning",
                 )
+            # Bounded like BrowserSession.stop: Chrome dropping the websocket
+            # first leaves browser.stop()'s transaction unresolved forever, and
+            # that would latch _active on, blocking every later run and setup.
             try:
-                await browser.stop()
-            except Exception:
-                pass
+                await asyncio.wait_for(browser.stop(), timeout=self.STOP_TIMEOUT)
+            except Exception as e:
+                self._log(f"Browser setup teardown failed: {e}", "warning")
+            finally:
+                self._loop = None
+                self._browser = None
+                self._active = False
 
     def logout(self, platform: str) -> bool:
         return self._cookie_store.delete_cookies(platform)

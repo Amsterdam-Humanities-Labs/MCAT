@@ -32,6 +32,12 @@ def login_in_progress() -> bool:
     return _login_service is not None and _login_service.is_active
 
 
+def shutdown_login(timeout: float = 10.0) -> None:
+    """Close a Set up browser window still open at app exit."""
+    if _login_service is not None:
+        _login_service.shutdown(timeout)
+
+
 def start_login(body: dict) -> dict:
     service = _get_login_service()
     project = app_context.current_project
