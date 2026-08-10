@@ -60,6 +60,12 @@ async function callBackend<T>(
 
     // Response received; an HTTP error is a final answer, not retried.
     if (!response.ok) {
+      // A 403 with no token of our own is the one recoverable cause, and it is
+      // otherwise indistinguishable from any other refusal. A 403 *with* a
+      // token means something else, so it keeps the generic message.
+      if (response.status === 403 && !authToken) {
+        throw new Error('Lost the connection token for the backend — restart MCAT.');
+      }
       let message = `Request failed (${response.status})`;
       try {
         const data = await response.json();

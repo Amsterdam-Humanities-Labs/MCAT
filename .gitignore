@@ -1,4 +1,5 @@
 plans/
+.claude/
 data/mcat_notebook_jan_05_2026.py
 packages/app/frontend/public/fonts/*
 
