@@ -1,6 +1,10 @@
 {
   "name": "mcat",
   "private": true,
+  "packageManager": "pnpm@10.28.2",
+  "engines": {
+    "node": ">=20.19.0"
+  },
   "scripts": {
     "dev:app": "cd packages/app/backend && venv/bin/python mcat/app.py",
     "dev:app:mock": "cd packages/app/backend && MCAT_MOCK=1 venv/bin/python mcat/app.py",

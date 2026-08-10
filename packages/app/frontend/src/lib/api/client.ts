@@ -7,6 +7,7 @@ import type {
 import type { Project } from '../../types/project';
 
 let backendUrl = '';
+let authToken = '';
 
 export function setBackendUrl(url: string) {
   backendUrl = url;
@@ -16,15 +17,29 @@ export function getBackendUrl(): string {
   return backendUrl;
 }
 
+// Minted by the backend at startup and passed to the SPA in its URL. Sent on
+// every API call; without it the backend answers 403.
+export function setAuthToken(token: string) {
+  authToken = token;
+}
+
+export function getAuthToken(): string {
+  return authToken;
+}
+
 async function callBackend<T>(
   endpoint: string,
   method: 'GET' | 'POST' = 'GET',
   body?: unknown,
   retries = 3
 ): Promise<T> {
-  const opts: RequestInit = { method };
+  // The token goes on GETs too — /health is gated like every other route.
+  const headers: Record<string, string> = { 'X-MCAT-Token': authToken };
   if (method === 'POST') {
-    opts.headers = { 'Content-Type': 'application/json' };
+    headers['Content-Type'] = 'application/json';
+  }
+  const opts: RequestInit = { method, headers };
+  if (method === 'POST') {
     opts.body = JSON.stringify(body ?? {});
   }
 

@@ -1,3 +1,4 @@
+import { getAuthToken } from './client';
 import { processingStore } from '../stores/processing.svelte';
 import { projectStore } from '../stores/project.svelte';
 import { consoleStore } from '../stores/console.svelte';
@@ -29,7 +30,8 @@ function connect() {
     eventSource.close();
   }
 
-  eventSource = new EventSource(`${baseUrl}/events`);
+  // EventSource cannot set headers, so the token travels in the query string.
+  eventSource = new EventSource(`${baseUrl}/events?token=${encodeURIComponent(getAuthToken())}`);
 
   eventSource.onopen = () => {
     if (consecutiveErrors > 0) {

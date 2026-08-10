@@ -31,7 +31,11 @@ jobs:
           node-version: '22'
 
       - name: Install pnpm
-        run: npm install -g pnpm@9
+        # Corepack uses the packageManager field in package.json, so CI and
+        # local machines run the same pnpm.
+        run: corepack enable
+        env:
+          COREPACK_ENABLE_DOWNLOAD_PROMPT: '0'
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile

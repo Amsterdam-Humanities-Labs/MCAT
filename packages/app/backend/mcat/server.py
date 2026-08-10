@@ -7,13 +7,14 @@ Lean HTTP server entry point. Business logic is in api/handlers/.
 import http.client
 import json
 import mimetypes
+import secrets
 import socket
 import sys
 import threading
 import time
 from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 from pathlib import Path
-from urllib.parse import urlparse
+from urllib.parse import urlparse, parse_qs
 
 # Ensure mcat directory is in path for imports
 mcat_dir = Path(__file__).parent
@@ -26,13 +27,7 @@ from events import event_bus
 DEFAULT_PORT = 9876
 MAX_PORT_ATTEMPTS = 10
 
-def _get_cors_origin(headers: object = None) -> str:
-    """Return the CORS origin. Only allow localhost origins."""
-    if headers and hasattr(headers, "get"):
-        origin: str = headers.get("Origin", "")  # type: ignore[union-attr]
-        if origin and ("127.0.0.1" in origin or "localhost" in origin):
-            return origin
-    return "null"
+AUTH_HEADER = "X-MCAT-Token"
 
 
 def find_available_port(start_port: int, max_attempts: int = 10) -> int:
@@ -56,11 +51,45 @@ class MCATHandler(BaseHTTPRequestHandler):
     # the SPA over http and only the API hits this server.
     static_dir: "Path | None" = None
 
+    # Exact origins allowed to read API responses, and the hosts this server
+    # answers to. Both are populated by app.py once the port is known.
+    allowed_origins: "set[str]" = set()
+    allowed_hosts: "set[str]" = set()
+
+    # Minted at startup and handed to the SPA in its URL. Without it a page in
+    # the user's ordinary browser could POST here, since the routes take no auth.
+    auth_token: str = ""
+
+    def _cors_origin(self) -> "str | None":
+        """The request's Origin if it is one we allow, else None (send no header)."""
+        origin = self.headers.get("Origin", "")
+        return origin if origin in self.allowed_origins else None
+
+    def _apply_cors(self) -> None:
+        origin = self._cors_origin()
+        if origin is not None:
+            self.send_header("Access-Control-Allow-Origin", origin)
+            self.send_header("Vary", "Origin")
+
+    def _host_allowed(self) -> bool:
+        """Guards DNS rebinding: a rebound page is same-origin, so CORS never runs."""
+        if not self.allowed_hosts:
+            return True
+        return self.headers.get("Host", "") in self.allowed_hosts
+
+    def _token_ok(self, query_token: "str | None" = None) -> bool:
+        """Token from the header, or the query string for EventSource, which
+        cannot set headers."""
+        if not self.auth_token:
+            return True
+        supplied = query_token if query_token is not None else self.headers.get(AUTH_HEADER, "")
+        return secrets.compare_digest(supplied or "", self.auth_token)
+
     def _send_json(self, data: dict, status: int = 200):
         """Send JSON response."""
         self.send_response(status)
         self.send_header("Content-Type", "application/json")
-        self.send_header("Access-Control-Allow-Origin", _get_cors_origin(self.headers))
+        self._apply_cors()
         self.end_headers()
         self.wfile.write(json.dumps(data).encode())
 
@@ -77,19 +106,33 @@ class MCATHandler(BaseHTTPRequestHandler):
         return json.loads(body.decode())
 
     def do_OPTIONS(self):
-        """Handle CORS preflight."""
+        """Handle CORS preflight. Never token-gated: a preflight cannot carry
+        custom headers, so gating it would reject every POST before it starts."""
+        if not self._host_allowed():
+            self.send_response(421)
+            self.end_headers()
+            return
         self.send_response(200)
-        self.send_header("Access-Control-Allow-Origin", _get_cors_origin(self.headers))
+        self._apply_cors()
         self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-        self.send_header("Access-Control-Allow-Headers", "Content-Type")
+        self.send_header("Access-Control-Allow-Headers", f"Content-Type, {AUTH_HEADER}")
         self.end_headers()
 
     def do_GET(self):
         """Handle GET requests."""
-        path = urlparse(self.path).path
+        if not self._host_allowed():
+            self._send_error("Host not allowed", 421)
+            return
+
+        parsed = urlparse(self.path)
+        path = parsed.path
 
         # SSE endpoint
         if path == "/events":
+            token = parse_qs(parsed.query).get("token", [""])[0]
+            if not self._token_ok(token):
+                self._send_error("Forbidden", 403)
+                return
             self._handle_sse()
             return
 
@@ -97,6 +140,11 @@ class MCATHandler(BaseHTTPRequestHandler):
 
         handler = routes.get(path)
         if handler:
+            # API routes are gated; static below is not, since the SPA's own
+            # page and asset requests carry no token.
+            if not self._token_ok():
+                self._send_error("Forbidden", 403)
+                return
             try:
                 result = handler(self.path)
                 self._send_json(result)
@@ -138,7 +186,7 @@ class MCATHandler(BaseHTTPRequestHandler):
         self.send_header("Content-Type", "text/event-stream")
         self.send_header("Cache-Control", "no-cache")
         self.send_header("Connection", "keep-alive")
-        self.send_header("Access-Control-Allow-Origin", _get_cors_origin(self.headers))
+        self._apply_cors()
         self.end_headers()
 
         # Subscribe to events
@@ -165,6 +213,19 @@ class MCATHandler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         """Handle POST requests."""
+        if not self._host_allowed():
+            self._send_error("Host not allowed", 421)
+            return
+        if not self._token_ok():
+            self._send_error("Forbidden", 403)
+            return
+        # A non-JSON content type is what lets a page POST here without a
+        # preflight, so require the exact type the SPA sends.
+        content_type = self.headers.get("Content-Type", "").split(";")[0].strip().lower()
+        if content_type != "application/json":
+            self._send_error("Unsupported Media Type", 415)
+            return
+
         path = urlparse(self.path).path
         routes = POST_ROUTES
 
@@ -194,7 +255,12 @@ class MCATHandler(BaseHTTPRequestHandler):
             self._send_error("Not found", 404)
 
     def log_message(self, format, *args):
-        """Log to stdout, suppressing routine polling requests."""
+        """Log to stdout, suppressing routine polling requests.
+
+        Keep /events suppressed: it is the one request carrying the auth token in
+        its query string (EventSource cannot set headers), so logging it would
+        print the token to stdout.
+        """
         message = args[0] if args else ""
         # Suppress frequent polling endpoints and SSE from API logs
         if any(ep in message for ep in ["/health", "/project/status", "/events"]):

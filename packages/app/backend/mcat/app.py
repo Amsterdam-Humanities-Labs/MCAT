@@ -6,6 +6,7 @@ In dev mode (no dist/ build), also spawns the Vite dev server automatically.
 """
 
 import os
+import secrets
 import signal
 import socket
 import subprocess
@@ -108,6 +109,13 @@ def main():
     port = find_available_port(DEFAULT_PORT, MAX_PORT_ATTEMPTS)
     print(f"Starting MCAT backend on port {port}...", flush=True)
 
+    # Only this exact host:port answers, so a rebound DNS name gets a 421 rather
+    # than becoming same-origin with the backend.
+    MCATHandler.allowed_hosts = {f"127.0.0.1:{port}", f"localhost:{port}"}
+    MCATHandler.allowed_origins = {f"http://127.0.0.1:{port}", f"http://localhost:{port}"}
+    # Handed to the SPA in its URL; every API call must present it back.
+    MCATHandler.auth_token = secrets.token_urlsafe(32)
+
     # Start backend in background thread
     backend_thread = threading.Thread(target=start_backend, args=(port,), daemon=True)
     backend_thread.start()
@@ -118,16 +126,22 @@ def main():
     is_dev = not (DIST_DIR / "index.html").exists()
 
     vite_port = VITE_PORT
+    token = MCATHandler.auth_token
     if is_dev:
         vite_proc, vite_port = start_vite()
-        frontend_url = f"http://127.0.0.1:{vite_port}?port={port}"
+        # Vite serves the SPA from its own origin, so in dev the API really is
+        # cross-origin and that origin has to be allowed.
+        MCATHandler.allowed_origins |= {
+            f"http://127.0.0.1:{vite_port}", f"http://localhost:{vite_port}"
+        }
+        frontend_url = f"http://127.0.0.1:{vite_port}?port={port}&token={token}"
     else:
         # Serve the built SPA from the backend itself so the UI and API share one
         # origin (http://127.0.0.1:port). Loading it from file:// instead makes
         # macOS WKWebView block every fetch to the http backend: the UI renders
         # but all buttons/API calls silently fail.
         MCATHandler.static_dir = DIST_DIR
-        frontend_url = f"http://127.0.0.1:{port}/?port={port}"
+        frontend_url = f"http://127.0.0.1:{port}/?port={port}&token={token}"
 
     try:
         import webview

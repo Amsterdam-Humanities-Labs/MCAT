@@ -1,3 +1,11 @@
 packages:
   - 'packages/app/frontend'
   - 'packages/*'
+
+# esbuild's postinstall links its platform binary; Vite cannot run without it.
+# pnpm 11 reads allowBuilds, pnpm 10 reads onlyBuiltDependencies, and pnpm 9
+# runs build scripts unconditionally (which is what CI still uses).
+allowBuilds:
+  esbuild: true
+onlyBuiltDependencies:
+  - esbuild
