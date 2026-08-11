@@ -1,91 +1,87 @@
-/* MCAT theme — 1j (warm cream surfaces, violet accent, blue-violet links)
-   Values taken from "MCAT App Theme 1j.dc.html". Near-black type on low-chroma
-   warm surfaces; the violet is the only high-chroma family in the theme. */
+/* MCAT theme — default (warm cream surfaces, violet accent and links).
+   The brown palette's surfaces, borders, text, status and timeline colours,
+   with the violet accent and links from theme-purple.css. Siblings
+   theme-brown.css and theme-purple.css hold the two source palettes; all three
+   define the same token set, so switching is one @import in an app.css. */
 @theme {
   /* ---- Backgrounds ---------------------------------------------------- */
-  --color-bg-primary: #FEFCF8;      /* table / reading surface           */
-  --color-bg-toolbar: #F8F5EE;      /* project header, baseline strip    */
-  --color-bg-controls: #EFEAE0;     /* controls row                      */
-  --color-bg-detail: #F8F5EE;
-  --color-bg-log: #ECE7DC;          /* activity log panel                */
-  --color-bg-row-zebra: #FBF9F4;    /* optional alternating table row    */
-
-  /* NEW — reserved for live / dynamic state. Currently the progress +
-     counts strip; also intended for modals and transient panels, so the
-     app can signal "something is happening here" without a border.      */
-  --color-bg-active: #EDE4F7;
+  --color-bg-primary: #FAF6F0;
+  --color-bg-toolbar: #F5EDE0;      /* project header, baseline strip     */
+  --color-bg-controls: #EAE0CE;
+  --color-bg-detail: #F3EDE4;
+  --color-bg-log: #E4D9C6;          /* derived — activity log panel       */
+  --color-bg-row-zebra: #F7F1E8;    /* derived — alternating table row    */
+  --color-bg-active: #EDE5D8;        /* derived — live / dynamic surface   */
 
   /* ---- Borders -------------------------------------------------------- */
-  --color-border-light: #DAD3C6;    /* panel dividers, section rules      */
-  --color-border-mid: #B6AC99;      /* inputs, buttons, meta separators   */
-  --color-border-input: #B6AC99;
-  --color-border-row: #E2DACC;      /* NEW — table row divider, lighter
-                                       than border-light so long tables
-                                       don't turn into a grid            */
+  --color-border-light: #D6C7AE;
+  --color-border-mid: #C5B28C;
+  --color-border-input: #AC9468;
+  --color-border-row: #E2D6C0;      /* derived — lighter than border-light */
 
   /* ---- Text ----------------------------------------------------------- */
-  --color-text-primary: #161616;
-  --color-text-body: #222222;
-  --color-text-secondary: #4A443A;
-  --color-text-hint: #5F594D;
+  --color-text-primary: #1A1209;
+  --color-text-body: #2A1E0E;
+  --color-text-secondary: #46341F;
+  --color-text-hint: #574230;
 
   /* ---- Accents -------------------------------------------------------- */
-  --color-accent-primary: #5A2596;      /* buttons, checkboxes, active tab */
-  --color-accent-primary-hover: #4A1D7D;
-  --color-accent-secondary: #D18F0C;    /* logo mark, small warm marks     */
-  --color-accent-secondary-bg: #F7EBD2; /* derived — light gold surface     */
-  --color-accent-tab-active: #EDE4F7;   /* derived — active tab (= bg-active) */
-  --color-link: #33125E;                /* darker than accent-primary      */
-  --color-link-hover: #240D45;
+  --color-accent-primary: #5A2596;
+  --color-accent-primary-hover: #4A1D7D; /* derived — darker accent       */
+  --color-accent-secondary: #C9A96E;
+  --color-accent-secondary-bg: #EDE5D8;
+  --color-accent-tab-active: #E8DCC8;
+  --color-link: #33125E;
+  --color-link-hover: #240D45;      /* derived — darker link              */
 
-  /* ---- Window chrome -------------------------------------------------- */
-  --color-chrome: #2E1350;              /* title bar — dark shade of accent */
-  --color-chrome-text: #EFEAE0;
-  --color-chrome-control: #B6AC99;      /* minimise / maximise / close     */
+  /* ---- Window chrome (derived) ---------------------------------------- */
+  --color-chrome: #2A1E0E;
+  --color-chrome-text: #EAE0CE;
+  --color-chrome-control: #C5B28C;
 
   /* ---- Status: text + solid fill -------------------------------------- */
-  --color-status-live: #5A7320;
-  --color-status-restricted: #96631A;
-  --color-status-moderated: #8A4059;
-  --color-status-unavailable: #A83A21;
-  --color-status-login: #4A6480;
-  --color-status-unknown: #5C5344;
-  --color-status-error: #7A5424;
-  --color-status-removed: #A83A21;       /* generic danger for form UI     */
+  --color-status-live: #2F6B22;
+  --color-status-restricted: #A85E08;
+  --color-status-moderated: #8A3D6B;
+  --color-status-unavailable: #A52727;
+  --color-status-login: #3A5A78;
+  --color-status-unknown: #6E6258;
+  --color-status-error: #6B472A;
+  --color-status-removed: #A52727;
 
-  /* ---- Status pills: pastel fill + border + label --------------------- */
-  --color-badge-live-bg: #EAEEDB;
-  --color-badge-live-border: #93A365;
-  --color-badge-live-text: #4C6118;
+  /* ---- Status pills: fill + border + label (label derived = status) --- */
+  --color-badge-live-bg: #E5F2E0;
+  --color-badge-live-border: #B8D8AD;
+  --color-badge-live-text: #2F6B22;
 
-  --color-badge-restricted-bg: #F7EBD2;
-  --color-badge-restricted-border: #BE9748;
-  --color-badge-restricted-text: #8A5A14;
+  --color-badge-restricted-bg: #FDF0DD;
+  --color-badge-restricted-border: #F0D4A0;
+  --color-badge-restricted-text: #A85E08;
 
-  --color-badge-moderated-bg: #F4E4E8;
-  --color-badge-moderated-border: #B57E8E;
-  --color-badge-moderated-text: #7E3950;
+  --color-badge-moderated-bg: #F3E5EF;
+  --color-badge-moderated-border: #DCB8D0;
+  --color-badge-moderated-text: #8A3D6B;
 
-  --color-badge-unavailable-bg: #F8E4DD;
-  --color-badge-unavailable-border: #C4836A;
-  --color-badge-unavailable-text: #9C3319;
+  --color-badge-unavailable-bg: #F8E5E5;
+  --color-badge-unavailable-border: #E8B8B8;
+  --color-badge-unavailable-text: #A52727;
+
+  --color-badge-login-bg: #E5ECF3;
+  --color-badge-login-border: #B8CCDC;
+  --color-badge-login-text: #3A5A78;
+
+  --color-badge-unknown-bg: #ECE8E0;
+  --color-badge-unknown-border: #CFC6B6;
+  --color-badge-unknown-text: #6E6258;
+
+  --color-badge-error-bg: #F2EAE4;
+  --color-badge-error-border: #DCC8B4;
+  --color-badge-error-text: #6B472A;
 
   /* removed — alias of unavailable */
-  --color-badge-removed-bg: #F8E4DD;
-  --color-badge-removed-border: #C4836A;
-  --color-badge-removed-text: #9C3319;
-
-  --color-badge-login-bg: #E6EBF1;
-  --color-badge-login-border: #8397AD;
-  --color-badge-login-text: #405973;
-
-  --color-badge-unknown-bg: #EEEADF;
-  --color-badge-unknown-border: #A69B80;
-  --color-badge-unknown-text: #564D3E;
-
-  --color-badge-error-bg: #F3E7D6;
-  --color-badge-error-border: #B08D5C;
-  --color-badge-error-text: #71501F;
+  --color-badge-removed-bg: #F8E5E5;
+  --color-badge-removed-border: #E8B8B8;
+  --color-badge-removed-text: #A52727;
 
   /* ---- Diff ----------------------------------------------------------- */
   --color-diff-added-mark: #C6E6BC;
@@ -93,35 +89,42 @@
   --color-diff-removed-mark: #F3C6C6;
   --color-diff-removed-text: #5C1E1E;
 
-  /* ---- Destructive ---------------------------------------------------- */
-  --color-danger-text: #A83A21;         /* matches the Abandon / danger button */
-  --color-danger-border: #A83A21;
-  --color-danger-bg: #FEFCF8;
+  /* ---- Destructive (derived — = status-removed) ----------------------- */
+  --color-danger-text: #A52727;
+  --color-danger-border: #A52727;
+  --color-danger-bg: #FAF6F0;
 
   /* ---- Console / log -------------------------------------------------- */
-  --color-console-timestamp: #7C7566;
-  --color-console-text: #222222;
-  --color-console-warning-count: #96631A;
+  --color-console-timestamp: #46341F;
+  --color-console-text: #2A1E0E;     /* derived — = text-body             */
+  --color-console-warning-count: #8A4422;
 
   /* ---- Progress ------------------------------------------------------- */
-  --color-progress-track: #DAD3C6;
-  /* segments use the status tokens above */
+  --color-progress-track: #E8DCC8;
 
   /* ---- Interactive states --------------------------------------------- */
-  --color-interactive-hover: #F3EDE2;
+  --color-interactive-hover: #EDE5D8;
   --color-interactive-active: #4A1D7D;
-  --color-interactive-primary: #4A1D7D; /* derived — = accent-primary-hover  */
-  --color-interactive-input: #FEFCF8;
+  --color-interactive-primary: #4A1D7D;
+  --color-interactive-input: #F0E8DA;
+  --color-interactive-danger: #F5E8E8;
+
+  /* Far end of a busy button's pulse, one per variant, mirroring how the
+     running timeline row breathes between two surface colours. Dark variants
+     lighten within their hue; light ones move toward their tint. */
+  --color-btn-pulse-primary: #9152DD;   /* derived — lighter accent-primary */
+  --color-btn-pulse-secondary: #DDCCF2; /* derived — deeper bg-active       */
+  --color-btn-pulse-danger: #EFD3D3;    /* derived — deeper danger tint     */
+  --color-btn-pulse-ghost: #E0D1BC;     /* derived — = bg-timeline          */
+
+  /* ---- Timeline ------------------------------------------------------- */
+  --color-bg-timeline: #E0D1BC;
+  --color-timeline-dot: #5A3F22;
+  --color-timeline-dot-muted: #AC9468;
+  --color-timeline-dot-abandoned: #C5B28C;
+  --color-timeline-axis: #C4AD8A;
 
   /* ---- Radii ---------------------------------------------------------- */
-  --radius-pill: 5px;               /* status pills in dense table rows   */
-  --radius-pill-lg: 6px;            /* status pills in the docs legend    */
-
-  /* ---- Retained; still referenced by app code (theme2 dropped them) --- */
-  --color-bg-timeline: #EDE4F7;         /* timeline / start / wizard surface — light purple */
-  --color-timeline-dot: #161616;        /* running / stop icons — black       */
-  --color-timeline-dot-muted: #5F594D;     /* derived — muted dot (= text-hint)  */
-  --color-timeline-dot-abandoned: #B6AC99; /* derived — abandoned (= border-mid) */
-  --color-timeline-axis: #DAD3C6;          /* derived — axis line (= border-light) */
-  --color-interactive-danger: #F5E8E8;  /* danger-button hover tint           */
+  --radius-pill: 5px;
+  --radius-pill-lg: 6px;
 }

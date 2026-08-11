@@ -15,8 +15,8 @@
   }: Props = $props();
 </script>
 
-<div class={cn('flex items-center justify-center h-screen bg-bg-toolbar', className)}>
-  <div class="bg-bg-active border border-border-mid rounded p-8 max-w-md w-full text-center">
+<div class={cn('flex items-center justify-center h-screen bg-bg-controls', className)}>
+  <div class="bg-bg-toolbar border border-border-mid rounded p-8 max-w-md w-full text-center">
     <div class="flex flex-col gap-3">
       <Button variant="primary" size="lg" class="w-full" onclick={onnewproject}>
         New Project

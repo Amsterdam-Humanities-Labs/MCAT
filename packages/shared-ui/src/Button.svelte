@@ -1,6 +1,5 @@
 <script lang="ts">
   import { cn } from './utils';
-  import { SpinnerGap } from 'phosphor-svelte';
 
   interface Props {
     href?: string;
@@ -47,13 +46,36 @@
     lg: 'px-6 py-3 text-base',
   };
 
-  const classes = $derived(cn(baseClasses, variants[variant], sizes[size], className));
-
   // A handler that returns a promise disables the button until it settles, so
   // async work cannot be fired twice by a second click. Handlers returning void
   // are unaffected.
   let pending = $state(false);
   const busy = $derived(loading || pending);
+
+  // Endpoints of the busy pulse: the variant's own background, and its
+  // pulse token from the theme.
+  const pulseEnds = {
+    primary: ['var(--color-accent-primary)', 'var(--color-btn-pulse-primary)'],
+    secondary: ['var(--color-bg-toolbar)', 'var(--color-btn-pulse-secondary)'],
+    danger: ['var(--color-bg-toolbar)', 'var(--color-btn-pulse-danger)'],
+    ghost: ['transparent', 'var(--color-btn-pulse-ghost)'],
+  };
+
+  const pulseStyle = $derived(
+    busy ? `--btn-base:${pulseEnds[variant][0]};--btn-pulse:${pulseEnds[variant][1]}` : undefined,
+  );
+
+  const classes = $derived(
+    cn(
+      baseClasses,
+      variants[variant],
+      sizes[size],
+      // While busy the pulse carries the state, so skip the disabled dimming
+      // that would otherwise wash it out.
+      busy && 'disabled:opacity-100 btn-pulse',
+      className,
+    ),
+  );
 
   async function handleClick(e: MouseEvent) {
     if (pending) return;
@@ -79,16 +101,32 @@
     class={classes}
     {onclick}
   >
-    {#if loading}
-      <SpinnerGap size={16} class="animate-spin -ml-1 mr-2" />
-    {/if}
     {@render children?.()}
   </a>
 {:else}
-  <button {type} disabled={disabled || busy} class={classes} onclick={handleClick}>
-    {#if busy}
-      <SpinnerGap size={16} class="animate-spin -ml-1 mr-2" />
-    {/if}
-    {@render children?.()}
+  <button
+    {type}
+    disabled={disabled || busy}
+    class={classes}
+    style={pulseStyle}
+    onclick={handleClick}
+  >
+    <!-- Only the label dims while busy; dimming the whole button would flatten
+         the pulse it sits on. -->
+    <span class={busy ? 'opacity-50' : undefined}>
+      {@render children?.()}
+    </span>
   </button>
 {/if}
+
+<style>
+  /* Busy state: the same slow background breathe as the running timeline row,
+     between the variant's own background and its pulse colour. */
+  :global(.btn-pulse) {
+    animation: btn-pulse 3s ease-in-out infinite;
+  }
+  @keyframes btn-pulse {
+    0%, 100% { background-color: var(--btn-base); }
+    50% { background-color: var(--btn-pulse); }
+  }
+</style>

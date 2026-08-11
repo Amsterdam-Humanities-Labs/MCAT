@@ -10,7 +10,8 @@
       "default": "./src/index.ts"
     },
     "./theme.css": "./src/theme.css",
-    "./theme-brown.css": "./src/theme-brown.css"
+    "./theme-brown.css": "./src/theme-brown.css",
+    "./theme-purple.css": "./src/theme-purple.css"
   },
   "dependencies": {
     "clsx": "^2.1.1",

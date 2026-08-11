@@ -1,8 +1,8 @@
 /* MCAT theme — brown (warm cream surfaces, brown accent, blue links).
-   The original palette. Same token set as theme.css (purple); to use it,
-   point the app/website app.css @import at this file instead of theme.css.
-   Tokens the original brown theme lacked are derived from the brown palette
-   and marked "derived". */
+   The original palette, kept whole. Same token set as theme.css; to use it,
+   point the app/website app.css @import at this file instead. Tokens the
+   original brown theme lacked are derived from the brown palette and marked
+   "derived". */
 @theme {
   /* ---- Backgrounds ---------------------------------------------------- */
   --color-bg-primary: #FAF6F0;
@@ -108,6 +108,14 @@
   --color-interactive-primary: #5F4325;
   --color-interactive-input: #F0E8DA;
   --color-interactive-danger: #F5E8E8;
+
+  /* Far end of a busy button's pulse, one per variant, mirroring how the
+     running timeline row breathes between two surface colours. Dark variants
+     lighten within their hue; light ones move toward their tint. */
+  --color-btn-pulse-primary: #A06E38;   /* derived — lighter accent-primary */
+  --color-btn-pulse-secondary: #DEC9A8; /* derived — deeper bg-active       */
+  --color-btn-pulse-danger: #EFD3D3;    /* derived — deeper danger tint     */
+  --color-btn-pulse-ghost: #E0D1BC;     /* derived — = bg-timeline          */
 
   /* ---- Timeline ------------------------------------------------------- */
   --color-bg-timeline: #E0D1BC;
