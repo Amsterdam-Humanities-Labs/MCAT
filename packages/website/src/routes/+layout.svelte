@@ -26,7 +26,7 @@
     <div class="mx-auto flex max-w-5xl items-center justify-between px-4 py-3">
       <a
         href="{base}/"
-        class="inline-block border-b-4 border-transparent pb-[2.5px] text-[22px] font-bold text-accent-primary hover:border-accent-primary"
+        class="inline-block border-b-4 border-transparent pb-[2.5px] text-[22px] font-bold text-text-primary hover:border-accent-primary"
       >
         MCAT
       </a>
