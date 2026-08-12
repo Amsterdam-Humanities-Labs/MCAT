@@ -16,7 +16,7 @@
   <a
     {href}
     class={cn(
-      'inline-block border-b-2 border-transparent pb-[2.5px] text-lg text-text-secondary hover:border-accent-primary hover:text-text-primary',
+      'inline-block border-b-4 border-transparent pb-[2.5px] text-lg text-text-secondary hover:border-accent-primary hover:text-text-primary',
       depth === 3 && 'ml-4',
       active && 'border-accent-primary text-text-primary',
     )}

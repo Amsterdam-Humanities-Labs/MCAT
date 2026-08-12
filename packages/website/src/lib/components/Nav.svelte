@@ -30,7 +30,7 @@
         <a
           href={base + href}
           class={cn(
-            'inline-block border-b-2 border-transparent pb-[2.5px] text-lg text-text-body hover:border-accent-primary hover:text-text-primary',
+            'inline-block border-b-4 border-transparent pb-[2.5px] text-lg text-text-body hover:border-accent-primary hover:text-text-primary',
             isActive(href) && 'border-accent-primary text-text-primary',
           )}
         >
