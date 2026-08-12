@@ -3,6 +3,8 @@
    point the app/website app.css @import at this file instead. Tokens the
    original brown theme lacked are derived from the brown palette and marked
    "derived". */
+@import "./typography.css";
+
 @theme {
   /* ---- Backgrounds ---------------------------------------------------- */
   --color-bg-primary: #FAF6F0;

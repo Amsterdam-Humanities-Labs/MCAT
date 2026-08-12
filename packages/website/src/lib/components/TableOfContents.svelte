@@ -36,7 +36,7 @@
       type="text"
       bind:value={query}
       onkeydown={handleInputKeydown}
-      placeholder="Search…"
+      placeholder="Search"
       aria-label="Search contents"
       class="w-full rounded border border-border-input bg-interactive-input py-1.5 pl-7 pr-2 text-base text-text-body placeholder:text-text-hint focus:border-accent-primary focus:outline-none"
     />

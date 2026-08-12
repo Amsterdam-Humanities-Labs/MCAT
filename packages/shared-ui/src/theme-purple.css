@@ -2,6 +2,8 @@
    Values taken from "MCAT App Theme 1j.dc.html". Near-black type on low-chroma
    warm surfaces; the violet is the only high-chroma family. Same token set as
    theme.css; to use it, point the app/website app.css @import at this file. */
+@import "./typography.css";
+
 @theme {
   /* ---- Backgrounds ---------------------------------------------------- */
   --color-bg-primary: #FEFCF8;      /* table / reading surface           */

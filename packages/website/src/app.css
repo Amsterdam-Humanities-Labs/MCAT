@@ -5,19 +5,27 @@
    so classes used by @mcat/shared-ui components are emitted here too. */
 @source "../../shared-ui/src";
 
-/* Body copy runs a notch above the 1rem root. The root stays 16px so rem-based
-   chrome (nav, logo, headings) keeps its sizing. */
-@theme {
-  --text-base: 1.1rem;
-}
-
+/* Family, sizes and weights come from shared-ui/typography.css via the theme.
+   The root stays 16px so rem-based chrome (logo, headings) keeps its sizing. */
 html {
-  font-family: 'Author', Georgia, serif;
   font-size: 16px;
   background: var(--color-bg-primary);
   color: var(--color-text-body);
 }
 
 body {
-  font-size: 1.1rem;
+  font-size: var(--text-base);
+}
+
+/* Author has no monospace companion, so code reads in the body face. */
+code,
+kbd,
+samp,
+pre {
+  font-family: inherit;
+}
+
+/* Anchor targets clear the sticky header instead of landing beneath it. */
+:where(h1, h2, h3, h4, h5, h6)[id] {
+  scroll-margin-top: 5rem;
 }

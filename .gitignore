@@ -20,7 +20,7 @@ packages/website/.svelte-kit/
 packages/website/build/
 
 # Policy source corpus — kept local, not tracked (derived static/policies/ is committed).
-packages/website/src/content/policies/
+packages/website/corpus/
 
 # Python cache
 __pycache__/

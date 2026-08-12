@@ -67,7 +67,9 @@ Cookies are small pieces of data a site stores in your browser so it remembers y
 
 **Login cookies** are the session token the platform issues after you sign in. They are what proves to the platform that a request comes from your account, and they are the reason MCAT can see what a logged-in visitor sees.
 
-<P variant="warning">Always create a new throwaway account for each platform, never use your personal one. MCAT never stores passwords, only cookies.</P> Click **Set up browser**. A Chrome window opens. Dismiss the cookie banner and log in where needed. MCAT stores the resulting cookies inside the project and reuses them until they expire.
+<P variant="warning">Always create a new throwaway account for each platform, never use your personal one. MCAT never stores passwords, only cookies.</P>
+
+Click **Set up browser**. A Chrome window opens. Dismiss the cookie banner and log in where needed. MCAT stores the resulting cookies inside the project and reuses them until they expire.
 
 #### How are session cookies stored
 

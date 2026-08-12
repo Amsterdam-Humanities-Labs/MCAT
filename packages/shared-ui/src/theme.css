@@ -3,6 +3,8 @@
    with the violet accent and links from theme-purple.css. Siblings
    theme-brown.css and theme-purple.css hold the two source palettes; all three
    define the same token set, so switching is one @import in an app.css. */
+@import "./typography.css";
+
 @theme {
   /* ---- Backgrounds ---------------------------------------------------- */
   --color-bg-primary: #FAF6F0;

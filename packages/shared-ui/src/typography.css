@@ -1,0 +1,28 @@
+/* MCAT typography — shared by the app and the website.
+
+   Palette-independent, so it lives beside the theme files rather than inside
+   them: every theme imports this, and switching palettes never changes type.
+
+   Author is loaded from Fontshare via a <link> in each package's HTML entry
+   (index.html / app.html); keep the weights there in sync with the ramp below.
+   Emphasis in prose is medium; bold is reserved for headings. */
+@theme {
+  --font-sans: 'Author', Georgia, serif;
+  --default-font-family: var(--font-sans);
+
+  /* Kept as an ascending ladder: raising base/lg without xl would collide,
+     since Tailwind's default xl is 1.25rem = 20px. */
+  --text-base: 19px;
+  --text-lg: 20px;
+  --text-xl: 22px;
+
+  --font-weight-medium: 500;
+  --font-weight-bold: 700;
+}
+
+/* Emphasis in prose is medium; bold is reserved for headings. Set explicitly
+   because Preflight's `bolder` would otherwise resolve to 700. */
+b,
+strong {
+  font-weight: var(--font-weight-medium);
+}

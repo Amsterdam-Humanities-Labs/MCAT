@@ -11,6 +11,6 @@
   let { class: className, children, ...rest }: Props = $props();
 </script>
 
-<h1 {...rest} class={cn('text-3xl font-bold text-text-primary md:text-5xl', className)}>
+<h4 {...rest} class={cn('text-lg font-bold text-text-primary md:text-xl', className)}>
   {@render children?.()}
-</h1>
+</h4>

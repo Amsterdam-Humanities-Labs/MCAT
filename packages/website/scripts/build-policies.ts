@@ -13,7 +13,7 @@ import type {
   VersionRef,
 } from '../src/lib/types/policies';
 
-const CONTENT = 'src/content/policies';
+const CONTENT = 'corpus';
 const OUT = 'static/policies';
 
 const slugify = (s: string) =>

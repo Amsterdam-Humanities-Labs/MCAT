@@ -52,7 +52,7 @@
 >
   <div class="p-6">
     {#if title}
-      <h2 class="text-lg font-semibold text-text-body mb-4">
+      <h2 class="text-lg font-bold text-text-body mb-4">
         {title}
       </h2>
     {/if}

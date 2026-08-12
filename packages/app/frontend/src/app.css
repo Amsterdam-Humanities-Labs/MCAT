@@ -4,14 +4,16 @@
 /* Tailwind only generates classes it sees; scan the shared UI package's source. */
 @source "../../../shared-ui/src";
 
-/* General Sans (400, 500, 600) is loaded from Fontshare's CSS API via the <link>
-   in index.html, so no local @font-face is needed. */
-
+/* Family, sizes and weights come from shared-ui/typography.css via the theme;
+   Author is loaded from Fontshare via the <link> in index.html. */
 html {
-  font-family: 'General Sans', system-ui, sans-serif;
   font-size: 16px;
   background: var(--color-bg-primary);
   color: var(--color-text-body);
+}
+
+body {
+  font-size: var(--text-base);
 }
 
 /* The Popover API polyfill (older WebKit, e.g. macOS Ventura) can't use the real

@@ -18,7 +18,7 @@
 >
   <span class="text-text-primary">Activity Log</span>
   {#if warningCount > 0}
-    <span class="text-console-warning-count font-semibold">{warningCount} warnings</span>
+    <span class="text-console-warning-count font-medium">{warningCount} warnings</span>
   {/if}
   <span class="ml-auto text-text-secondary">
     {#if expanded}

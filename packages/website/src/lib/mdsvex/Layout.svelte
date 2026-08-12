@@ -4,6 +4,8 @@
   export { default as h1 } from '$components/H1.svelte';
   export { default as h2 } from '$components/H2.svelte';
   export { default as h3 } from '$components/H3.svelte';
+  export { default as h4 } from '$components/H4.svelte';
+  export { default as h5 } from '$components/H5.svelte';
   export { default as p } from '$components/P.svelte';
   export { default as ul } from '$components/Ul.svelte';
   export { default as ol } from '$components/Ol.svelte';
@@ -17,7 +19,7 @@
 </script>
 
 <article
-  class="flex flex-col gap-4 [&_h2]:pt-6 [&_h3]:pt-4 [&_th]:border-b [&_th]:border-border-mid [&_th]:py-2 [&_th]:pr-4 [&_th]:font-medium [&_th]:text-text-primary [&_td]:border-b [&_td]:border-border-light [&_td]:py-2 [&_td]:pr-4 [&_td]:align-top [&_td]:text-text-body"
+  class="flex flex-col gap-4 [&_h2]:pt-6 [&_h3]:pt-4 [&_h4]:pt-3 [&_h5]:pt-2 [&_th]:border-b [&_th]:border-border-mid [&_th]:py-2 [&_th]:pr-4 [&_th]:font-medium [&_th]:text-text-primary [&_td]:border-b [&_td]:border-border-light [&_td]:py-2 [&_td]:pr-4 [&_td]:align-top [&_td]:text-text-body"
 >
   {@render children()}
 </article>
