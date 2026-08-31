@@ -126,6 +126,20 @@ Abandoned runs are skipped, so the comparison always reaches back to the last ru
 
 A project's URLs are fixed when you create it. When you have new URLs to track, create a new project.
 
+## Scraping hygiene
+
+### Your IP's reputation
+
+MCAT checks each URL from your own internet connection, so every check comes from your IP address. When one connection makes many automated visits in a short time, networks and platforms can lower the reputation of that address. You may then see bot checks, such as captchas or a "verifying you're not a bot" messages, on normal websites for a while, even ones you never scraped. This is not permanent. The reputation recovers over days or weeks once you stop, and on many home connections restarting your router gives you a new address.
+
+### Lowering your scraping footprint
+
+Large runs and repeated runs affect the reputation most, and scheduled tracking affects it more than anything else, because it repeats on its own over several days. To keep the effect small, check only the URLs you need, and set long tracking intervals. If your own browsing starts showing bot checks, stop for a while and let the IP address recover.
+
+### Using a VPN for long or tracked runs
+
+For long runs or tracking, turn on a VPN before you start and off when you finish. Use the VPN's desktop app, so that all of your computer's traffic goes through the VPN, including MCAT. Some platforms are stricter with VPN addresses than with home ones, so check that your targets still load with the VPN on before you rely on it.
+
 ## Content states
 
 Every checked URL resolves to one content state. A few states only occur on certain platforms.
