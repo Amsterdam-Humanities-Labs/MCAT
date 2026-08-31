@@ -130,7 +130,7 @@ A project's URLs are fixed when you create it. When you have new URLs to track, 
 
 ### Your IP's reputation
 
-MCAT checks each URL from your own internet connection, so every check comes from your IP address. When one connection makes many automated visits in a short time, networks and platforms can lower the reputation of that address. You may then see bot checks, such as captchas or a "verifying you're not a bot" messages, on normal websites for a while, even ones you never scraped. This is not permanent. The reputation recovers over days or weeks once you stop, and on many home connections restarting your router gives you a new address.
+MCAT checks each URL from your own internet connection, so every check comes from your IP address. When one connection makes many automated visits in a short time, networks and platforms can lower the reputation of that address. A few companies, such as Cloudflare and Google, handle bot checks for a large part of the web, and each sees your address across every site it covers. Because ofthis, you may start seeing bot checks, such as captchas or a "verifying you're not a bot" message, on normal websites for a while,even ones you never scraped. This is not permanent. The reputation recovers over days or weeks once you stop scraping.
 
 ### Lowering your scraping footprint
 
@@ -138,7 +138,7 @@ Large runs and repeated runs affect the reputation most, and scheduled tracking 
 
 ### Using a VPN for long or tracked runs
 
-For long runs or tracking, turn on a VPN before you start and off when you finish. Use the VPN's desktop app, so that all of your computer's traffic goes through the VPN, including MCAT. Some platforms are stricter with VPN addresses than with home ones, so check that your targets still load with the VPN on before you rely on it.
+For long runs or tracking it's recommended to use a VPN service. VPN hides your real IP address from platform's bot detection protecting your home network's reputation. Use the VPN's desktop app, so that all of MCAT's traffic goes through it. Some platforms are stricter with VPN addresses than with home ones, so check that your targets still load with the VPN.
 
 ## Content states
 
@@ -152,7 +152,7 @@ Every checked URL resolves to one content state. A few states only occur on cert
 - <StatusBadge status="unknown" /> Loaded but nothing matched, left for a human to judge from the screenshot. All platforms.
 - <StatusBadge status="error" /> The check itself failed: no load, a timeout, or a crash. All platforms.
 
-## States by platform
+### States by platform
 
 Which states occur, and how reliably they are told apart, varies by platform.
 
